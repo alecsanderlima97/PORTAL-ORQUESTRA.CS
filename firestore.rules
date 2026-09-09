@@ -1,0 +1,68 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isPlatformAdmin() {
+      return signedIn()
+        && userDoc().data.role in ['orquestra_admin', 'platform_owner'];
+    }
+
+    function sameTenant(tenantId) {
+      return signedIn()
+        && userDoc().data.tenantId == tenantId
+        && userDoc().data.active == true;
+    }
+
+    match /users/{userId} {
+      allow read: if isPlatformAdmin() || request.auth.uid == userId;
+      allow create, update: if isPlatformAdmin();
+      allow delete: if false;
+    }
+
+    match /companies/{companyId} {
+      allow read: if isPlatformAdmin() || sameTenant(companyId);
+      allow create, update: if isPlatformAdmin();
+      allow delete: if false;
+    }
+
+    match /companyModules/{moduleAccessId} {
+      allow read: if isPlatformAdmin() || sameTenant(resource.data.tenantId);
+      allow create, update: if isPlatformAdmin();
+      allow delete: if false;
+    }
+
+    match /payments/{paymentId} {
+      allow read: if isPlatformAdmin() || sameTenant(resource.data.tenantId);
+      allow create, update: if isPlatformAdmin();
+      allow delete: if false;
+    }
+
+    match /supportTickets/{ticketId} {
+      allow read: if isPlatformAdmin() || sameTenant(resource.data.tenantId);
+      allow create: if signedIn() && request.resource.data.tenantId == userDoc().data.tenantId;
+      allow update: if isPlatformAdmin();
+      allow delete: if false;
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if signedIn();
+      allow create, update: if isPlatformAdmin();
+      allow delete: if false;
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if isPlatformAdmin() || sameTenant(resource.data.tenantId);
+      allow create: if signedIn();
+      allow update, delete: if false;
+    }
+  }
+}
+
