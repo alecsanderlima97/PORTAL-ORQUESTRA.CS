@@ -94,7 +94,7 @@ export function PortalLanding() {
       >
         <span className="portal-gateway__scene" aria-hidden="true">
           <Image
-            src="/orquestra-portal-brand-composition.png"
+            src="/orquestra-portal-altar-clean.png"
             alt=""
             fill
             priority
@@ -108,6 +108,7 @@ export function PortalLanding() {
           <span className="portal-gateway__transition-light" />
         </span>
         <span className="portal-gateway__content">
+          <BrandLogo variant="essential" size={54} showWordmark tone="light" />
           <span className="portal-gateway__prompt">
             <span>Acessar plataforma</span>
             <ChevronDown className="size-4" />
