@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Orquestra.cs</title>
+  <desc id="desc">Simbolo O da Orquestra.cs para perfil e aplicativo.</desc>
+  <defs>
+    <radialGradient id="background" cx="50%" cy="38%" r="78%">
+      <stop offset="0" stop-color="#15558A" />
+      <stop offset="0.58" stop-color="#082B4D" />
+      <stop offset="1" stop-color="#020D1C" />
+    </radialGradient>
+    <linearGradient id="ring" x1="240" y1="185" x2="790" y2="840" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#C5EDFF" />
+      <stop offset="0.28" stop-color="#72C9F4" />
+      <stop offset="0.64" stop-color="#2C83B9" />
+      <stop offset="1" stop-color="#10375D" />
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#010915" flood-opacity=".62" />
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" rx="112" fill="url(#background)" />
+  <circle cx="512" cy="512" r="342" fill="none" stroke="#8DD5F7" stroke-opacity=".08" stroke-width="2" />
+  <g filter="url(#shadow)">
+    <circle cx="512" cy="512" r="285" fill="none" stroke="url(#ring)" stroke-width="68" stroke-dasharray="1695 88" transform="rotate(-47 512 512)" />
+    <path d="M249 666l75-30M271 721l73-30M301 768l69-29" fill="none" stroke="#8DD4F7" stroke-linecap="round" stroke-width="12" />
+    <path d="M319 311c65-73 155-115 252-121" fill="none" stroke="#E1F5FF" stroke-linecap="round" stroke-width="12" opacity=".82" />
+  </g>
+</svg>

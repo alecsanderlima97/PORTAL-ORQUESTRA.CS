@@ -6,6 +6,7 @@ import {
   ExternalLink,
   Settings,
   ShieldCheck,
+  UserRound,
   Users,
 } from "lucide-react";
 import { companies, formatCurrency, formatDate, products } from "@/lib/portal-data";
@@ -43,6 +44,7 @@ export default function PortalPage() {
             ["Plano e vencimento", ShieldCheck],
             ["Usuários", Users],
             ["Suporte", CircleHelp],
+            ["Meu perfil", UserRound],
             ["Configurações", Settings],
           ].map(([label, Icon]) => (
             <button
@@ -141,6 +143,18 @@ export default function PortalPage() {
                 <button className="mt-4 h-10 w-full rounded-md border border-zinc-200 text-sm font-semibold hover:bg-zinc-50">
                   Solicitar suporte
                 </button>
+              </div>
+              <div className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <UserRound className="size-5 text-emerald-700" />
+                  <h2 className="font-semibold">Meu perfil</h2>
+                </div>
+                <dl className="mt-4 space-y-3 text-sm">
+                  <div><dt className="text-zinc-500">Nome</dt><dd className="mt-1 font-medium">{company.owner}</dd></div>
+                  <div><dt className="text-zinc-500">Empresa</dt><dd className="mt-1 font-medium">{company.name}</dd></div>
+                  <div><dt className="text-zinc-500">E-mail</dt><dd className="mt-1 font-medium">admin@empresa.com.br</dd></div>
+                </dl>
+                <button className="mt-4 h-10 w-full rounded-md border border-zinc-200 text-sm font-semibold hover:bg-zinc-50">Editar dados</button>
               </div>
             </div>
           </div>

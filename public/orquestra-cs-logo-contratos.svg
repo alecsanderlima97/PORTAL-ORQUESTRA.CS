@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="640" viewBox="0 0 1200 320" role="img" aria-labelledby="title desc">
+  <title id="title">Orquestra.cs</title>
+  <desc id="desc">Logo Orquestra.cs com simbolo circular azul e assinatura Um portal para sua operacao.</desc>
+  <defs>
+    <linearGradient id="ring" x1="42" y1="62" x2="198" y2="238" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#91D7FF" />
+      <stop offset="0.34" stop-color="#3F9DDA" />
+      <stop offset="0.72" stop-color="#145485" />
+      <stop offset="1" stop-color="#0A223C" />
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(16 0)">
+    <circle cx="120" cy="150" r="78" fill="none" stroke="url(#ring)" stroke-width="18" stroke-dasharray="465 25" transform="rotate(-47 120 150)" />
+    <path d="M48 192l20-8M54 207l20-8M63 221l19-8" fill="none" stroke="#5BADE4" stroke-linecap="round" stroke-width="3" />
+    <path d="M68 95c18-20 43-32 70-34" fill="none" stroke="#B7E3FF" stroke-linecap="round" stroke-width="3" opacity=".78" />
+  </g>
+
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="260" y="157" fill="#183449" font-size="86" font-weight="700" letter-spacing="-2">orquestra<tspan fill="#56B6E8">.cs</tspan></text>
+    <text x="264" y="202" fill="#64869B" font-size="17" font-weight="700" letter-spacing="5">UM PORTAL PARA SUA OPERAÇÃO</text>
+  </g>
+</svg>
