@@ -1,0 +1,23 @@
+.preview :global(.portal-site) {
+  background-image: linear-gradient(115deg, #b3ede414, transparent 35%, #cac5e419 55%, transparent 75%, #e7dfbf14);
+  background-size: 220% 220%;
+  animation: refraction 18s ease-in-out infinite alternate;
+}
+.preview :global(.portal-action),
+.preview :global(.portal-solution),
+.preview :global(.portal-orchestrator-panel),
+.preview :global(.portal-header__login),
+.preview :global(.portal-gateway__prompt) {
+  border: 1px solid transparent;
+  background: linear-gradient(120deg, #143444ec, #122230eb) padding-box, linear-gradient(120deg, #9cded6, #afcbea, #d9b8d7, #ded4aa, #9ccedc) border-box;
+  color: #f1f7fc;
+  box-shadow: inset 0 1px 16px #b6e5ec18, 0 4px 22px #82c3df16;
+  backdrop-filter: blur(14px);
+}
+.preview :global(.portal-action:hover), .preview :global(.portal-solution:hover) {
+  background: linear-gradient(120deg, #315565eb, #303d58e8) padding-box, linear-gradient(120deg, #d4ffea, #cad9ff, #f4c6e7, #f2e8bc) border-box;
+}
+.preview :global(.portal-solution__category) { color: #bfd4df; }
+.preview :global(.portal-header), .preview :global(.portal-footer) { border-color: #b5dfdd55; }
+@keyframes refraction { from { background-position: 0% 30%; } to { background-position: 100% 70%; } }
+@media (prefers-reduced-motion: reduce) { .preview :global(.portal-site) { animation: none; } }
