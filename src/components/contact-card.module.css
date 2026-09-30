@@ -530,7 +530,9 @@
   .technologyArtwork,
   .techNode,
   .page::before,
-  .page::after {
+  .page::after,
+  .outerFog,
+  .starField::before {
     animation: none;
   }
 }
@@ -558,6 +560,7 @@
   background-size: 150px 132px, 190px 170px, 220px 190px, 260px 210px, 100% 100%;
   content: "";
   opacity: .7;
+  animation: spaceStars 22s linear infinite;
 }
 
 .starField span {
@@ -594,10 +597,49 @@
   62% { opacity: .62; transform: translate3d(16px, -12px, 0) scale(1.15); }
 }
 
+@keyframes outerFogPass {
+  from { transform: translate3d(-7%, 5%, 0) scaleX(.96); }
+  to { transform: translate3d(8%, -4%, 0) scaleX(1.06); }
+}
+
 .ambientRing {
   border: 0;
   box-shadow: none;
   animation: none;
+}
+
+.outerFog {
+  position: absolute;
+  z-index: -1;
+  top: 60%;
+  right: -22%;
+  bottom: -12%;
+  left: -22%;
+  overflow: hidden;
+  opacity: .34;
+  filter: blur(24px);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.outerFog::before,
+.outerFog::after {
+  position: absolute;
+  content: "";
+  inset: -18% -12%;
+  background:
+    radial-gradient(ellipse at 28% 52%, rgba(153, 213, 235, .18), transparent 31%),
+    radial-gradient(ellipse at 70% 42%, rgba(100, 185, 232, .14), transparent 30%),
+    linear-gradient(168deg, transparent 18%, rgba(176, 225, 239, .12) 46%, transparent 68%);
+  animation: outerFogPass 17s ease-in-out infinite alternate;
+}
+
+.outerFog::after {
+  inset: 2% -20% -22%;
+  opacity: .58;
+  transform: scaleY(.72);
+  animation-delay: -8s;
+  animation-duration: 21s;
 }
 
 .front .holographicSweep {
@@ -637,7 +679,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .starField span {
+  .starField span,
+  .outerFog::before,
+  .outerFog::after {
     animation: none;
   }
 }
@@ -653,6 +697,9 @@
   z-index: 0;
   inset: 0;
   overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 48%, rgba(42, 117, 184, .28), transparent 54%),
+    linear-gradient(180deg, #061a33, #031024 72%, #020b19);
 }
 
 .back .portalAtmosphere::after {
@@ -672,10 +719,25 @@
   inset: 0;
   object-fit: cover;
   object-position: center center;
-  transform: scale(1.08);
-  filter: saturate(.92) brightness(.94) contrast(1.04);
-  mask-image: none;
-  -webkit-mask-image: none;
+  transform: scale(.8);
+  filter: saturate(.88) brightness(.9) contrast(1.02);
+  mask-image: linear-gradient(180deg, transparent 4%, #000 16%, #000 84%, transparent 96%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 4%, #000 16%, #000 84%, transparent 96%);
+}
+
+.back .starField {
+  z-index: 2;
+  inset: 0;
+  opacity: .56;
+  mask-image: linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent);
+}
+
+.back .starField::before {
+  opacity: .55;
+}
+
+.back .starField span {
+  box-shadow: 0 0 5px rgba(126, 221, 255, .9), 0 0 16px rgba(85, 170, 241, .44);
 }
 
 .back .crystalLight {
@@ -689,6 +751,11 @@
   z-index: 3;
   inset: 66% -30% 0;
   opacity: .36;
+}
+
+.back .holographicSweep {
+  z-index: 5;
+  opacity: .16;
 }
 
 .backIdentity {

@@ -83,6 +83,7 @@ export default function ContactCard() {
     return (
     <main className={styles.page}>
       <div className={styles.ambientRing} aria-hidden="true" />
+      <div className={styles.outerFog} aria-hidden="true" />
       <div className={styles.deck}>
       <div
         className={styles.stage}
@@ -170,6 +171,9 @@ export default function ContactCard() {
       </section>
       <section className={`${styles.card} ${styles.back}`} inert={!flipped} aria-hidden={!flipped} aria-label="Marca Orquestra.cs">
         <div className={styles.crystalFoil} aria-hidden="true" />
+        <div className={styles.starField} aria-hidden="true">
+          {contactStars.map((star) => <span key={star} />)}
+        </div>
         <div className={styles.portalAtmosphere} aria-hidden="true">
         <Image src="/orquestra-portal-altar-clean.png" alt="" fill sizes="(max-width: 500px) 100vw, 448px" className={styles.portalImage} />
           <div className={styles.crystalLight}><i /><i /><i /><i /></div>
