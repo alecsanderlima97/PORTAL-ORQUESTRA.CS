@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import { useRef, useState, type PointerEvent, type ReactNode } from "react";
 import Image from "next/image";
 import {
   ArrowUpRight,
@@ -13,7 +13,6 @@ import {
 import { BrandLogo } from "@/components/brand-logo";
 import { createVCard, digitalContact } from "@/lib/contact-data";
 import styles from "./contact-card.module.css";
-import QRCode from "qrcode";
 
 function ActionIcon({ children }: { children: ReactNode }) {
   return <span className={styles.actionIcon}>{children}</span>;
@@ -22,7 +21,6 @@ function ActionIcon({ children }: { children: ReactNode }) {
 export default function ContactCard() {
   const [saved, setSaved] = useState(false);
   const [flipped, setFlipped] = useState(false);
-  const [qrCode, setQrCode] = useState("");
   const cardRef = useRef<HTMLElement>(null);
   const swipeStart = useRef<{ x: number; y: number; id: number } | null>(null);
   const whatsappHref = `https://wa.me/${digitalContact.phoneE164.replace("+", "")}?text=${encodeURIComponent(digitalContact.whatsappMessage)}`;
@@ -68,23 +66,6 @@ export default function ContactCard() {
     }
   }
 
-  useEffect(() => {
-    let mounted = true;
-
-    QRCode.toDataURL(digitalContact.contactPage, {
-      errorCorrectionLevel: "M",
-      margin: 3,
-      width: 280,
-      color: { dark: "#071522", light: "#ffffff" },
-    }).then((dataUrl) => {
-      if (mounted) setQrCode(dataUrl);
-    });
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
   function downloadContact() {
     const blob = new Blob([createVCard()], { type: "text/vcard;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -125,6 +106,13 @@ export default function ContactCard() {
       >
         <div className={styles.holographicSweep} aria-hidden="true" />
         <div className={styles.crystalFoil} aria-hidden="true" />
+        <div className={styles.technologyArtwork} aria-hidden="true">
+          <span className={styles.techOrbit} />
+          <span className={styles.techCircuit} />
+          <span className={styles.techNode} />
+          <span className={styles.techNode} />
+          <span className={styles.techNode} />
+        </div>
         <div className={styles.portraitArea}>
           <Image src="/alecsander-contato.png" alt="Alecsander Lima" fill priority sizes="(max-width: 480px) 100vw, 448px" className={styles.portrait} draggable={false} />
           <header className={styles.portraitBrand}>
@@ -176,20 +164,6 @@ export default function ContactCard() {
             <span className={styles.saveHint} aria-hidden="true">+</span>
           </button>
         </div>
-
-        <section className={styles.qrSection} aria-labelledby="qr-title">
-          <div className={styles.qrFrame}>
-            {qrCode ? (
-              <Image className={styles.qrCode} src={qrCode} width={280} height={280} unoptimized alt="QR Code para abrir o cartão de contato Orquestra.CS" />
-            ) : (
-              <span className={styles.qrLoading}>Gerando QR</span>
-            )}
-          </div>
-          <div>
-            <p id="qr-title" className={styles.qrTitle}>Compartilhe este contato</p>
-            <p className={styles.qrText}>Aponte a câmera para abrir o cartão digital.</p>
-          </div>
-        </section>
 
         <footer className={styles.footer}>
           <p>Sistemas <span>•</span> Automação <span>•</span> Consultoria <span>•</span> Infraestrutura <span>•</span> Tecnologia</p>

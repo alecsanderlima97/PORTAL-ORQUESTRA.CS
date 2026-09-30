@@ -392,3 +392,139 @@
     margin-inline: -18px;
   }
 }
+
+/* Quiet technology language inside the card, kept behind the contact details. */
+.technologyArtwork {
+  position: absolute;
+  z-index: 0;
+  inset: 39% -10% 7%;
+  overflow: hidden;
+  opacity: .52;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+.technologyArtwork::before {
+  position: absolute;
+  inset: 13% 9% 12%;
+  border: 1px solid rgba(121, 221, 246, .2);
+  border-radius: 50%;
+  box-shadow: 0 0 0 16px rgba(80, 169, 214, .035), inset 0 0 40px rgba(82, 178, 225, .08);
+  content: "";
+  transform: rotate(-17deg) scaleY(.44);
+}
+
+.technologyArtwork::after {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(114deg, transparent 18%, rgba(120, 222, 248, .16) 18.2%, transparent 18.6%),
+    linear-gradient(168deg, transparent 43%, rgba(173, 229, 247, .11) 43.3%, transparent 43.7%),
+    repeating-linear-gradient(90deg, transparent 0 45px, rgba(105, 191, 226, .05) 46px, transparent 47px);
+  mask-image: linear-gradient(180deg, transparent, #000 22%, #000 72%, transparent);
+  content: "";
+}
+
+.techOrbit,
+.techCircuit,
+.techNode {
+  position: absolute;
+  display: block;
+}
+
+.techOrbit {
+  inset: 24% 17% 28%;
+  border: 1px solid rgba(147, 224, 246, .16);
+  border-radius: 50%;
+  transform: rotate(22deg) scaleY(.24);
+}
+
+.techCircuit {
+  top: 48%;
+  left: 11%;
+  width: 78%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(124, 224, 248, .3) 18%, rgba(124, 224, 248, .08) 82%, transparent);
+  box-shadow: 0 0 10px rgba(91, 202, 242, .22);
+  transform: rotate(-11deg);
+}
+
+.techNode {
+  width: 5px;
+  height: 5px;
+  border: 1px solid rgba(212, 247, 255, .8);
+  border-radius: 50%;
+  background: #77d5f5;
+  box-shadow: 0 0 10px rgba(92, 218, 255, .8);
+  animation: techPulse 4.8s ease-in-out infinite alternate;
+}
+
+.techNode:nth-of-type(3) { top: 31%; left: 29%; }
+.techNode:nth-of-type(4) { top: 51%; right: 23%; animation-delay: -1.6s; }
+.techNode:nth-of-type(5) { bottom: 27%; left: 52%; animation-delay: -3.2s; }
+
+@keyframes techPulse {
+  from { opacity: .3; transform: scale(.75); }
+  to { opacity: .95; transform: scale(1.25); }
+}
+
+/* The card floats in a calm, blue night-sky environment. */
+.page {
+  background:
+    radial-gradient(ellipse at 50% -8%, rgba(76, 163, 226, .25), transparent 38%),
+    radial-gradient(ellipse at 8% 76%, rgba(30, 108, 177, .18), transparent 34%),
+    radial-gradient(ellipse at 94% 42%, rgba(80, 119, 202, .12), transparent 32%),
+    linear-gradient(180deg, #061a31 0%, #020b18 58%, #010712 100%);
+}
+
+.page::before {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
+  transform: none;
+  opacity: .48;
+  background-image:
+    radial-gradient(circle at 12% 22%, rgba(205, 239, 255, .85) 0 1px, transparent 1.7px),
+    radial-gradient(circle at 74% 18%, rgba(157, 217, 252, .7) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 88% 72%, rgba(184, 224, 255, .74) 0 1px, transparent 1.7px),
+    radial-gradient(circle at 26% 81%, rgba(133, 201, 246, .64) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 53% 9%, rgba(231, 248, 255, .66) 0 1px, transparent 1.7px);
+  background-size: 240px 220px, 310px 260px, 370px 330px, 280px 310px, 430px 360px;
+  animation: spaceStars 22s linear infinite;
+}
+
+.page::after {
+  right: -28%;
+  bottom: -26%;
+  left: auto;
+  width: 110vw;
+  height: 58vh;
+  aspect-ratio: auto;
+  border-radius: 50%;
+  transform: rotate(-15deg);
+  background: radial-gradient(ellipse, rgba(47, 119, 195, .22), rgba(26, 81, 153, .08) 38%, transparent 70%);
+  filter: blur(30px);
+  animation: spaceNebula 18s ease-in-out infinite alternate;
+}
+
+@keyframes spaceStars {
+  from { background-position: 0 0, 0 0, 0 0, 0 0, 0 0; }
+  to { background-position: 24px 18px, -18px 24px, 22px -16px, -16px -22px, 28px 12px; }
+}
+
+@keyframes spaceNebula {
+  from { transform: translate3d(-4%, 3%, 0) rotate(-15deg) scale(1); opacity: .6; }
+  to { transform: translate3d(4%, -3%, 0) rotate(-11deg) scale(1.08); opacity: .92; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .technologyArtwork,
+  .techNode,
+  .page::before,
+  .page::after {
+    animation: none;
+  }
+}
