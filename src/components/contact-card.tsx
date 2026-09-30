@@ -9,7 +9,6 @@ import {
   Globe2,
   Mail,
   MessageCircle,
-  RotateCw,
 } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { createVCard, digitalContact } from "@/lib/contact-data";
@@ -50,7 +49,7 @@ export default function ContactCard() {
 
   function startSwipe(event: PointerEvent<HTMLDivElement>) {
     if (event.pointerType === "mouse" || !event.isPrimary) return;
-    if ((event.target as Element).closest("a, button")) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
     swipeStart.current = { x: event.clientX, y: event.clientY, id: event.pointerId };
   }
 
@@ -58,6 +57,9 @@ export default function ContactCard() {
     const start = swipeStart.current;
     swipeStart.current = null;
     if (!start || start.id !== event.pointerId) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
     const dx = event.clientX - start.x;
     const dy = event.clientY - start.y;
     if (Math.abs(dx) >= 55 && Math.abs(dx) > Math.abs(dy) * 1.5) {
@@ -95,14 +97,23 @@ export default function ContactCard() {
     window.setTimeout(() => setSaved(false), 2400);
   }
 
-  return (
+    return (
     <main className={styles.page}>
       <div className={styles.ambientRing} aria-hidden="true" />
       <div className={styles.deck}>
-      <button className={styles.flipButton} type="button" aria-pressed={flipped} onClick={() => { resetPointer(); setFlipped(!flipped); }}>
-        <RotateCw size={18} aria-hidden="true" /> {flipped ? "Ver contatos" : "Girar cartão"}
-      </button>
-      <div className={styles.stage} data-flipped={flipped} onPointerDown={startSwipe} onPointerUp={finishSwipe} onPointerCancel={() => { swipeStart.current = null; }}>
+      <div
+        className={styles.stage}
+        data-flipped={flipped}
+        aria-label="Cartão digital. Deslize para a esquerda ou direita para alternar entre a frente e o verso."
+        onPointerDown={startSwipe}
+        onPointerUp={finishSwipe}
+        onPointerCancel={(event) => {
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          }
+          swipeStart.current = null;
+        }}
+      >
       <section
         ref={cardRef}
         className={`${styles.card} ${styles.front}`}
