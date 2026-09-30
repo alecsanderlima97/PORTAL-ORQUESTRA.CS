@@ -240,6 +240,12 @@
 
 .stage {
   touch-action: pan-y pinch-zoom;
+  cursor: grab;
+  user-select: none;
+}
+
+.stage:active {
+  cursor: grabbing;
 }
 
 .stage > .card {

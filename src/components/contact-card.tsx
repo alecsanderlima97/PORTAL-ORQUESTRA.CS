@@ -48,7 +48,7 @@ export default function ContactCard() {
   }
 
   function startSwipe(event: PointerEvent<HTMLDivElement>) {
-    if (event.pointerType === "mouse" || !event.isPrimary) return;
+    if (!event.isPrimary) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     swipeStart.current = { x: event.clientX, y: event.clientY, id: event.pointerId };
   }
