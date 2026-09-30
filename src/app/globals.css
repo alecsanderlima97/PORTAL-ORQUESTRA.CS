@@ -882,11 +882,19 @@ body {
 
 /* A calm, brighter arrival once the visitor crosses the gateway. */
 .portal-site {
-  background:
-    radial-gradient(ellipse at 78% 16%, rgba(72, 149, 192, 0.2), transparent 34%),
-    linear-gradient(180deg, rgba(7, 28, 47, 0.32), rgba(3, 18, 32, 0.62)),
-    url('/orquestra-portal-dimension-v2.png') center / cover no-repeat,
-    #071c30;
+  background-color: #071c30;
+  background-image:
+    radial-gradient(ellipse at 78% 16%, rgba(72, 149, 192, .2), transparent 34%),
+    radial-gradient(ellipse at 16% 76%, rgba(31, 112, 179, .16), transparent 32%),
+    linear-gradient(180deg, rgba(7, 28, 47, .34), rgba(3, 18, 32, .68)),
+    radial-gradient(circle at 12% 22%, rgba(205, 239, 255, .82) 0 1px, transparent 1.7px),
+    radial-gradient(circle at 74% 18%, rgba(157, 217, 252, .68) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 88% 72%, rgba(184, 224, 255, .7) 0 1px, transparent 1.7px),
+    radial-gradient(circle at 26% 81%, rgba(133, 201, 246, .6) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 53% 9%, rgba(231, 248, 255, .62) 0 1px, transparent 1.7px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 240px 220px, 310px 260px, 370px 330px, 280px 310px, 430px 360px;
+  background-position: 50% 50%, 50% 50%, 50% 50%, 0 0, 0 0, 0 0, 0 0, 0 0;
+  animation: portal-space-drift 28s linear infinite;
 }
 
 .portal-gravity-field {
@@ -896,6 +904,15 @@ body {
 .portal-site::before,
 .portal-site::after {
   background: rgba(82, 153, 188, 0.075);
+}
+
+@keyframes portal-space-drift {
+  from {
+    background-position: 50% 50%, 50% 50%, 50% 50%, 0 0, 0 0, 0 0, 0 0, 0 0;
+  }
+  to {
+    background-position: 50% 50%, 50% 50%, 50% 50%, 24px 18px, -18px 24px, 22px -16px, -16px -22px, 28px 12px;
+  }
 }
 
 .portal-header {

@@ -8,7 +8,7 @@ export const digitalContact = {
   website: "https://portal.orquestracs.com",
   contactPage: "https://portal.orquestracs.com/contato",
   instagramHandle: "ORQUESTRA.CS",
-  instagramUrl: "",
+  instagramUrl: "https://www.instagram.com/orquestra.cs/",
   whatsappMessage: "Olá, Alecsander! Conheci a Orquestra.CS através do seu crachá.",
 } as const;
 
