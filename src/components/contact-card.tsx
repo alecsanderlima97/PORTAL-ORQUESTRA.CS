@@ -14,6 +14,8 @@ import { BrandLogo } from "@/components/brand-logo";
 import { createVCard, digitalContact } from "@/lib/contact-data";
 import styles from "./contact-card.module.css";
 
+const contactStars = Array.from({ length: 16 }, (_, index) => index);
+
 function ActionIcon({ children }: { children: ReactNode }) {
   return <span className={styles.actionIcon}>{children}</span>;
 }
@@ -106,12 +108,8 @@ export default function ContactCard() {
       >
         <div className={styles.holographicSweep} aria-hidden="true" />
         <div className={styles.crystalFoil} aria-hidden="true" />
-        <div className={styles.technologyArtwork} aria-hidden="true">
-          <span className={styles.techOrbit} />
-          <span className={styles.techCircuit} />
-          <span className={styles.techNode} />
-          <span className={styles.techNode} />
-          <span className={styles.techNode} />
+        <div className={styles.starField} aria-hidden="true">
+          {contactStars.map((star) => <span key={star} />)}
         </div>
         <div className={styles.portraitArea}>
           <Image src="/alecsander-contato.png" alt="Alecsander Lima" fill priority sizes="(max-width: 480px) 100vw, 448px" className={styles.portrait} draggable={false} />
