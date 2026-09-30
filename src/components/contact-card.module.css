@@ -641,3 +641,84 @@
     animation: none;
   }
 }
+
+/* The reverse side is one continuous artwork: portal, atmosphere and mark share the same plane. */
+.stage .back {
+  overflow: hidden;
+  background: #041326;
+}
+
+.back .portalAtmosphere {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+}
+
+.back .portalAtmosphere::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(2, 10, 23, .12), rgba(2, 13, 29, .04) 42%, rgba(1, 8, 18, .34)),
+    radial-gradient(ellipse at 50% 46%, transparent 22%, rgba(1, 8, 18, .25) 88%);
+  content: "";
+  pointer-events: none;
+}
+
+.back .portalImage {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  object-fit: cover;
+  object-position: center center;
+  transform: scale(1.08);
+  filter: saturate(.92) brightness(.94) contrast(1.04);
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+
+.back .crystalLight {
+  z-index: 2;
+  inset: 0;
+  opacity: .28;
+  mask-image: radial-gradient(ellipse at 50% 47%, #000 0 27%, transparent 71%);
+}
+
+.back .lowFog {
+  z-index: 3;
+  inset: 66% -30% 0;
+  opacity: .36;
+}
+
+.backIdentity {
+  position: relative;
+  z-index: 4;
+  align-self: stretch;
+  justify-content: flex-end;
+  height: 100%;
+  padding: 0 24px 16%;
+  background: linear-gradient(180deg, transparent 54%, rgba(1, 8, 18, .2));
+}
+
+.backIdentity .foilMark {
+  transform: scale(.68);
+  margin-bottom: -34px;
+  filter: drop-shadow(0 0 18px rgba(126, 211, 245, .5));
+}
+
+.backIdentity .foilMark svg {
+  filter: drop-shadow(-3px 0 2px rgba(172, 227, 216, .72)) drop-shadow(3px 1px 2px rgba(206, 167, 208, .66));
+}
+
+.backWordmark {
+  margin: 12px 0 0;
+  color: rgba(250, 253, 255, .96);
+  font-size: clamp(30px, 8vw, 38px);
+  letter-spacing: -.03em;
+  text-shadow: 0 3px 18px rgba(0, 0, 0, .42);
+}
+
+.backWordmark span {
+  color: #8edcff;
+}
