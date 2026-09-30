@@ -684,6 +684,17 @@
 .stage .back {
   overflow: hidden;
   background: #041326;
+  border: 0;
+  box-shadow: 0 22px 65px rgba(0, 0, 0, .34);
+}
+
+.stage .back::before,
+.stage .back::after,
+.back .crystalFoil,
+.back .starField,
+.back .crystalLight,
+.back .holographicSweep {
+  display: none;
 }
 
 .back .portalAtmosphere {
