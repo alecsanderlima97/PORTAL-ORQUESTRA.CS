@@ -112,7 +112,9 @@ export default function PortalPage() {
                           </div>
                         </div>
                         <a
-                          href={company.externalUrl}
+                          href={product.externalUrl ?? company.externalUrl}
+                          target="_blank"
+                          rel="noreferrer"
                           className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-zinc-950 px-3 text-sm font-semibold text-white transition hover:bg-zinc-800"
                         >
                           Abrir sistema

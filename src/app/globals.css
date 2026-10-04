@@ -265,7 +265,8 @@ body {
   z-index: 0;
   height: 100svh;
   overflow: hidden;
-  opacity: 0.74;
+  opacity: 0.62;
+  mix-blend-mode: screen;
   pointer-events: none;
 }
 
@@ -897,10 +898,6 @@ body {
   animation: portal-space-drift 28s linear infinite;
 }
 
-.portal-gravity-field {
-  opacity: 0.38;
-}
-
 .portal-site::before,
 .portal-site::after {
   background: rgba(82, 153, 188, 0.075);
@@ -1096,9 +1093,73 @@ body {
   pointer-events: none;
 }
 
+.portal-orbit-field {
+  position: absolute;
+  inset: 6% -4% 4%;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.portal-orbit-field__ring {
+  position: absolute;
+  border: 1px solid rgba(137, 204, 237, 0.2);
+  border-radius: 50%;
+  box-shadow: inset 0 0 32px rgba(77, 152, 196, 0.07);
+  opacity: 0.76;
+}
+
+.portal-orbit-field__ring--outer {
+  inset: 5% 1% 7%;
+  transform: rotate(-17deg) scaleX(0.82);
+  animation: orbit-field-turn 24s linear infinite;
+}
+
+.portal-orbit-field__ring--inner {
+  inset: 22% 15% 19%;
+  border-color: rgba(172, 222, 244, 0.16);
+  transform: rotate(24deg) scaleX(0.88);
+  animation: orbit-field-turn 17s linear infinite reverse;
+}
+
+.portal-orbit-field__beam {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1px;
+  height: 62%;
+  background: linear-gradient(180deg, transparent, rgba(137, 214, 246, 0.08) 28%, rgba(181, 232, 250, 0.55) 50%, rgba(137, 214, 246, 0.08) 72%, transparent);
+  transform-origin: 50% 0;
+  opacity: 0.66;
+}
+
+.portal-orbit-field__beam--one {
+  transform: rotate(132deg);
+  animation: orbit-beam-breathe 5.6s ease-in-out infinite alternate;
+}
+
+.portal-orbit-field__beam--two {
+  height: 49%;
+  transform: rotate(-42deg);
+  animation: orbit-beam-breathe 6.8s ease-in-out -2.4s infinite alternate;
+}
+
+.portal-orbit-field__pulse {
+  position: absolute;
+  top: 47%;
+  left: 51%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #bcecff;
+  box-shadow: 0 0 0 0 rgba(132, 212, 247, 0.34), 0 0 18px rgba(169, 226, 250, 0.6);
+  animation: orbit-pulse 3.8s ease-out infinite;
+}
+
 .portal-home__orchestrator-figure {
   position: absolute;
   inset: 0;
+  z-index: 1;
   will-change: transform;
 }
 
@@ -1108,6 +1169,108 @@ body {
   filter: saturate(0.72) contrast(1.04) brightness(0.96) drop-shadow(0 24px 50px rgba(0, 9, 18, 0.36));
   animation: orchestrator-float 7s ease-in-out 1.4s infinite alternate;
 }
+
+.portal-orbit-node {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 126px;
+  padding: 0.52rem 0.62rem;
+  border: 1px solid rgba(151, 211, 244, 0.19);
+  border-radius: 6px;
+  background: rgba(5, 24, 41, 0.42);
+  box-shadow: 0 12px 32px rgba(0, 8, 18, 0.16);
+  color: rgba(235, 248, 253, 0.78);
+  opacity: 0.68;
+  text-decoration: none;
+  backdrop-filter: blur(10px);
+  transition: border-color 260ms ease, background 260ms ease, box-shadow 260ms ease, color 260ms ease, opacity 260ms ease, transform 260ms ease;
+}
+
+.portal-orbit-node:hover,
+.portal-orbit-node:focus-visible,
+.portal-orbit-node[data-active="true"] {
+  border-color: rgba(162, 223, 249, 0.72);
+  background: rgba(9, 45, 70, 0.72);
+  box-shadow: 0 0 0 1px rgba(179, 232, 252, 0.1), 0 16px 42px rgba(18, 109, 157, 0.24);
+  color: #f7fcff;
+  opacity: 1;
+  outline: none;
+  transform: translateY(-3px);
+}
+
+.portal-orbit-node__icon {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  place-items: center;
+  border: 1px solid rgba(157, 221, 248, 0.28);
+  border-radius: 50%;
+  color: #a8e0f7;
+  box-shadow: inset 0 0 13px rgba(117, 194, 230, 0.08);
+}
+
+.portal-orbit-node__content {
+  display: grid;
+  gap: 0.08rem;
+}
+
+.portal-orbit-node__content strong {
+  font-size: 0.67rem;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.portal-orbit-node__content small {
+  color: rgba(210, 234, 246, 0.58);
+  font-size: 0.59rem;
+  line-height: 1.2;
+}
+
+.portal-orbit-node::after {
+  position: absolute;
+  top: 50%;
+  width: clamp(30px, 8vw, 74px);
+  height: 1px;
+  background: linear-gradient(90deg, rgba(151, 216, 246, 0.02), rgba(174, 230, 252, 0.75), rgba(151, 216, 246, 0.02));
+  background-size: 54px 100%;
+  content: "";
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.portal-orbit-node[data-active="true"]::after {
+  animation: node-signal 1.6s linear infinite;
+  opacity: 0.9;
+}
+
+.portal-orbit-node--northwest { top: 14%; left: -2%; }
+.portal-orbit-node--northeast { top: 22%; right: -4%; }
+.portal-orbit-node--east { top: 47%; right: -8%; }
+.portal-orbit-node--southwest { bottom: 28%; left: -5%; }
+.portal-orbit-node--southeast { right: -3%; bottom: 20%; }
+
+.portal-orbit-node--northwest::after,
+.portal-orbit-node--southwest::after {
+  left: 100%;
+  transform-origin: 0 50%;
+}
+
+.portal-orbit-node--northwest::after { transform: rotate(17deg); }
+.portal-orbit-node--southwest::after { transform: rotate(-15deg); }
+
+.portal-orbit-node--northeast::after,
+.portal-orbit-node--southeast::after {
+  right: 100%;
+  transform-origin: 100% 50%;
+}
+
+.portal-orbit-node--northeast::after { transform: rotate(-17deg); }
+.portal-orbit-node--southeast::after { transform: rotate(15deg); }
 
 .portal-orchestrator-panel {
   position: absolute;
@@ -1170,6 +1333,26 @@ body {
   font-size: 0.59rem;
 }
 
+@keyframes orbit-field-turn {
+  from { rotate: 0deg; }
+  to { rotate: 360deg; }
+}
+
+@keyframes orbit-beam-breathe {
+  from { opacity: 0.2; filter: blur(0); }
+  to { opacity: 0.9; filter: blur(0.3px); }
+}
+
+@keyframes orbit-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(132, 212, 247, 0.34), 0 0 18px rgba(169, 226, 250, 0.6); transform: scale(0.7); }
+  58% { box-shadow: 0 0 0 30px rgba(132, 212, 247, 0), 0 0 24px rgba(169, 226, 250, 0.7); transform: scale(1); }
+  100% { box-shadow: 0 0 0 30px rgba(132, 212, 247, 0), 0 0 18px rgba(169, 226, 250, 0.35); transform: scale(0.7); }
+}
+
+@keyframes node-signal {
+  to { background-position: 54px 0; }
+}
+
 @keyframes orchestrator-float {
   from { transform: translateY(0); }
   to { transform: translateY(-8px); }
@@ -1188,28 +1371,62 @@ body {
   }
 
   .portal-home__orchestrator {
-    position: absolute;
-    top: 12%;
-    right: -17vw;
-    width: 75vw;
-    height: 76%;
-    min-height: 0;
-    opacity: 0.38;
-    pointer-events: none;
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 100%;
+    height: 320px;
+    min-height: 320px;
+    margin-top: -0.5rem;
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .portal-home__orchestrator-image {
     object-position: center;
-    filter: saturate(0.62) contrast(1.02) brightness(0.78);
+    filter: saturate(0.62) contrast(1.02) brightness(0.72);
   }
 
   .portal-orchestrator-panel {
+    right: 0;
+    bottom: 0;
+    width: min(248px, 74%);
+  }
+
+  .portal-orbit-field {
+    inset: 2% -8% 0;
+  }
+
+  .portal-orbit-node {
+    min-width: 0;
+    padding: 0.42rem 0.5rem;
+  }
+
+  .portal-orbit-node__content small {
     display: none;
+  }
+
+  .portal-orbit-node__content strong {
+    font-size: 0.6rem;
+  }
+
+  .portal-orbit-node--northwest { top: 9%; left: 0; }
+  .portal-orbit-node--northeast { top: 14%; right: 0; }
+  .portal-orbit-node--east { top: 46%; right: 0; }
+  .portal-orbit-node--southwest { bottom: 22%; left: 0; }
+  .portal-orbit-node--southeast { right: 0; bottom: 27%; }
+
+  .portal-orbit-node::after {
+    width: 32px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .portal-home__orchestrator-image {
+  .portal-home__orchestrator-image,
+  .portal-orbit-field__ring,
+  .portal-orbit-field__beam,
+  .portal-orbit-field__pulse,
+  .portal-orbit-node[data-active="true"]::after {
     animation: none;
   }
 }

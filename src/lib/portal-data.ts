@@ -30,6 +30,18 @@ export type Product = {
   status: ProductStatus;
   icon: typeof Factory;
   accent: string;
+  externalUrl?: string;
+};
+
+export type DeployedProject = {
+  id: string;
+  name: string;
+  vercelName: string;
+  url: string;
+  category: string;
+  description: string;
+  icon: typeof Factory;
+  status: "publicado" | "legado" | "tecnico";
 };
 
 export type Company = {
@@ -51,8 +63,8 @@ export type Company = {
 export const products: Product[] = [
   {
     id: "madeira",
-    name: "Orquestra Madeira",
-    shortName: "Madeira / Serraria",
+    name: "Sistema Serraria",
+    shortName: "Sistema Serraria",
     category: "Madeira",
     audience: "Serrarias, madeireiras e paleteiras",
     description:
@@ -61,6 +73,7 @@ export const products: Product[] = [
     status: "ativo",
     icon: Factory,
     accent: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+    externalUrl: "https://orquestracs.com",
   },
   {
     id: "beleza",
@@ -87,6 +100,7 @@ export const products: Product[] = [
     status: "ativo",
     icon: Car,
     accent: "bg-cyan-50 text-cyan-700 ring-cyan-100",
+    externalUrl: "https://autodetail.orquestracs.com",
   },
   {
     id: "food",
@@ -113,6 +127,7 @@ export const products: Product[] = [
     status: "ativo",
     icon: Clock3,
     accent: "bg-indigo-50 text-indigo-700 ring-indigo-100",
+    externalUrl: "https://faceid.orquestracs.com",
   },
   {
     id: "hub",
@@ -126,6 +141,7 @@ export const products: Product[] = [
     status: "ativo",
     icon: WalletCards,
     accent: "bg-teal-50 text-teal-700 ring-teal-100",
+    externalUrl: "https://hub.orquestracs.com",
   },
   {
     id: "comercial",
@@ -142,6 +158,89 @@ export const products: Product[] = [
   },
 ];
 
+export const deployedProjects: DeployedProject[] = [
+  {
+    id: "orquestra-blend",
+    name: "Orquestra Blend",
+    vercelName: "orquestra-blend",
+    url: "https://orquestra-blend.vercel.app",
+    category: "Produto digital",
+    description: "Produto digital publicado no ecossistema Orquestra.cs.",
+    icon: Sparkles,
+    status: "publicado",
+  },
+  {
+    id: "sistema-serraria",
+    name: "Sistema Serraria",
+    vercelName: "sistema-serraria",
+    url: "https://orquestracs.com",
+    category: "Indústria e madeira",
+    description: "Sistema operacional para serraria, madeira, estoque e produção.",
+    icon: Factory,
+    status: "publicado",
+  },
+  {
+    id: "orquestracs-face-id",
+    name: "Orquestra Face ID",
+    vercelName: "orquestracs-face-id",
+    url: "https://faceid.orquestracs.com",
+    category: "Ponto e RH",
+    description: "Batida de ponto, jornadas e identificação para equipes.",
+    icon: Clock3,
+    status: "publicado",
+  },
+  {
+    id: "orquestra-fit",
+    name: "Orquestra Fit",
+    vercelName: "orquestra-fit",
+    url: "https://orquestra-fit.vercel.app",
+    category: "Academia e operação",
+    description: "Gestão de academia, alunos, treinos e acompanhamento operacional.",
+    icon: HeartHandshake,
+    status: "publicado",
+  },
+  {
+    id: "orquestra-hub",
+    name: "Orquestra Hub",
+    vercelName: "orquestra-hub",
+    url: "https://hub.orquestracs.com",
+    category: "Financeiro",
+    description: "Gestão financeira, fornecedores, compras e decisões empresariais.",
+    icon: WalletCards,
+    status: "publicado",
+  },
+  {
+    id: "woodmaster",
+    name: "Woodmaster",
+    vercelName: "woodmaster",
+    url: "https://woodmaster-gules.vercel.app",
+    category: "Madeira",
+    description: "Solução digital para operações e processos do setor madeireiro.",
+    icon: Factory,
+    status: "publicado",
+  },
+  {
+    id: "orquestra-auto-detail",
+    name: "Orquestra Auto Detail",
+    vercelName: "orquestra-auto-detail",
+    url: "https://autodetail.orquestracs.com",
+    category: "Estética automotiva",
+    description: "Agenda, ordens de serviço, clientes e operação de estética automotiva.",
+    icon: Car,
+    status: "publicado",
+  },
+  {
+    id: "orquestra-studio",
+    name: "Orquestra Studio",
+    vercelName: "orquestra-studio",
+    url: "https://studio.orquestracs.com",
+    category: "Serviços e beleza",
+    description: "Sistema para serviços, agenda e relacionamento com clientes.",
+    icon: Scissors,
+    status: "publicado",
+  },
+];
+
 export const companies: Company[] = [
   {
     id: "vanmarte",
@@ -155,7 +254,7 @@ export const companies: Company[] = [
     status: "ativo",
     users: 8,
     aiCredits: 0,
-    externalUrl: "https://sistema-serraria.exemplo.com",
+    externalUrl: "https://orquestracs.com",
     lastAccess: "Hoje, 09:42",
   },
   {
@@ -170,7 +269,7 @@ export const companies: Company[] = [
     status: "vencendo",
     users: 4,
     aiCredits: 120,
-    externalUrl: "https://estetica-automotiva.exemplo.com",
+    externalUrl: "https://autodetail.orquestracs.com",
     lastAccess: "Ontem, 18:10",
   },
   {
@@ -185,7 +284,7 @@ export const companies: Company[] = [
     status: "inadimplente",
     users: 5,
     aiCredits: 60,
-    externalUrl: "https://orquestra-hub.exemplo.com",
+    externalUrl: "https://hub.orquestracs.com",
     lastAccess: "25/08/2026, 14:03",
   },
   {
@@ -200,7 +299,7 @@ export const companies: Company[] = [
     status: "teste",
     users: 12,
     aiCredits: 0,
-    externalUrl: "https://orquestra-faceid.exemplo.com",
+    externalUrl: "https://faceid.orquestracs.com",
     lastAccess: "Hoje, 07:58",
   },
 ];

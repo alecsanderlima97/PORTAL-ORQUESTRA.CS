@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Activity, ArrowRight, ChevronDown, LockKeyhole, Mail, MessageCircle, Network, Workflow } from "lucide-react";
 import gsap from "gsap";
-import { products } from "@/lib/portal-data";
+import { deployedProjects } from "@/lib/portal-data";
 import { BrandLogo } from "@/components/brand-logo";
 import { PortalGravityField, PortalWarpCanvas } from "@/components/portal-visual-effects";
 
@@ -15,15 +15,58 @@ type GatewayPhase = "arrival" | "entering" | "inside";
 const solutionGroups = [
   {
     title: "Sistemas de operação",
-    description: "Produtos preparados para rotinas que precisam de controle e velocidade.",
-    ids: ["madeira", "auto", "beleza", "food", "ponto"],
+    description: "Sistemas reais publicados para organizar rotinas e ganhar clareza.",
+    ids: ["sistema-serraria", "orquestracs-face-id", "orquestra-fit", "orquestra-auto-detail"],
   },
   {
-    title: "Gestão e crescimento",
-    description: "Informação organizada para decidir melhor e vender com consistência.",
-    ids: ["hub", "comercial"],
+    title: "Gestão e ecossistema",
+    description: "Produtos que conectam gestão, madeira, serviços e crescimento.",
+    ids: ["orquestra-hub", "woodmaster", "orquestra-studio", "orquestra-blend"],
   },
 ];
+
+const heroNavigation = [
+  {
+    id: "solucoes",
+    label: "Soluções",
+    detail: "Tecnologia sob medida",
+    href: "#solucoes",
+    position: "northwest",
+    icon: Network,
+  },
+  {
+    id: "sistemas-publicados",
+    label: "Sistemas publicados",
+    detail: "Produtos reais",
+    href: "#solucoes",
+    position: "northeast",
+    icon: Activity,
+  },
+  {
+    id: "consultoria",
+    label: "Consultoria",
+    detail: "Estratégia e operação",
+    href: "#servicos",
+    position: "east",
+    icon: MessageCircle,
+  },
+  {
+    id: "planos",
+    label: "Planos",
+    detail: "Caminhos para começar",
+    href: "#planos",
+    position: "southeast",
+    icon: Workflow,
+  },
+  {
+    id: "quem-somos",
+    label: "Quem somos",
+    detail: "A Orquestra.cs",
+    href: "#sobre",
+    position: "southwest",
+    icon: LockKeyhole,
+  },
+] as const;
 
 function playPortalTransitionSound() {
   const AudioContextConstructor =
@@ -90,6 +133,7 @@ function playPortalTransitionSound() {
 
 export function PortalLanding() {
   const [phase, setPhase] = useState<GatewayPhase>("arrival");
+  const [activeNavigationId, setActiveNavigationId] = useState<(typeof heroNavigation)[number]["id"]>("solucoes");
   const transitionTimerRef = useRef<number | null>(null);
   const gatewayRef = useRef<HTMLButtonElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -100,6 +144,7 @@ export function PortalLanding() {
   const siteRef = useRef<HTMLDivElement>(null);
   const orchestratorRef = useRef<HTMLDivElement>(null);
   const orchestratorGlowRef = useRef<HTMLSpanElement>(null);
+  const activeNavigation = heroNavigation.find((item) => item.id === activeNavigationId) ?? heroNavigation[0];
 
   const enterPortal = useCallback(() => {
     if (phase !== "arrival") return;
@@ -279,6 +324,7 @@ export function PortalLanding() {
           </Link>
           <nav className="portal-header__nav" aria-label="Navegação principal">
             <a href="#solucoes">Soluções</a>
+            <a href="#solucoes">Sistemas publicados</a>
             <a href="#servicos">Consultoria</a>
             <a href="#planos">Planos</a>
             <a href="#sobre">Quem somos</a>
@@ -304,8 +350,43 @@ export function PortalLanding() {
             </div>
           </div>
 
-          <div className="portal-home__orchestrator" aria-label="Orquestrador digital da Orquestra.cs">
+          <div
+            className="portal-home__orchestrator"
+            aria-label="Orquestrador digital da Orquestra.cs"
+            data-active-navigation={activeNavigation.id}
+          >
             <span ref={orchestratorGlowRef} className="portal-home__orchestrator-glow" aria-hidden="true" />
+            <span className="portal-orbit-field" aria-hidden="true">
+              <span className="portal-orbit-field__ring portal-orbit-field__ring--outer" />
+              <span className="portal-orbit-field__ring portal-orbit-field__ring--inner" />
+              <span className="portal-orbit-field__beam portal-orbit-field__beam--one" />
+              <span className="portal-orbit-field__beam portal-orbit-field__beam--two" />
+              <span className="portal-orbit-field__pulse" />
+            </span>
+
+            {heroNavigation.map((item) => {
+              const Icon = item.icon;
+              const isActive = item.id === activeNavigation.id;
+
+              return (
+                <a
+                  key={item.id}
+                  href={item.href}
+                  className={`portal-orbit-node portal-orbit-node--${item.position}`}
+                  data-active={isActive}
+                  onPointerEnter={() => setActiveNavigationId(item.id)}
+                  onFocus={() => setActiveNavigationId(item.id)}
+                  aria-label={`Ir para ${item.label}: ${item.detail}`}
+                >
+                  <span className="portal-orbit-node__icon"><Icon className="size-3.5" /></span>
+                  <span className="portal-orbit-node__content">
+                    <strong>{item.label}</strong>
+                    <small>{item.detail}</small>
+                  </span>
+                </a>
+              );
+            })}
+
             <div ref={orchestratorRef} className="portal-home__orchestrator-figure">
               <Image
                 src="/orquestra-motion-conductor.png"
@@ -317,14 +398,14 @@ export function PortalLanding() {
               />
             </div>
             <div className="portal-orchestrator-panel">
-              <div className="portal-orchestrator-panel__status"><span /> Orquestrador</div>
+              <div className="portal-orchestrator-panel__status"><span /> Navegação ativa</div>
               <div className="portal-orchestrator-panel__message">
                 <Network className="size-4" />
-                <span>Uma direção para cada sistema.</span>
+                <span>{activeNavigation.label}: {activeNavigation.detail}</span>
               </div>
               <div className="portal-orchestrator-panel__signals">
-                <span><Workflow className="size-3.5" /> Fluxos conectados</span>
-                <span><Activity className="size-3.5" /> Operação em sintonia</span>
+                <span><Workflow className="size-3.5" /> Portal integrado</span>
+                <span><Activity className="size-3.5" /> Em sintonia</span>
               </div>
             </div>
           </div>
@@ -332,9 +413,9 @@ export function PortalLanding() {
 
         <section className="portal-solutions" id="solucoes">
           <div className="portal-solutions__heading">
-            <p className="portal-eyebrow">Soluções</p>
-            <h2>Escolha a frente que precisa avançar.</h2>
-            <p className="portal-section-intro">Sistemas independentes, feitos para a realidade de cada operação.</p>
+            <p className="portal-eyebrow">Sistemas publicados</p>
+            <h2>Produtos reais da Orquestra.cs.</h2>
+            <p className="portal-section-intro">Cada sistema nasce para resolver uma rotina específica e pode evoluir com a operação.</p>
           </div>
           <div className="portal-solutions__list">
             {solutionGroups.map((group) => (
@@ -344,16 +425,16 @@ export function PortalLanding() {
                   <p>{group.description}</p>
                 </div>
                 {group.ids.map((id) => {
-                  const product = products.find((item) => item.id === id);
-                  if (!product) return null;
-                  const Icon = product.icon;
+                  const project = deployedProjects.find((item) => item.id === id);
+                  if (!project) return null;
+                  const Icon = project.icon;
                   return (
-                    <Link href="/login" className="portal-solution" key={product.id}>
+                    <a href={project.url} target="_blank" rel="noreferrer" className="portal-solution" key={project.id}>
                       <span className="portal-solution__icon"><Icon className="size-4" /></span>
-                      <span className="portal-solution__name">{product.name}</span>
-                      <span className="portal-solution__category">{product.audience}</span>
+                      <span className="portal-solution__name">{project.name}</span>
+                      <span className="portal-solution__category">{project.category}</span>
                       <ArrowRight className="portal-solution__arrow size-4" />
-                    </Link>
+                    </a>
                   );
                 })}
               </div>

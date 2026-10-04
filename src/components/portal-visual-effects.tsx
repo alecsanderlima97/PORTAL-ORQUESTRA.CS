@@ -208,7 +208,8 @@ export function PortalGravityField() {
       return;
     }
 
-    renderer.setPixelRatio(Math.min(Math.max(window.devicePixelRatio, 1), 1.35));
+    const compact = window.matchMedia("(max-width: 720px)").matches;
+    renderer.setPixelRatio(compact ? 0.9 : Math.min(window.devicePixelRatio, 1.2));
     renderer.domElement.className = "portal-gravity-field__surface";
     host.appendChild(renderer.domElement);
 
@@ -266,6 +267,19 @@ export function PortalGravityField() {
 
           float orbit = exp(-abs(radius - 0.235) * 34.0) * 0.13;
           orbit *= 0.55 + 0.45 * sin(angle * 3.0 - uTime * 0.22);
+
+          float ringOne = exp(-abs(radius - 0.34 - sin(angle * 2.0 - uTime * 0.42) * 0.026) * 78.0);
+          float ringTwo = exp(-abs(radius - 0.47 - sin(angle * 3.0 + uTime * 0.31) * 0.038) * 66.0);
+          float ringThree = exp(-abs(radius - 0.62 - sin(angle * 1.5 - uTime * 0.24) * 0.05) * 54.0);
+          float signalWave = 0.5 + 0.5 * sin(angle * 5.0 + radius * 15.0 - uTime * 1.45);
+          float signalPulse = smoothstep(0.78, 1.0, signalWave);
+          float dataFlow = (ringOne * 0.54 + ringTwo * 0.34 + ringThree * 0.2) * (0.28 + signalPulse * 0.72);
+
+          vec2 nodeOnePosition = vec2(cos(uTime * 0.23) * 0.36, sin(uTime * 0.23) * 0.28);
+          vec2 nodeTwoPosition = vec2(cos(-uTime * 0.17 + 2.1) * 0.52, sin(-uTime * 0.17 + 2.1) * 0.4);
+          float nodeOne = exp(-length(p - nodeOnePosition) * 42.0);
+          float nodeTwo = exp(-length(p - nodeTwoPosition) * 48.0);
+
           float core = exp(-radius * 7.5) * 0.16;
           float vignette = smoothstep(1.2, 0.18, distance(uv, vec2(0.54)));
 
@@ -275,6 +289,9 @@ export function PortalGravityField() {
           vec3 color = deep;
           color += blue * orbit;
           color += pale * dust * (0.26 + gravity * 0.55);
+          color += blue * dataFlow * 0.23;
+          color += pale * dataFlow * 0.1;
+          color += pale * (nodeOne + nodeTwo) * 0.16;
           color += blue * core;
           color *= 0.72 + vignette * 0.34;
 
@@ -293,9 +310,10 @@ export function PortalGravityField() {
       uniforms.uResolution.value.set(Math.max(width, 1), Math.max(height, 1));
     };
 
+    const targetPointer = new THREE.Vector2(0, 0);
     const onPointerMove = (event: PointerEvent) => {
-      uniforms.uPointer.value.x = (event.clientX / window.innerWidth - 0.5) * 2;
-      uniforms.uPointer.value.y = (event.clientY / window.innerHeight - 0.5) * -2;
+      targetPointer.x = (event.clientX / window.innerWidth - 0.5) * 2;
+      targetPointer.y = (event.clientY / window.innerHeight - 0.5) * -2;
     };
 
     resize();
@@ -306,18 +324,46 @@ export function PortalGravityField() {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const startedAt = performance.now();
     let animationFrame = 0;
+    let pageVisible = !document.hidden;
+    let fieldVisible = true;
+    let rendering = false;
 
     const render = () => {
+      if (!pageVisible || !fieldVisible) {
+        rendering = false;
+        return;
+      }
+
+      rendering = true;
+      const easing = reducedMotion.matches ? 1 : 0.08;
+      uniforms.uPointer.value.lerp(targetPointer, easing);
       uniforms.uTime.value = reducedMotion.matches ? 0 : (performance.now() - startedAt) / 1000;
       renderer.render(scene, camera);
       if (!reducedMotion.matches) animationFrame = window.requestAnimationFrame(render);
     };
+
+    const resumeRendering = () => {
+      pageVisible = !document.hidden;
+      if (pageVisible && fieldVisible && !rendering && !reducedMotion.matches) render();
+    };
+
+    const visibilityObserver = new IntersectionObserver(
+      ([entry]) => {
+        fieldVisible = entry.isIntersecting;
+        if (fieldVisible) resumeRendering();
+      },
+      { threshold: 0.01 },
+    );
+    visibilityObserver.observe(host);
+    document.addEventListener("visibilitychange", resumeRendering);
 
     render();
 
     return () => {
       window.cancelAnimationFrame(animationFrame);
       window.removeEventListener("pointermove", onPointerMove);
+      document.removeEventListener("visibilitychange", resumeRendering);
+      visibilityObserver.disconnect();
       resizeObserver.disconnect();
       geometry.dispose();
       material.dispose();
