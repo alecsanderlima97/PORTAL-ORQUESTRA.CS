@@ -10,59 +10,90 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
+    function activeProfile() {
+      return signedIn() && userDoc().data.active == true;
+    }
+
     function isPlatformAdmin() {
-      return signedIn()
+      return activeProfile()
         && userDoc().data.role in ['orquestra_admin', 'platform_owner'];
     }
 
-    function sameTenant(tenantId) {
-      return signedIn()
-        && userDoc().data.tenantId == tenantId
-        && userDoc().data.active == true;
+    function belongsToTenant(tenantId) {
+      return activeProfile() && userDoc().data.tenantId == tenantId;
     }
 
     match /users/{userId} {
-      allow read: if isPlatformAdmin() || request.auth.uid == userId;
-      allow create, update: if isPlatformAdmin();
-      allow delete: if false;
+      allow read: if isPlatformAdmin() || (signedIn() && request.auth.uid == userId);
+      // Roles, tenant and status are changed only by the server through Firebase Admin SDK.
+      allow create, update, delete: if false;
     }
 
-    match /companies/{companyId} {
-      allow read: if isPlatformAdmin() || sameTenant(companyId);
-      allow create, update: if isPlatformAdmin();
-      allow delete: if false;
+    match /companies/{tenantId} {
+      allow read: if isPlatformAdmin() || belongsToTenant(tenantId);
+      allow create, update, delete: if false;
     }
 
+    match /managedServices/{serviceId} {
+      allow read: if isPlatformAdmin() || belongsToTenant(resource.data.tenantId);
+      allow create, update, delete: if false;
+    }
+
+    // Kept during the transition from the original portal model.
     match /companyModules/{moduleAccessId} {
-      allow read: if isPlatformAdmin() || sameTenant(resource.data.tenantId);
-      allow create, update: if isPlatformAdmin();
-      allow delete: if false;
+      allow read: if isPlatformAdmin() || belongsToTenant(resource.data.tenantId);
+      allow create, update, delete: if false;
+    }
+
+    match /billingCharges/{chargeId} {
+      allow read: if isPlatformAdmin() || belongsToTenant(resource.data.tenantId);
+      allow create, update, delete: if false;
     }
 
     match /payments/{paymentId} {
-      allow read: if isPlatformAdmin() || sameTenant(resource.data.tenantId);
-      allow create, update: if isPlatformAdmin();
-      allow delete: if false;
+      allow read: if isPlatformAdmin() || belongsToTenant(resource.data.tenantId);
+      allow create, update, delete: if false;
     }
 
-    match /supportTickets/{ticketId} {
-      allow read: if isPlatformAdmin() || sameTenant(resource.data.tenantId);
-      allow create: if signedIn() && request.resource.data.tenantId == userDoc().data.tenantId;
-      allow update: if isPlatformAdmin();
-      allow delete: if false;
+    match /usageSummaries/{summaryId} {
+      allow read: if isPlatformAdmin() || belongsToTenant(resource.data.tenantId);
+      allow create, update, delete: if false;
     }
 
-    match /announcements/{announcementId} {
-      allow read: if signedIn();
-      allow create, update: if isPlatformAdmin();
-      allow delete: if false;
+    match /accessCommands/{commandId} {
+      allow read: if isPlatformAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /connectorEvents/{eventId} {
+      allow read: if isPlatformAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /opportunities/{opportunityId} {
+      allow read: if isPlatformAdmin();
+      allow create, update, delete: if false;
     }
 
     match /auditLogs/{logId} {
-      allow read: if isPlatformAdmin() || sameTenant(resource.data.tenantId);
-      allow create: if signedIn();
+      allow read: if isPlatformAdmin();
+      // An audit trail is server-written. A browser must never forge audit events.
+      allow create, update, delete: if false;
+    }
+
+    match /supportTickets/{ticketId} {
+      allow read: if isPlatformAdmin() || belongsToTenant(resource.data.tenantId);
+      allow create: if belongsToTenant(request.resource.data.tenantId)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'tenantId', 'createdBy', 'subject', 'message', 'status', 'createdAt'
+        ]);
       allow update, delete: if false;
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if activeProfile();
+      allow create, update, delete: if false;
     }
   }
 }
-

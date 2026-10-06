@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>Estudo visual | Orquestra.cs</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #eff7fc;
+        --muted: #bed0dd;
+        --blue: #8acdf0;
+        --navy: #06182b;
+        --deep: #03111f;
+        --line: rgba(195, 225, 242, 0.2);
+        --frame-width: 1440px;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+        background: #eaf0f4;
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      button, a { font: inherit; }
+
+      .preview-bar {
+        display: flex;
+        min-height: 62px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 10px max(20px, calc((100vw - var(--frame-width)) / 2));
+        color: #183248;
+      }
+
+      .preview-label {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .preview-label span {
+        color: #607487;
+        font-size: 11px;
+        font-weight: 500;
+      }
+
+      .device-switch {
+        display: inline-flex;
+        gap: 2px;
+        padding: 3px;
+        border: 1px solid #c8d5df;
+        background: #f7fafc;
+      }
+
+      .device-switch button {
+        min-height: 34px;
+        padding: 0 13px;
+        border: 0;
+        background: transparent;
+        color: #52687a;
+        cursor: pointer;
+        font-size: 12px;
+      }
+
+      .device-switch button[aria-pressed="true"] {
+        background: #dbeaf3;
+        color: #09253b;
+        font-weight: 700;
+      }
+
+      .stage-wrap {
+        width: min(calc(100% - 40px), var(--frame-width));
+        margin: 0 auto 28px;
+      }
+
+      .artboard {
+        position: relative;
+        height: min(78vh, 900px);
+        min-height: 650px;
+        overflow: hidden;
+        isolation: isolate;
+        background: var(--navy);
+        box-shadow: 0 18px 55px rgba(13, 37, 58, 0.16);
+      }
+
+      .scene-art {
+        position: absolute;
+        z-index: -2;
+        inset: 0 0 0 29%;
+        overflow: hidden;
+        mask-image: linear-gradient(90deg, transparent 0%, #000 24%, #000 100%);
+        transition: inset 1.15s cubic-bezier(0.2, 0.75, 0.15, 1), filter 1.15s ease;
+      }
+
+      .scene-art img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: 50% 50%;
+        opacity: 0.87;
+        transform: scale(1.025);
+        transition: transform 1.45s cubic-bezier(0.18, 0.76, 0.16, 1), opacity 900ms ease, filter 1s ease;
+      }
+
+      .scene-veil {
+        position: absolute;
+        z-index: -1;
+        inset: 0;
+        background:
+          linear-gradient(90deg, #06182b 0%, rgba(6, 24, 43, 0.96) 27%, rgba(6, 24, 43, 0.56) 49%, rgba(6, 24, 43, 0.16) 78%),
+          linear-gradient(180deg, rgba(3, 14, 25, 0.34), transparent 34%, rgba(3, 14, 25, 0.46));
+        transition: background 900ms ease;
+      }
+
+      .site-header {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        width: min(calc(100% - 96px), 1280px);
+        height: 92px;
+        align-items: center;
+        justify-content: space-between;
+        margin: 0 auto;
+      }
+
+      .brand-lockup {
+        display: block;
+        width: 196px;
+        line-height: 0;
+      }
+
+      .brand-lockup img { display: block; width: 100%; height: auto; }
+
+      .main-nav {
+        display: flex;
+        align-items: center;
+        gap: 31px;
+        color: rgba(239, 247, 252, 0.78);
+        font-size: 13px;
+      }
+
+      .main-nav a, .client-link { color: inherit; text-decoration: none; }
+      .main-nav a:hover, .client-link:hover { color: white; }
+
+      .client-link {
+        padding: 10px 14px;
+        border: 1px solid rgba(195, 225, 242, 0.38);
+        color: var(--ink);
+        font-size: 12px;
+      }
+
+      .page-state {
+        position: relative;
+        z-index: 1;
+        width: min(calc(100% - 96px), 1280px);
+        min-height: calc(100% - 92px);
+        margin: 0 auto;
+      }
+
+      .arrival, .inside {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        transition: opacity 420ms ease, transform 720ms cubic-bezier(0.2, 0.75, 0.15, 1), visibility 420ms;
+      }
+
+      .arrival { visibility: visible; opacity: 1; transform: translateY(0); }
+      .arrival-copy { width: min(54%, 610px); padding: 35px 0 100px; }
+
+      .eyebrow {
+        margin: 0 0 20px;
+        color: var(--blue);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      h1, h2, p { margin-top: 0; }
+
+      .arrival h1 {
+        max-width: 570px;
+        margin-bottom: 19px;
+        font-size: 54px;
+        font-weight: 590;
+        letter-spacing: 0;
+        line-height: 1.08;
+      }
+
+      .lead {
+        max-width: 530px;
+        margin-bottom: 29px;
+        color: var(--muted);
+        font-size: 17px;
+        line-height: 1.65;
+      }
+
+      .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+
+      .action {
+        display: inline-flex;
+        min-height: 48px;
+        align-items: center;
+        justify-content: center;
+        padding: 0 18px;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 650;
+        transition: background 180ms ease, color 180ms ease, border-color 180ms ease;
+      }
+
+      .action-primary { background: #b8e1f7; color: #092239; }
+      .action-primary:hover { background: #d0edfc; }
+      .action-secondary { border-color: rgba(195, 225, 242, 0.42); color: var(--ink); }
+      .action-secondary:hover { border-color: var(--blue); background: rgba(164, 215, 243, 0.08); }
+
+      .service-line {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 19px;
+        margin: 36px 0 0;
+        color: rgba(211, 229, 240, 0.68);
+        font-size: 11px;
+      }
+
+      .service-line span + span::before {
+        content: "";
+        display: inline-block;
+        width: 3px;
+        height: 3px;
+        margin: 0 19px 2px 0;
+        border-radius: 50%;
+        background: #79bfe7;
+      }
+
+      .inside { visibility: hidden; opacity: 0; transform: translateY(20px); }
+      .inside-copy { width: min(70%, 820px); padding: 30px 0 100px; }
+
+      .inside h2 {
+        max-width: 710px;
+        margin-bottom: 18px;
+        font-size: 50px;
+        font-weight: 580;
+        line-height: 1.1;
+      }
+
+      .inside .lead { max-width: 650px; }
+
+      .service-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 24px;
+        margin: 40px 0 34px;
+      }
+
+      .service-item { padding-top: 14px; border-top: 1px solid var(--line); }
+      .service-item strong { display: block; margin-bottom: 7px; font-size: 14px; font-weight: 620; }
+      .service-item p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+
+      .reset-entry {
+        position: absolute;
+        z-index: 3;
+        right: 24px;
+        bottom: 22px;
+        padding: 8px 10px;
+        border: 1px solid rgba(210, 233, 246, 0.34);
+        background: rgba(5, 21, 37, 0.66);
+        color: rgba(239, 247, 252, 0.82);
+        cursor: pointer;
+        font-size: 11px;
+      }
+
+      .portal-preview[data-state="entering"] .scene-art { inset: -4% -2% -4% 23%; filter: brightness(1.2) saturate(1.05); }
+      .portal-preview[data-state="entering"] .scene-art img { transform: scale(1.5); opacity: 1; }
+      .portal-preview[data-state="entering"] .scene-veil { background: linear-gradient(90deg, #06182b 0%, rgba(6, 24, 43, 0.72) 31%, rgba(6, 24, 43, 0.1) 68%, rgba(191, 230, 250, 0.08)); }
+      .portal-preview[data-state="entering"] .arrival { opacity: 0; transform: scale(1.025); }
+      .portal-preview[data-state="inside"] .arrival { visibility: hidden; }
+      .portal-preview[data-state="inside"] .inside { visibility: visible; opacity: 1; transform: translateY(0); transition-delay: 180ms; }
+      .portal-preview[data-state="inside"] .scene-art { inset: 0; filter: brightness(1.18) saturate(0.82); }
+      .portal-preview[data-state="inside"] .scene-art img { transform: scale(1.06); opacity: 0.48; }
+      .portal-preview[data-state="inside"] .scene-veil { background: linear-gradient(90deg, rgba(5, 25, 43, 0.94), rgba(8, 36, 58, 0.72) 48%, rgba(12, 46, 70, 0.42)), linear-gradient(180deg, rgba(4, 24, 41, 0.1), rgba(5, 25, 43, 0.4)); }
+
+      .portal-preview[data-device="mobile"] {
+        width: min(390px, 100%);
+        height: min(80vh, 844px);
+        min-height: 620px;
+        margin: 0 auto;
+        border: 7px solid #102b40;
+        border-radius: 22px;
+        box-shadow: 0 22px 62px rgba(13, 37, 58, 0.2);
+      }
+
+      .portal-preview[data-device="mobile"] .scene-art {
+        inset: 58px 0 auto;
+        height: 53%;
+        mask-image: linear-gradient(180deg, #000 5%, #000 63%, transparent 100%);
+      }
+
+      .portal-preview[data-device="mobile"] .scene-art img { object-position: 50% 50%; opacity: 0.82; }
+      .portal-preview[data-device="mobile"] .scene-veil { background: linear-gradient(180deg, rgba(4, 19, 33, 0.25), rgba(5, 23, 39, 0.04) 24%, #06182b 65%, #06182b 100%); }
+      .portal-preview[data-device="mobile"] .site-header { width: calc(100% - 34px); height: 62px; }
+      .portal-preview[data-device="mobile"] .brand-lockup { width: 145px; }
+      .portal-preview[data-device="mobile"] .main-nav { display: none; }
+      .portal-preview[data-device="mobile"] .client-link { padding: 8px 9px; font-size: 10px; }
+      .portal-preview[data-device="mobile"] .page-state { width: calc(100% - 38px); min-height: calc(100% - 62px); }
+      .portal-preview[data-device="mobile"] .arrival, .portal-preview[data-device="mobile"] .inside { align-items: flex-end; }
+      .portal-preview[data-device="mobile"] .arrival-copy { width: 100%; padding: 0 0 49px; }
+      .portal-preview[data-device="mobile"] .eyebrow { margin-bottom: 13px; font-size: 9px; }
+      .portal-preview[data-device="mobile"] .arrival h1 { max-width: 340px; margin-bottom: 13px; font-size: 34px; line-height: 1.1; }
+      .portal-preview[data-device="mobile"] .lead { margin-bottom: 20px; font-size: 14px; line-height: 1.55; }
+      .portal-preview[data-device="mobile"] .actions { display: grid; grid-template-columns: 1fr; gap: 9px; }
+      .portal-preview[data-device="mobile"] .action { width: 100%; min-height: 46px; }
+      .portal-preview[data-device="mobile"] .service-line { gap: 8px 12px; margin-top: 19px; font-size: 9px; }
+      .portal-preview[data-device="mobile"] .service-line span + span::before { margin-right: 12px; }
+      .portal-preview[data-device="mobile"] .inside-copy { width: 100%; padding: 0 0 50px; }
+      .portal-preview[data-device="mobile"] .inside h2 { margin-bottom: 12px; font-size: 32px; }
+      .portal-preview[data-device="mobile"] .inside .lead { margin-bottom: 12px; }
+      .portal-preview[data-device="mobile"] .service-grid { grid-template-columns: 1fr; gap: 13px; margin: 18px 0 20px; }
+      .portal-preview[data-device="mobile"] .service-item { display: grid; grid-template-columns: 1fr 1.25fr; gap: 12px; align-items: start; padding-top: 9px; }
+      .portal-preview[data-device="mobile"] .service-item strong { margin: 0; font-size: 12px; }
+      .portal-preview[data-device="mobile"] .service-item p { font-size: 10px; }
+      .portal-preview[data-device="mobile"] .reset-entry { right: 10px; bottom: 10px; font-size: 9px; }
+      .portal-preview[data-device="mobile"][data-state="entering"] .scene-art { inset: 48px -14% auto; height: 62%; }
+      .portal-preview[data-device="mobile"][data-state="inside"] .scene-art { inset: 58px 0 auto; height: 53%; }
+
+      @media (max-width: 640px) {
+        .preview-bar { min-height: 56px; padding: 9px 12px; }
+        .preview-label { gap: 0; font-size: 12px; }
+        .preview-label span { display: none; }
+        .device-switch button { padding: 0 9px; font-size: 11px; }
+        .stage-wrap { width: calc(100% - 20px); }
+        .artboard:not([data-device="mobile"]) { height: calc(100svh - 94px); min-height: 650px; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="preview-bar">
+        <div class="preview-label">Proposta visual 01 <span>Conceito local, ainda não aplicado ao portal</span></div>
+        <div class="device-switch" role="group" aria-label="Formato da prévia">
+          <button type="button" data-device-button="desktop" aria-pressed="true">Desktop</button>
+          <button type="button" data-device-button="mobile" aria-pressed="false">Celular</button>
+        </div>
+      </div>
+
+      <div class="stage-wrap">
+        <section class="artboard portal-preview" data-device="desktop" data-state="arrival" aria-label="Prévia do Portal Orquestra.cs">
+          <div class="scene-art" aria-hidden="true">
+            <img src="../public/orquestra-portal-altar-clean.png" alt="">
+          </div>
+          <div class="scene-veil" aria-hidden="true"></div>
+
+          <header class="site-header">
+            <a class="brand-lockup" href="#" aria-label="Orquestra.cs">
+              <img src="../public/orquestra-cs-logo-portal-light.svg" alt="Orquestra.cs — Um portal para sua operação">
+            </a>
+            <nav class="main-nav" aria-label="Navegação principal">
+              <a href="#solucoes">Soluções</a>
+              <a href="#consultoria">Consultoria</a>
+              <a href="#quem-somos">Quem somos</a>
+            </nav>
+            <a class="client-link" href="#cliente">Área do cliente</a>
+          </header>
+
+          <div class="page-state">
+            <section class="arrival" aria-labelledby="arrival-title">
+              <div class="arrival-copy">
+                <p class="eyebrow">Tecnologia com visão de operação</p>
+                <h1 id="arrival-title">A tecnologia certa para sua operação.</h1>
+                <p class="lead">Consultoria de TI, infraestrutura comercial, corporativa e industrial, sistemas, sites e automações, do equipamento à solução digital.</p>
+                <div class="actions">
+                  <button class="action action-primary" type="button" data-enter>Entrar no portal</button>
+                  <a class="action action-secondary" href="#solucoes">Conhecer soluções</a>
+                </div>
+                <p class="service-line"><span>Consultoria</span><span>Infraestrutura</span><span>Sistemas</span><span>Automação</span></p>
+              </div>
+            </section>
+
+            <section class="inside" aria-labelledby="inside-title" aria-hidden="true">
+              <div class="inside-copy">
+                <p class="eyebrow">Bem-vindo à Orquestra.cs</p>
+                <h2 id="inside-title">Tudo conectado ao que sua empresa precisa.</h2>
+                <p class="lead">Tecnologia, estrutura e desenvolvimento trabalhando juntos para simplificar sua operação.</p>
+                <div class="service-grid" id="solucoes">
+                  <div class="service-item" id="consultoria">
+                    <strong>Consultoria e infraestrutura</strong>
+                    <p>Equipamentos, redes e ambientes preparados para o seu negócio.</p>
+                  </div>
+                  <div class="service-item">
+                    <strong>Sistemas e sites</strong>
+                    <p>Software sob medida para organizar processos e atender seus clientes.</p>
+                  </div>
+                  <div class="service-item" id="quem-somos">
+                    <strong>Automação e integração</strong>
+                    <p>Menos tarefas repetitivas. Mais visibilidade e continuidade.</p>
+                  </div>
+                </div>
+                <div class="actions">
+                  <a class="action action-primary" href="mailto:orquestracs@gmail.com">Solicitar orçamento</a>
+                  <a class="action action-secondary" href="#cliente">Acessar meus sistemas</a>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <button class="reset-entry" type="button" data-reset>Reiniciar entrada</button>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      const preview = document.querySelector(".portal-preview");
+      const enterButton = document.querySelector("[data-enter]");
+      const resetButton = document.querySelector("[data-reset]");
+      const arrival = document.querySelector(".arrival");
+      const inside = document.querySelector(".inside");
+      let transitionTimer;
+
+      function enterPortal() {
+        if (preview.dataset.state !== "arrival") return;
+        preview.dataset.state = "entering";
+        clearTimeout(transitionTimer);
+        transitionTimer = setTimeout(() => {
+          preview.dataset.state = "inside";
+          arrival.setAttribute("aria-hidden", "true");
+          inside.setAttribute("aria-hidden", "false");
+        }, 920);
+      }
+
+      function resetPortal() {
+        clearTimeout(transitionTimer);
+        preview.dataset.state = "arrival";
+        arrival.setAttribute("aria-hidden", "false");
+        inside.setAttribute("aria-hidden", "true");
+      }
+
+      enterButton.addEventListener("click", enterPortal);
+      resetButton.addEventListener("click", resetPortal);
+
+      document.querySelectorAll("[data-device-button]").forEach((button) => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll("[data-device-button]").forEach((item) => item.setAttribute("aria-pressed", "false"));
+          button.setAttribute("aria-pressed", "true");
+          preview.dataset.device = button.dataset.deviceButton;
+          resetPortal();
+        });
+      });
+    </script>
+  </body>
+</html>

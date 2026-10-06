@@ -11,7 +11,17 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-export const firebaseApp = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-export const auth = getAuth(firebaseApp);
-export const db = getFirestore(firebaseApp);
+export const hasFirebaseClientConfig = Object.values(firebaseConfig).every(Boolean);
 
+export function getFirebaseClient() {
+  if (!hasFirebaseClientConfig) {
+    throw new Error("Firebase ainda não está configurado neste ambiente.");
+  }
+
+  const firebaseApp = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+
+  return {
+    auth: getAuth(firebaseApp),
+    db: getFirestore(firebaseApp),
+  };
+}

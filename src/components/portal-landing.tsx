@@ -21,7 +21,7 @@ const solutionGroups = [
   {
     title: "Gestão e ecossistema",
     description: "Produtos que conectam gestão, madeira, serviços e crescimento.",
-    ids: ["orquestra-hub", "woodmaster", "orquestra-studio", "orquestra-blend"],
+    ids: ["orquestra-hub", "orquestra-studio"],
   },
 ];
 

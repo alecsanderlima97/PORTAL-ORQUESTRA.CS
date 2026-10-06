@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowLeft, Eye, LockKeyhole, Mail } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
+import { LoginForm } from "@/components/login-form";
 
 export default function LoginPage() {
   return (
@@ -51,28 +52,7 @@ export default function LoginPage() {
           <h2 className="mt-3 text-[1.55rem] font-semibold tracking-[-0.02em] text-[#071b2a]">Acessar portal</h2>
           <p className="mt-2 text-xs leading-5 text-[#667b8b]">Entre com seu usuário para acessar os sistemas liberados para sua empresa.</p>
 
-          <form className="mt-6 space-y-4">
-            <label className="block">
-              <span className="text-xs font-medium text-[#294052]">E-mail</span>
-              <span className="mt-2 flex h-11 items-center gap-2 rounded-md border border-[#d7e0e7] bg-white px-3 transition-within:border-[#2b9ac2]">
-                <Mail className="size-4 text-[#8b9baa]" />
-                <input className="w-full bg-transparent text-sm text-[#071b2a] outline-none placeholder:text-[#98a8b4]" placeholder="cliente@empresa.com.br" type="email" aria-label="E-mail" />
-              </span>
-            </label>
-            <label className="block">
-              <span className="text-xs font-medium text-[#294052]">Senha</span>
-              <span className="mt-2 flex h-11 items-center gap-2 rounded-md border border-[#d7e0e7] bg-white px-3 transition-within:border-[#2b9ac2]">
-                <LockKeyhole className="size-4 text-[#8b9baa]" />
-                <input className="w-full bg-transparent text-sm text-[#071b2a] outline-none placeholder:text-[#98a8b4]" placeholder="Sua senha" type="password" aria-label="Senha" />
-                <button type="button" className="text-[#778c9c] transition hover:text-[#087da6]" aria-label="Mostrar senha"><Eye className="size-4" /></button>
-              </span>
-            </label>
-            <div className="flex justify-end"><button type="button" className="text-xs font-semibold text-[#087da6] hover:text-[#075f7f]">Esqueci minha senha</button></div>
-            <Link href="/portal" className="flex h-11 w-full items-center justify-center rounded-md bg-[#087fba] text-sm font-semibold text-white transition hover:bg-[#076d9e]">Entrar</Link>
-            <button type="button" className="flex h-11 w-full items-center justify-center gap-2 rounded-md border border-[#d7e0e7] text-xs font-semibold text-[#173348] transition hover:bg-[#f5f9fb]"><span className="flex size-5 items-center justify-center rounded-full border border-[#dbe3ea] text-[11px] font-bold text-[#4285f4]">G</span>Continuar com Google</button>
-            <button type="button" className="block w-full text-center text-xs font-semibold text-[#087da6] hover:text-[#075f7f]">Ainda não tenho uma conta</button>
-            <Link href="/portal" className="flex h-10 w-full items-center justify-center rounded-md border border-[#c9d7e1] text-xs font-medium text-[#325166] transition hover:bg-[#f5f9fb]">Entrar em modo demo</Link>
-          </form>
+          <LoginForm />
         </div>
       </section>
     </main>

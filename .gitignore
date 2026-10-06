@@ -19,10 +19,14 @@
 
 # production
 /build
+/output/
+/tmp/
 
 # misc
 .DS_Store
 *.pem
+*-firebase-admin*.json
+service-account*.json
 
 # debug
 npm-debug.log*
