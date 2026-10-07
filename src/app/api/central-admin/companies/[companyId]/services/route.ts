@@ -12,6 +12,9 @@ const sourceSystemNames: Record<string, string> = {
   orquestra_hub: "Orquestra Hub",
   orquestra_fit: "Orquestra Fit",
   orquestracs_face_id: "Orquestra Face ID",
+  orquestra_studio: "Orquestra Studio",
+  orquestra_auto_detail: "Orquestra Auto Detail",
+  orquestra_moda: "Orquestra Moda",
 };
 
 function text(value: unknown, maxLength: number) {

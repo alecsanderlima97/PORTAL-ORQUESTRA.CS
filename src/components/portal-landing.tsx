@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Activity, ArrowRight, ChevronDown, LockKeyhole, Mail, MessageCircle, Network, Workflow } from "lucide-react";
 import gsap from "gsap";
-import { deployedProjects } from "@/lib/portal-data";
+import { deployedProjects, projectCatalogDetails } from "@/lib/portal-data";
 import { BrandLogo } from "@/components/brand-logo";
 import { PortalGravityField, PortalWarpCanvas } from "@/components/portal-visual-effects";
 
@@ -21,7 +21,12 @@ const solutionGroups = [
   {
     title: "Gestão e ecossistema",
     description: "Produtos que conectam gestão, madeira, serviços e crescimento.",
-    ids: ["orquestra-hub", "orquestra-studio"],
+    ids: ["orquestra-hub", "orquestra-studio", "orquestra-blend", "orquestra-moda"],
+  },
+  {
+    title: "Sites e presença digital",
+    description: "Projetos institucionais e comerciais publicados ou em manutenção.",
+    ids: ["site-porto-belo", "site-pr-perfumaria", "site-dama-de-ferro", "site-vanmarte"],
   },
 ];
 
@@ -428,17 +433,48 @@ export function PortalLanding() {
                   const project = deployedProjects.find((item) => item.id === id);
                   if (!project) return null;
                   const Icon = project.icon;
-                  return (
-                    <a href={project.url} target="_blank" rel="noreferrer" className="portal-solution" key={project.id}>
+                  const solutionContent = (
+                    <>
                       <span className="portal-solution__icon"><Icon className="size-4" /></span>
                       <span className="portal-solution__name">{project.name}</span>
                       <span className="portal-solution__category">{project.category}</span>
+                      <span className={`portal-solution__status portal-solution__status--${project.availability}`}>
+                        {project.availability === "online" ? "Online" : project.availability === "offline" ? "Offline" : "A verificar"}
+                      </span>
                       <ArrowRight className="portal-solution__arrow size-4" />
-                    </a>
+                    </>
                   );
+                  return project.url ? <a href={project.url} target="_blank" rel="noreferrer" className="portal-solution" key={project.id}>{solutionContent}</a> : <div className="portal-solution portal-solution--disabled" key={project.id}>{solutionContent}</div>;
                 })}
               </div>
             ))}
+          </div>
+          <div className="portal-catalog" aria-label="Detalhes dos sistemas e projetos">
+            <div className="portal-catalog__heading">
+              <p className="portal-eyebrow">Conheça por dentro</p>
+              <h2>Uma solução para cada tipo de operação.</h2>
+              <p className="portal-section-intro">Veja para quem cada produto foi pensado e o que ele ajuda a organizar.</p>
+            </div>
+            <div className="portal-catalog__grid">
+              {deployedProjects.map((project) => {
+                const details = projectCatalogDetails[project.id];
+                if (!details) return null;
+                const Icon = project.icon;
+                return (
+                  <article className="portal-catalog-card" key={project.id}>
+                    {details.previewImage ? <div className="portal-catalog-card__media"><Image src={details.previewImage} alt={details.previewAlt || project.name} fill sizes="(max-width: 900px) 100vw, 360px" /></div> : <div className="portal-catalog-card__media portal-catalog-card__media--empty"><Icon className="size-8" /><span>Prévia de interface em preparação</span></div>}
+                    <div className="portal-catalog-card__body">
+                      <div className="portal-catalog-card__meta"><span>{project.category}</span><span>{project.relation === "cliente_ativo" ? "Cliente ativo" : project.relation === "site" ? "Site" : "Produto próprio"}</span></div>
+                      <h3>{project.name}</h3>
+                      <p>{project.description}</p>
+                      <p className="portal-catalog-card__audience"><strong>Indicado para:</strong> {details.audience}</p>
+                      <ul>{details.highlights.map((highlight) => <li key={highlight}>{highlight}</li>)}</ul>
+                      {details.previewKind === "ambiente" ? <small>Prévia visual real do projeto. Capturas das telas entram na próxima etapa.</small> : null}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
           </div>
         </section>
 
