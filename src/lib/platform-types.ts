@@ -84,6 +84,9 @@ export type ManagedService = {
   supportFee: number | null;
   billingDay: number | null;
   renewalDate: string | null;
+  currentVersion: string | null;
+  lastUpdatedAt: string | null;
+  lastUpdateSummary: string | null;
   environment: "production" | "staging" | "development";
   accessStatus: CompanyAccessStatus;
   connectorStatus: ConnectorStatus;
