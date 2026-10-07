@@ -19,6 +19,8 @@ type FormValues = {
   currentVersion: string;
   lastUpdatedAt: string;
   lastUpdateSummary: string;
+  vercelProjectName: string;
+  repositoryUrl: string;
 };
 
 const serviceTypes = [
@@ -52,6 +54,8 @@ function initialValues(service: ManagedService): FormValues {
     currentVersion: service.currentVersion ?? "",
     lastUpdatedAt: service.lastUpdatedAt ? service.lastUpdatedAt.slice(0, 10) : "",
     lastUpdateSummary: service.lastUpdateSummary ?? "",
+    vercelProjectName: service.vercelProjectName ?? "",
+    repositoryUrl: service.repositoryUrl ?? "",
   };
 }
 
@@ -94,6 +98,8 @@ export function EditServiceForm({ service }: { service: ManagedService }) {
           currentVersion: values.currentVersion || null,
           lastUpdatedAt: values.lastUpdatedAt || null,
           lastUpdateSummary: values.lastUpdateSummary || null,
+          vercelProjectName: values.vercelProjectName || null,
+          repositoryUrl: values.repositoryUrl || null,
           csrfToken: csrf.csrfToken,
         }),
       });
@@ -114,6 +120,8 @@ export function EditServiceForm({ service }: { service: ManagedService }) {
     <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3"><Field label="Mensalidade (R$)" value={values.monthlyFee} onChange={(value) => update("monthlyFee", value)} type="number" placeholder="Ex.: 300" /><Field label="Desenvolvimento / orçamento (R$)" value={values.developmentFee} onChange={(value) => update("developmentFee", value)} type="number" placeholder="Ex.: 2500" /><Field label="Implantação (R$)" value={values.implementationFee} onChange={(value) => update("implementationFee", value)} type="number" /><Field label="Suporte recorrente (R$)" value={values.supportFee} onChange={(value) => update("supportFee", value)} type="number" /><Field label="Dia de vencimento" value={values.billingDay} onChange={(value) => update("billingDay", value)} type="number" placeholder="Ex.: 10" /><Field label="Renovação" value={values.renewalDate} onChange={(value) => update("renewalDate", value)} type="date" /></div>
     <div className="mt-8 border-t border-[#edf1f5] pt-6"><h2 className="text-base font-semibold text-[#173044]">Versão e atualizações</h2><p className="mt-1 text-sm text-[#718196]">Registre a versão real publicada e a última alteração. Depois podemos automatizar isso por integração.</p></div>
     <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3"><Field label="Versão atual" value={values.currentVersion} onChange={(value) => update("currentVersion", value)} placeholder="Ex.: 2026.10.07" /><Field label="Última atualização" value={values.lastUpdatedAt} onChange={(value) => update("lastUpdatedAt", value)} type="date" /><div className="md:col-span-2 lg:col-span-1"><Field label="Resumo da atualização" value={values.lastUpdateSummary} onChange={(value) => update("lastUpdateSummary", value)} placeholder="Ex.: Novo controle de usuários" /></div></div>
+    <div className="mt-8 border-t border-[#edf1f5] pt-6"><h2 className="text-base font-semibold text-[#173044]">Integração de versões</h2><p className="mt-1 text-sm text-[#718196]">Vincule o projeto para buscar o último deployment sem expor tokens no navegador.</p></div>
+    <div className="mt-5 grid gap-5 md:grid-cols-2"><Field label="Projeto na Vercel" value={values.vercelProjectName} onChange={(value) => update("vercelProjectName", value)} placeholder="Ex.: orquestra-blend" /><Field label="Repositório GitHub" value={values.repositoryUrl} onChange={(value) => update("repositoryUrl", value)} type="url" placeholder="https://github.com/empresa/projeto" /></div>
     {message ? <p role="status" className="mt-5 rounded-md bg-[#edf7f2] px-3 py-3 text-sm font-medium text-[#267d5b]">{message}</p> : null}
     {error ? <p role="alert" className="mt-5 rounded-md bg-red-50 px-3 py-3 text-sm font-medium text-red-700">{error}</p> : null}
     <div className="mt-6 flex flex-col-reverse justify-between gap-3 sm:flex-row sm:items-center"><Link href="/central-admin/servicos" className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-[#cbd7e4] px-4 text-sm font-semibold text-[#294052] transition hover:border-[#83a5c4] hover:bg-[#f8fbfd]"><ArrowLeft className="size-4" /> Voltar para serviços</Link><button type="submit" disabled={isSaving} className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[#0d5e98] px-5 text-sm font-semibold text-white transition hover:bg-[#0a4e80] disabled:cursor-not-allowed disabled:opacity-60"><Save className="size-4" />{isSaving ? "Salvando..." : "Salvar dados comerciais"}</button></div>

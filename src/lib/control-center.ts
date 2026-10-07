@@ -105,6 +105,8 @@ function mapService(id: string, raw: FirebaseFirestore.DocumentData): ManagedSer
     currentVersion: nullableString(raw.currentVersion),
     lastUpdatedAt: dateValue(raw.lastUpdatedAt),
     lastUpdateSummary: nullableString(raw.lastUpdateSummary),
+    vercelProjectName: nullableString(raw.vercelProjectName),
+    repositoryUrl: nullableString(raw.repositoryUrl),
     availabilityStatus: (raw.availabilityStatus ?? "nao_verificado") as ServiceAvailabilityStatus,
     httpStatus: raw.httpStatus == null ? null : numberValue(raw.httpStatus),
     responseTimeMs: raw.responseTimeMs == null ? null : numberValue(raw.responseTimeMs),

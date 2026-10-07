@@ -6,7 +6,7 @@ import { getCurrentSession } from "@/lib/session";
 
 const platformRoles = new Set(["platform_owner", "orquestra_admin"]);
 const serviceTypes = new Set(["sistema_web", "site", "landing_page", "crm", "erp", "saas", "consultoria", "marketing_digital", "trafego_pago", "automacao", "integracao", "suporte_tecnico", "outro"]);
-const editableFields = ["name", "type", "url", "plan", "monthlyFee", "developmentFee", "implementationFee", "supportFee", "billingDay", "renewalDate", "currentVersion", "lastUpdatedAt", "lastUpdateSummary"] as const;
+const editableFields = ["name", "type", "url", "plan", "monthlyFee", "developmentFee", "implementationFee", "supportFee", "billingDay", "renewalDate", "currentVersion", "lastUpdatedAt", "lastUpdateSummary", "vercelProjectName", "repositoryUrl"] as const;
 
 function text(value: unknown, maxLength: number) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
@@ -63,6 +63,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ se
     const currentVersion = optionalText(body.currentVersion, 80);
     const lastUpdatedAt = optionalText(body.lastUpdatedAt, 20);
     const lastUpdateSummary = optionalText(body.lastUpdateSummary, 500);
+    const vercelProjectName = optionalText(body.vercelProjectName, 120);
+    const repositoryUrl = optionalText(body.repositoryUrl, 500);
 
     if (!name || !plan || !url || !serviceTypes.has(type)) {
       return NextResponse.json({ error: "Preencha nome, tipo, plano e link do serviço." }, { status: 400 });
@@ -75,6 +77,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ se
       return NextResponse.json({ error: "Informe um link válido com http ou https." }, { status: 400 });
     }
 
+    if (repositoryUrl) {
+      try {
+        const parsedRepositoryUrl = new URL(repositoryUrl);
+        if (parsedRepositoryUrl.protocol !== "https:" || parsedRepositoryUrl.hostname !== "github.com") throw new Error("invalid repository");
+      } catch {
+        return NextResponse.json({ error: "Informe um repositório GitHub válido." }, { status: 400 });
+      }
+    }
+
     if ([monthlyFee, developmentFee, implementationFee, supportFee].some((value) => value === undefined)) {
       return NextResponse.json({ error: "Confira os valores comerciais informados." }, { status: 400 });
     }
@@ -83,7 +94,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ se
       return NextResponse.json({ error: "O vencimento deve estar entre os dias 1 e 31." }, { status: 400 });
     }
 
-    const updatedFields = { name, type, url, plan, monthlyFee, developmentFee, implementationFee, supportFee, billingDay, renewalDate, currentVersion, lastUpdatedAt, lastUpdateSummary };
+    const updatedFields = { name, type, url, plan, monthlyFee, developmentFee, implementationFee, supportFee, billingDay, renewalDate, currentVersion, lastUpdatedAt, lastUpdateSummary, vercelProjectName, repositoryUrl };
     const previousData = serviceSnapshot.data() ?? {};
     const batch = db.batch();
     batch.update(serviceRef, { ...updatedFields, updatedAt: FieldValue.serverTimestamp() });

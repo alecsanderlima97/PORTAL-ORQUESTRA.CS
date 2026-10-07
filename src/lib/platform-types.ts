@@ -88,6 +88,8 @@ export type ManagedService = {
   currentVersion: string | null;
   lastUpdatedAt: string | null;
   lastUpdateSummary: string | null;
+  vercelProjectName: string | null;
+  repositoryUrl: string | null;
   availabilityStatus: ServiceAvailabilityStatus;
   httpStatus: number | null;
   responseTimeMs: number | null;

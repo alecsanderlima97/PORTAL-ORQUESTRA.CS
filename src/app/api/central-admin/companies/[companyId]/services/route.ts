@@ -57,6 +57,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ com
     const currentVersion = optionalText(body.currentVersion, 80);
     const lastUpdatedAt = optionalText(body.lastUpdatedAt, 20);
     const lastUpdateSummary = optionalText(body.lastUpdateSummary, 500);
+    const vercelProjectName = optionalText(body.vercelProjectName, 120);
+    const repositoryUrl = optionalText(body.repositoryUrl, 500);
 
     if (!serviceTypes.has(serviceType) || !serviceName || !systemUrl || !plan) return NextResponse.json({ error: "Preencha tipo, nome, link e plano do serviço." }, { status: 400 });
     if ([monthlyFee, developmentFee, implementationFee, supportFee].some((value) => value === undefined)) return NextResponse.json({ error: "Confira os valores comerciais informados." }, { status: 400 });
@@ -68,6 +70,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ com
       if (!["http:", "https:"].includes(parsedUrl.protocol)) throw new Error("invalid protocol");
     } catch {
       return NextResponse.json({ error: "Informe um link de produção válido." }, { status: 400 });
+    }
+
+    if (repositoryUrl) {
+      try {
+        const parsedRepositoryUrl = new URL(repositoryUrl);
+        if (parsedRepositoryUrl.protocol !== "https:" || parsedRepositoryUrl.hostname !== "github.com") throw new Error("invalid repository");
+      } catch {
+        return NextResponse.json({ error: "Informe um repositório GitHub válido." }, { status: 400 });
+      }
     }
 
     const db = getFirebaseAdminDb();
@@ -95,6 +106,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ com
       currentVersion,
       lastUpdatedAt,
       lastUpdateSummary,
+      vercelProjectName,
+      repositoryUrl,
       availabilityStatus: "nao_verificado",
       httpStatus: null,
       responseTimeMs: null,
