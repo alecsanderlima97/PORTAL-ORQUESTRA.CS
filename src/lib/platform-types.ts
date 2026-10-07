@@ -78,6 +78,12 @@ export type ManagedService = {
   url: string;
   tenantId: string;
   plan: string;
+  monthlyFee: number | null;
+  developmentFee: number | null;
+  implementationFee: number | null;
+  supportFee: number | null;
+  billingDay: number | null;
+  renewalDate: string | null;
   environment: "production" | "staging" | "development";
   accessStatus: CompanyAccessStatus;
   connectorStatus: ConnectorStatus;

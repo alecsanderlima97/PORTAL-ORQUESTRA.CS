@@ -7,8 +7,10 @@ import { getCurrentSession } from "@/lib/session";
 const platformRoles = new Set(["platform_owner", "orquestra_admin"]);
 const contractStatuses = new Set(["ativo", "teste", "suspenso", "encerrado"]);
 const accessStatuses = new Set(["ativo", "em_tolerancia", "bloqueado", "liberacao_pendente", "revisao_manual"]);
+const serviceTypes = new Set(["sistema_web", "site", "landing_page", "crm", "erp", "saas", "consultoria", "marketing_digital", "trafego_pago", "automacao", "integracao", "suporte_tecnico", "outro"]);
 const sourceSystemNames: Record<string, string> = {
   mad360: "Orquestra Mad360 / Serraria",
+  orquestra_blend: "Orquestra Blend",
   orquestra_hub: "Orquestra Hub",
   orquestra_fit: "Orquestra Fit",
   orquestracs_face_id: "Orquestra Face ID",
@@ -51,11 +53,27 @@ export async function POST(request: Request) {
     const sourceSystem = text(body.sourceSystem, 80) || null;
     const externalTenantId = optionalText(body.externalTenantId, 120);
     const systemUrl = optionalText(body.systemUrl, 500);
+    const serviceType = text(body.serviceType, 40) || (sourceSystem ? "sistema_web" : null);
+    const serviceName = optionalText(body.serviceName, 160);
     const contractStatus = text(body.contractStatus, 30);
     const accessStatus = text(body.accessStatus, 30);
     const billingDay = Math.round(numberValue(body.billingDay, 10));
     const graceDays = Math.round(numberValue(body.graceDays, 5));
     const monthlyFee = numberValue(body.monthlyFee, 0);
+    const serviceMonthlyFee = body.serviceMonthlyFee === null || body.serviceMonthlyFee === "" || body.serviceMonthlyFee === undefined
+      ? monthlyFee
+      : numberValue(body.serviceMonthlyFee, 0);
+    const serviceDevelopmentFee = body.serviceDevelopmentFee === null || body.serviceDevelopmentFee === "" || body.serviceDevelopmentFee === undefined
+      ? null
+      : numberValue(body.serviceDevelopmentFee, 0);
+    const serviceImplementationFee = body.serviceImplementationFee === null || body.serviceImplementationFee === "" || body.serviceImplementationFee === undefined
+      ? null
+      : numberValue(body.serviceImplementationFee, 0);
+    const serviceSupportFee = body.serviceSupportFee === null || body.serviceSupportFee === "" || body.serviceSupportFee === undefined
+      ? null
+      : numberValue(body.serviceSupportFee, 0);
+    const serviceBillingDay = Math.round(numberValue(body.serviceBillingDay, billingDay));
+    const serviceRenewalDate = optionalText(body.serviceRenewalDate, 20) ?? optionalText(body.renewalDate, 20);
 
     if (!legalName || !responsibleName || !plan) {
       return NextResponse.json({ error: "Preencha empresa, responsável e plano." }, { status: 400 });
@@ -67,6 +85,18 @@ export async function POST(request: Request) {
 
     if ((externalTenantId && !sourceSystem) || (sourceSystem && (!externalTenantId || !systemUrl))) {
       return NextResponse.json({ error: "Informe o sistema, o ID externo da empresa e o link de produção." }, { status: 400 });
+    }
+
+    if (serviceType && !serviceTypes.has(serviceType)) {
+      return NextResponse.json({ error: "Tipo de serviço inválido." }, { status: 400 });
+    }
+
+    if (serviceType && !systemUrl) {
+      return NextResponse.json({ error: "Informe o link do site ou sistema vinculado." }, { status: 400 });
+    }
+
+    if (serviceType && !sourceSystem && !serviceName) {
+      return NextResponse.json({ error: "Informe o nome do site ou serviço." }, { status: 400 });
     }
 
     if (systemUrl) {
@@ -82,7 +112,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Status inicial inválido." }, { status: 400 });
     }
 
-    if (billingDay < 1 || billingDay > 31 || graceDays < 0 || graceDays > 30 || monthlyFee < 0) {
+    if (billingDay < 1 || billingDay > 31 || serviceBillingDay < 1 || serviceBillingDay > 31 || graceDays < 0 || graceDays > 30 || monthlyFee < 0 || serviceMonthlyFee < 0 || (serviceDevelopmentFee !== null && serviceDevelopmentFee < 0) || (serviceImplementationFee !== null && serviceImplementationFee < 0) || (serviceSupportFee !== null && serviceSupportFee < 0)) {
       return NextResponse.json({ error: "Confira vencimento, tolerância e mensalidade." }, { status: 400 });
     }
 
@@ -142,14 +172,20 @@ export async function POST(request: Request) {
       });
     }
 
-    if (sourceSystem && externalTenantId && systemUrl) {
+    if (serviceType && systemUrl && (sourceSystem || serviceName)) {
       batch.set(db.collection("managedServices").doc(), {
-        name: sourceSystemNames[sourceSystem] ?? text(body.tradeName, 160) ?? sourceSystem,
+        name: sourceSystemNames[sourceSystem ?? ""] || serviceName || text(body.tradeName, 160) || sourceSystem || "Serviço sem nome",
         sourceSystem,
-        type: "sistema_web",
+        type: serviceType,
         url: systemUrl,
         tenantId: companyRef.id,
         plan,
+        monthlyFee: Math.round(serviceMonthlyFee * 100) / 100,
+        developmentFee: serviceDevelopmentFee === null ? null : Math.round(serviceDevelopmentFee * 100) / 100,
+        implementationFee: serviceImplementationFee === null ? null : Math.round(serviceImplementationFee * 100) / 100,
+        supportFee: serviceSupportFee === null ? null : Math.round(serviceSupportFee * 100) / 100,
+        billingDay: serviceBillingDay,
+        renewalDate: serviceRenewalDate,
         environment: "production",
         accessStatus,
         connectorStatus: "pendente",
@@ -168,7 +204,7 @@ export async function POST(request: Request) {
       targetType: "company",
       targetId: companyRef.id,
       createdAt: now,
-      metadata: { plan, contractStatus, accessStatus, sourceSystem, externalTenantId },
+      metadata: { plan, contractStatus, accessStatus, sourceSystem, externalTenantId, serviceType, serviceName },
     });
     await batch.commit();
 
