@@ -46,6 +46,7 @@ export type ServiceType =
   | "outro";
 
 export type ConnectorStatus = "pendente" | "ativo" | "com_falha" | "desativado";
+export type ServiceAvailabilityStatus = "online" | "offline" | "erro" | "nao_verificado";
 
 export type UserProfile = {
   uid: string;
@@ -87,6 +88,11 @@ export type ManagedService = {
   currentVersion: string | null;
   lastUpdatedAt: string | null;
   lastUpdateSummary: string | null;
+  availabilityStatus: ServiceAvailabilityStatus;
+  httpStatus: number | null;
+  responseTimeMs: number | null;
+  lastCheckedAt: string | null;
+  sslStatus: "seguro" | "nao_aplicavel" | "nao_verificado";
   environment: "production" | "staging" | "development";
   accessStatus: CompanyAccessStatus;
   connectorStatus: ConnectorStatus;
