@@ -7,6 +7,12 @@ import { getCurrentSession } from "@/lib/session";
 const platformRoles = new Set(["platform_owner", "orquestra_admin"]);
 const contractStatuses = new Set(["ativo", "teste", "suspenso", "encerrado"]);
 const accessStatuses = new Set(["ativo", "em_tolerancia", "bloqueado", "liberacao_pendente", "revisao_manual"]);
+const sourceSystemNames: Record<string, string> = {
+  mad360: "Orquestra Mad360 / Serraria",
+  orquestra_hub: "Orquestra Hub",
+  orquestra_fit: "Orquestra Fit",
+  orquestracs_face_id: "Orquestra Face ID",
+};
 
 function text(value: unknown, maxLength: number) {
   if (typeof value !== "string") return "";
@@ -39,21 +45,37 @@ export async function POST(request: Request) {
 
     const legalName = text(body.legalName, 160);
     const responsibleName = text(body.responsibleName, 120);
-    const ownerGoogleEmail = text(body.ownerGoogleEmail, 160).toLowerCase();
-    const contactEmail = text(body.contactEmail, 160).toLowerCase() || ownerGoogleEmail;
+    const ownerGoogleEmail = optionalText(body.ownerGoogleEmail, 160)?.toLowerCase() ?? null;
+    const contactEmail = optionalText(body.contactEmail, 160)?.toLowerCase() ?? null;
     const plan = text(body.plan, 80);
+    const sourceSystem = text(body.sourceSystem, 80) || null;
+    const externalTenantId = optionalText(body.externalTenantId, 120);
+    const systemUrl = optionalText(body.systemUrl, 500);
     const contractStatus = text(body.contractStatus, 30);
     const accessStatus = text(body.accessStatus, 30);
     const billingDay = Math.round(numberValue(body.billingDay, 10));
     const graceDays = Math.round(numberValue(body.graceDays, 5));
     const monthlyFee = numberValue(body.monthlyFee, 0);
 
-    if (!legalName || !responsibleName || !ownerGoogleEmail || !plan) {
-      return NextResponse.json({ error: "Preencha empresa, responsável, Google do administrador e plano." }, { status: 400 });
+    if (!legalName || !responsibleName || !plan) {
+      return NextResponse.json({ error: "Preencha empresa, responsável e plano." }, { status: 400 });
     }
 
-    if (!/^\S+@\S+\.\S+$/.test(ownerGoogleEmail) || (contactEmail && !/^\S+@\S+\.\S+$/.test(contactEmail))) {
+    if ((ownerGoogleEmail && !/^\S+@\S+\.\S+$/.test(ownerGoogleEmail)) || (contactEmail && !/^\S+@\S+\.\S+$/.test(contactEmail))) {
       return NextResponse.json({ error: "Informe e-mails válidos." }, { status: 400 });
+    }
+
+    if ((externalTenantId && !sourceSystem) || (sourceSystem && (!externalTenantId || !systemUrl))) {
+      return NextResponse.json({ error: "Informe o sistema, o ID externo da empresa e o link de produção." }, { status: 400 });
+    }
+
+    if (systemUrl) {
+      try {
+        const parsedUrl = new URL(systemUrl);
+        if (!["http:", "https:"].includes(parsedUrl.protocol)) throw new Error("invalid protocol");
+      } catch {
+        return NextResponse.json({ error: "Informe um link de produção válido." }, { status: 400 });
+      }
     }
 
     if (!contractStatuses.has(contractStatus) || !accessStatuses.has(accessStatus)) {
@@ -66,15 +88,17 @@ export async function POST(request: Request) {
 
     const db = getFirebaseAdminDb();
     const companyRef = db.collection("companies").doc();
-    const existingProfile = await db.collection("users").where("email", "==", ownerGoogleEmail).limit(10).get();
-    if (!existingProfile.empty) {
-      return NextResponse.json({ error: "Este Google já possui um cadastro no Portal. Gerencie o acesso existente em vez de criar outro vínculo." }, { status: 409 });
-    }
+    if (ownerGoogleEmail) {
+      const existingProfile = await db.collection("users").where("email", "==", ownerGoogleEmail).limit(10).get();
+      if (!existingProfile.empty) {
+        return NextResponse.json({ error: "Este Google já possui um cadastro no Portal. Gerencie o acesso existente em vez de criar outro vínculo." }, { status: 409 });
+      }
 
-    const existingInvite = await db.collection("userInvites").where("email", "==", ownerGoogleEmail).limit(10).get();
-    const inviteAlreadyUsed = existingInvite.docs.some((doc) => doc.data().active === true);
-    if (inviteAlreadyUsed) {
-      return NextResponse.json({ error: "Este Google já possui um convite de acesso pendente." }, { status: 409 });
+      const existingInvite = await db.collection("userInvites").where("email", "==", ownerGoogleEmail).limit(10).get();
+      const inviteAlreadyUsed = existingInvite.docs.some((doc) => doc.data().active === true);
+      if (inviteAlreadyUsed) {
+        return NextResponse.json({ error: "Este Google já possui um convite de acesso pendente." }, { status: 409 });
+      }
     }
 
     const now = new Date().toISOString();
@@ -90,6 +114,8 @@ export async function POST(request: Request) {
       state: text(body.state, 2).toUpperCase(),
       address: optionalText(body.address, 240),
       plan,
+      sourceSystem,
+      externalTenantId,
       contractStatus,
       accessStatus,
       billingDay,
@@ -105,14 +131,34 @@ export async function POST(request: Request) {
 
     const batch = db.batch();
     batch.set(companyRef, company);
-    batch.set(db.collection("userInvites").doc(), {
-      email: ownerGoogleEmail,
-      tenantId: companyRef.id,
-      role: "company_owner",
-      active: true,
-      invitedBy: session.uid,
-      createdAt: FieldValue.serverTimestamp(),
-    });
+    if (ownerGoogleEmail) {
+      batch.set(db.collection("userInvites").doc(), {
+        email: ownerGoogleEmail,
+        tenantId: companyRef.id,
+        role: "company_owner",
+        active: true,
+        invitedBy: session.uid,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    }
+
+    if (sourceSystem && externalTenantId && systemUrl) {
+      batch.set(db.collection("managedServices").doc(), {
+        name: sourceSystemNames[sourceSystem] ?? text(body.tradeName, 160) ?? sourceSystem,
+        type: "sistema_web",
+        url: systemUrl,
+        tenantId: companyRef.id,
+        plan,
+        environment: "production",
+        accessStatus,
+        connectorStatus: "pendente",
+        externalTenantId,
+        lastSyncAt: null,
+        lastKnownStatus: "Ponte segura ainda não configurada.",
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
     batch.set(db.collection("auditLogs").doc(), {
       tenantId: companyRef.id,
       actorUserId: session.uid,
@@ -121,7 +167,7 @@ export async function POST(request: Request) {
       targetType: "company",
       targetId: companyRef.id,
       createdAt: now,
-      metadata: { plan, contractStatus, accessStatus },
+      metadata: { plan, contractStatus, accessStatus, sourceSystem, externalTenantId },
     });
     await batch.commit();
 

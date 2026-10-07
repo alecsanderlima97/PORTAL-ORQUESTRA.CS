@@ -14,11 +14,11 @@ export type DeployedProject = {
 export const deployedProjects: DeployedProject[] = [
   {
     id: "sistema-serraria",
-    name: "Sistema Serraria",
+    name: "Orquestra Mad360",
     vercelName: "sistema-serraria",
     url: "https://orquestracs.com",
     category: "Indústria e madeira",
-    description: "Sistema operacional para serraria, madeira, estoque e produção.",
+    description: "Gestão operacional para serraria, madeira, estoque e produção.",
     icon: Factory,
     status: "publicado",
   },

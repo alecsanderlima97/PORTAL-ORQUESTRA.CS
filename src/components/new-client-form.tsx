@@ -20,6 +20,9 @@ type FormValues = {
   graceDays: string;
   contractStatus: string;
   accessStatus: string;
+  sourceSystem: string;
+  externalTenantId: string;
+  systemUrl: string;
   startDate: string;
   renewalDate: string;
   notes: string;
@@ -42,6 +45,9 @@ const initialValues: FormValues = {
   graceDays: "5",
   contractStatus: "teste",
   accessStatus: "revisao_manual",
+  sourceSystem: "",
+  externalTenantId: "",
+  systemUrl: "",
   startDate: "",
   renewalDate: "",
   notes: "",
@@ -85,7 +91,7 @@ export function NewClientForm() {
       const result = await response.json() as { error?: string; companyId?: string };
       if (!response.ok || !result.companyId) throw new Error(result.error ?? "Não foi possível cadastrar a empresa.");
 
-      setMessage("Cliente cadastrado. O acesso ficou em revisão manual até os sistemas serem vinculados.");
+      setMessage(values.sourceSystem ? "Cliente cadastrado e sistema registrado. A conexão ficou pendente até a ponte segura ser configurada." : "Cliente cadastrado. O acesso ficou em revisão manual até um sistema ser vinculado.");
       setValues(initialValues);
     } catch (submissionError) {
       setError(submissionError instanceof Error ? submissionError.message : "Não foi possível concluir o cadastro.");
@@ -98,20 +104,26 @@ export function NewClientForm() {
     <form onSubmit={handleSubmit} className="rounded-lg border border-[#dfe6ee] bg-white p-5 shadow-[0_12px_30px_rgba(18,51,82,0.05)] sm:p-7">
       <div className="flex items-start gap-3 border-b border-[#edf1f5] pb-5">
         <span className="flex size-10 items-center justify-center rounded-md bg-[#e9f1fb] text-[#1769b0]"><Building2 className="size-5" /></span>
-        <div><h2 className="text-base font-semibold text-[#173044]">Dados da empresa</h2><p className="mt-1 text-sm text-[#718196]">Os campos marcados com asterisco são necessários para criar o tenant.</p></div>
+        <div><h2 className="text-base font-semibold text-[#173044]">Dados da empresa</h2><p className="mt-1 text-sm text-[#718196]">Cadastre a empresa pelo sistema que ela já utiliza. Não é necessário saber o Google dos funcionários.</p></div>
       </div>
 
       <div className="mt-6 grid gap-5 md:grid-cols-2">
         <Field label="Razão social" name="legalName" value={values.legalName} onChange={update} required />
         <Field label="Nome fantasia" name="tradeName" value={values.tradeName} onChange={update} />
         <Field label="Responsável" name="responsibleName" value={values.responsibleName} onChange={update} required />
-        <Field label="Google do administrador" name="ownerGoogleEmail" value={values.ownerGoogleEmail} onChange={update} type="email" required placeholder="admin@empresa.com" />
         <Field label="E-mail comercial" name="contactEmail" value={values.contactEmail} onChange={update} type="email" placeholder="contato@empresa.com" />
         <Field label="Telefone / WhatsApp" name="contactPhone" value={values.contactPhone} onChange={update} />
         <Field label="CPF ou CNPJ" name="document" value={values.document} onChange={update} />
         <Field label="Cidade" name="city" value={values.city} onChange={update} />
         <Field label="UF" name="state" value={values.state} onChange={update} placeholder="SP" />
         <div className="md:col-span-2"><Field label="Endereço" name="address" value={values.address} onChange={update} /></div>
+      </div>
+
+      <div className="mt-8 border-t border-[#edf1f5] pt-6"><h2 className="text-base font-semibold text-[#173044]">Sistema de origem</h2><p className="mt-1 text-sm text-[#718196]">O Portal acompanha o sistema e o contrato. Usuários, cargos e dados continuam no produto de origem.</p></div>
+      <div className="mt-5 grid gap-5 md:grid-cols-2">
+        <label className="block"><span className="text-xs font-semibold text-[#294052]">Sistema utilizado</span><select name="sourceSystem" value={values.sourceSystem} onChange={(event) => update("sourceSystem", event.target.value)} className="mt-2 h-11 w-full rounded-md border border-[#d7e0e7] bg-white px-3 text-sm text-[#10243c] outline-none focus:border-[#3189bc]"><option value="">Ainda não vinculado</option><option value="mad360">Orquestra Mad360 / Serraria</option><option value="orquestra_hub">Orquestra Hub</option><option value="orquestra_fit">Orquestra Fit</option><option value="orquestracs_face_id">Orquestra Face ID</option><option value="outro">Outro sistema</option></select></label>
+        <Field label="ID da empresa no sistema" name="externalTenantId" value={values.externalTenantId} onChange={update} placeholder="Ex.: vanmarte" required={Boolean(values.sourceSystem)} />
+        <div className="md:col-span-2"><Field label="Link de produção do sistema" name="systemUrl" value={values.systemUrl} onChange={update} type="url" placeholder="https://exemplo.com" required={Boolean(values.sourceSystem)} /></div>
       </div>
 
       <div className="mt-8 border-t border-[#edf1f5] pt-6"><h2 className="text-base font-semibold text-[#173044]">Contrato e acesso</h2><p className="mt-1 text-sm text-[#718196]">O cliente começa em revisão manual para evitar liberação antes da configuração.</p></div>
