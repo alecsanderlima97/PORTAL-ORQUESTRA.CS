@@ -1,7 +1,8 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { Building2, Save } from "lucide-react";
+import { Building2, LoaderCircle, MapPin, Save } from "lucide-react";
+import { formatCep, formatCnpj, formatCpf, formatPhoneBR, formatRg } from "@/lib/client-data";
 
 type FormValues = {
   legalName: string;
@@ -11,6 +12,14 @@ type FormValues = {
   contactEmail: string;
   contactPhone: string;
   document: string;
+  cpf: string;
+  cnpj: string;
+  rg: string;
+  cep: string;
+  street: string;
+  number: string;
+  complement: string;
+  neighborhood: string;
   city: string;
   state: string;
   address: string;
@@ -44,6 +53,14 @@ const initialValues: FormValues = {
   contactEmail: "",
   contactPhone: "",
   document: "",
+  cpf: "",
+  cnpj: "",
+  rg: "",
+  cep: "",
+  street: "",
+  number: "",
+  complement: "",
+  neighborhood: "",
   city: "",
   state: "",
   address: "",
@@ -83,9 +100,40 @@ export function NewClientForm() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLookingUpCep, setIsLookingUpCep] = useState(false);
+  const [cepMessage, setCepMessage] = useState<string | null>(null);
 
   function update(name: keyof FormValues, value: string) {
-    setValues((current) => ({ ...current, [name]: value }));
+    const formattedValue = name === "contactPhone" ? formatPhoneBR(value)
+      : name === "cpf" ? formatCpf(value)
+        : name === "cnpj" ? formatCnpj(value)
+          : name === "rg" ? formatRg(value)
+            : name === "cep" ? formatCep(value)
+              : name === "state" ? value.replace(/[^a-zA-Z]/g, "").slice(0, 2).toUpperCase()
+                : value;
+    setValues((current) => ({ ...current, [name]: formattedValue }));
+  }
+
+  async function lookupCep() {
+    const postalCode = values.cep.replace(/\D/g, "");
+    if (postalCode.length !== 8) {
+      setCepMessage("Informe os 8 números do CEP para buscar o endereço.");
+      return;
+    }
+
+    setIsLookingUpCep(true);
+    setCepMessage(null);
+    try {
+      const response = await fetch(`/api/central-admin/cep/${postalCode}`, { cache: "no-store" });
+      const result = await response.json() as { found?: boolean; error?: string; street?: string; neighborhood?: string; city?: string; state?: string };
+      if (!response.ok || !result.found) throw new Error(result.error ?? "CEP não encontrado.");
+      setValues((current) => ({ ...current, street: result.street ?? "", neighborhood: result.neighborhood ?? "", city: result.city ?? "", state: result.state ?? "" }));
+      setCepMessage("Endereço localizado. Confira número e complemento antes de salvar.");
+    } catch (lookupError) {
+      setCepMessage(lookupError instanceof Error ? lookupError.message : "Não foi possível consultar o CEP.");
+    } finally {
+      setIsLookingUpCep(false);
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -139,11 +187,26 @@ export function NewClientForm() {
         <Field label="Nome fantasia" name="tradeName" value={values.tradeName} onChange={update} />
         <Field label="Responsável" name="responsibleName" value={values.responsibleName} onChange={update} required />
         <Field label="E-mail comercial" name="contactEmail" value={values.contactEmail} onChange={update} type="email" placeholder="contato@empresa.com" />
-        <Field label="Telefone / WhatsApp" name="contactPhone" value={values.contactPhone} onChange={update} />
-        <Field label="CPF ou CNPJ" name="document" value={values.document} onChange={update} />
+        <Field label="Telefone / WhatsApp" name="contactPhone" value={values.contactPhone} onChange={update} placeholder="(15) 99847-8705" />
+        <div className="md:col-span-2"><p className="text-xs font-bold uppercase tracking-[0.12em] text-[#1769b0]">Documentos e identificação</p><p className="mt-1 text-xs text-[#8290a1]">Preencha apenas o que for necessário para o cadastro do cliente.</p></div>
+        <Field label="CPF" name="cpf" value={values.cpf} onChange={update} placeholder="000.000.000-00" />
+        <Field label="CNPJ" name="cnpj" value={values.cnpj} onChange={update} placeholder="00.000.000/0000-00" />
+        <Field label="RG" name="rg" value={values.rg} onChange={update} placeholder="00.000.000-0" />
+        <div className="md:col-span-2 mt-2 border-t border-[#edf1f5] pt-5"><div className="flex items-center gap-2"><MapPin className="size-4 text-[#1769b0]" /><div><p className="text-xs font-bold uppercase tracking-[0.12em] text-[#1769b0]">Endereço comercial</p><p className="mt-1 text-xs text-[#8290a1]">Digite o CEP e o cadastro preencherá a cidade, UF, rua e bairro automaticamente.</p></div></div></div>
+        <label className="block">
+          <span className="text-xs font-semibold text-[#294052]">CEP</span>
+          <div className="mt-2 flex gap-2">
+            <input name="cep" value={values.cep} onChange={(event) => update("cep", event.target.value)} onBlur={() => { if (values.cep.replace(/\D/g, "").length === 8) void lookupCep(); }} placeholder="00000-000" className="h-11 min-w-0 flex-1 rounded-md border border-[#d7e0e7] bg-white px-3 text-sm text-[#10243c] outline-none transition placeholder:text-[#9aa9b5] focus:border-[#3189bc] focus:ring-2 focus:ring-[#dceef8]" />
+            <button type="button" onClick={() => void lookupCep()} disabled={isLookingUpCep} className="inline-flex h-11 shrink-0 items-center gap-2 rounded-md border border-[#b9d4e7] px-3 text-xs font-semibold text-[#1769b0] transition hover:bg-[#f2f8fc] disabled:cursor-wait disabled:opacity-60">{isLookingUpCep ? <LoaderCircle className="size-4 animate-spin" /> : <MapPin className="size-4" />}{isLookingUpCep ? "Buscando" : "Buscar CEP"}</button>
+          </div>
+          {cepMessage ? <span className="mt-2 block text-xs text-[#5f7890]">{cepMessage}</span> : null}
+        </label>
+        <Field label="Rua / avenida" name="street" value={values.street} onChange={update} />
+        <Field label="Número" name="number" value={values.number} onChange={update} />
+        <Field label="Complemento" name="complement" value={values.complement} onChange={update} placeholder="Sala, galpão, bloco..." />
+        <Field label="Bairro" name="neighborhood" value={values.neighborhood} onChange={update} />
         <Field label="Cidade" name="city" value={values.city} onChange={update} />
         <Field label="UF" name="state" value={values.state} onChange={update} placeholder="SP" />
-        <div className="md:col-span-2"><Field label="Endereço" name="address" value={values.address} onChange={update} /></div>
       </div>
 
       <div className="mt-8 border-t border-[#edf1f5] pt-6"><h2 className="text-base font-semibold text-[#173044]">Serviço vinculado</h2><p className="mt-1 text-sm text-[#718196]">Sistemas têm ponte de usuários; sites têm monitoramento técnico. O financeiro de cada serviço fica separado.</p></div>

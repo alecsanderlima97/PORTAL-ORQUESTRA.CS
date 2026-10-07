@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getFirebaseAdminDb } from "@/lib/firebase-admin";
 import { getCurrentSession } from "@/lib/session";
+import { digits, isValidCnpj, isValidCpf } from "@/lib/client-data";
 
 const platformRoles = new Set(["platform_owner", "orquestra_admin"]);
 const contractStatuses = new Set(["ativo", "teste", "suspenso", "encerrado"]);
@@ -49,6 +50,18 @@ export async function POST(request: Request) {
     const responsibleName = text(body.responsibleName, 120);
     const ownerGoogleEmail = optionalText(body.ownerGoogleEmail, 160)?.toLowerCase() ?? null;
     const contactEmail = optionalText(body.contactEmail, 160)?.toLowerCase() ?? null;
+    const contactPhone = text(body.contactPhone, 40);
+    const cpf = optionalText(body.cpf, 20);
+    const cnpj = optionalText(body.cnpj, 24);
+    const rg = optionalText(body.rg, 20);
+    const cep = optionalText(body.cep, 9);
+    const street = optionalText(body.street, 160);
+    const addressNumber = optionalText(body.number, 30);
+    const complement = optionalText(body.complement, 120);
+    const neighborhood = optionalText(body.neighborhood, 120);
+    const city = text(body.city, 100);
+    const state = text(body.state, 2).toUpperCase();
+    const legacyDocument = optionalText(body.document, 32);
     const plan = text(body.plan, 80);
     const sourceSystem = text(body.sourceSystem, 80) || null;
     const externalTenantId = optionalText(body.externalTenantId, 120);
@@ -81,6 +94,22 @@ export async function POST(request: Request) {
 
     if ((ownerGoogleEmail && !/^\S+@\S+\.\S+$/.test(ownerGoogleEmail)) || (contactEmail && !/^\S+@\S+\.\S+$/.test(contactEmail))) {
       return NextResponse.json({ error: "Informe e-mails válidos." }, { status: 400 });
+    }
+
+    if (contactPhone && ![10, 11].includes(digits(contactPhone).length)) {
+      return NextResponse.json({ error: "Informe um telefone com DDD válido." }, { status: 400 });
+    }
+
+    if (cpf && !isValidCpf(cpf)) {
+      return NextResponse.json({ error: "O CPF informado não é válido." }, { status: 400 });
+    }
+
+    if (cnpj && !isValidCnpj(cnpj)) {
+      return NextResponse.json({ error: "O CNPJ informado não é válido." }, { status: 400 });
+    }
+
+    if (cep && digits(cep).length !== 8) {
+      return NextResponse.json({ error: "Informe um CEP válido com 8 números." }, { status: 400 });
     }
 
     if ((externalTenantId && !sourceSystem) || (sourceSystem && (!externalTenantId || !systemUrl))) {
@@ -138,11 +167,19 @@ export async function POST(request: Request) {
       responsibleName,
       ownerGoogleEmail,
       contactEmail,
-      contactPhone: text(body.contactPhone, 40),
-      document: optionalText(body.document, 32),
-      city: text(body.city, 100),
-      state: text(body.state, 2).toUpperCase(),
-      address: optionalText(body.address, 240),
+      contactPhone,
+      document: cnpj ?? cpf ?? legacyDocument,
+      cpf,
+      cnpj,
+      rg,
+      cep,
+      street,
+      number: addressNumber,
+      complement,
+      neighborhood,
+      city,
+      state,
+      address: optionalText(body.address, 240) ?? ([street, addressNumber, complement, neighborhood].filter(Boolean).join(", ") || null),
       plan,
       sourceSystem,
       externalTenantId,
@@ -190,6 +227,16 @@ export async function POST(request: Request) {
         accessStatus,
         connectorStatus: "pendente",
         externalTenantId,
+        currentVersion: null,
+        lastUpdatedAt: null,
+        lastUpdateSummary: null,
+        vercelProjectName: null,
+        repositoryUrl: null,
+        availabilityStatus: "nao_verificado",
+        httpStatus: null,
+        responseTimeMs: null,
+        lastCheckedAt: null,
+        sslStatus: "nao_verificado",
         lastSyncAt: null,
         lastKnownStatus: "Ponte segura ainda não configurada.",
         createdAt: FieldValue.serverTimestamp(),

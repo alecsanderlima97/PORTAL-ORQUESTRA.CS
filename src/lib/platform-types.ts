@@ -112,6 +112,14 @@ export type CompanyRecord = {
   contactEmail: string;
   contactPhone: string;
   document: string | null;
+  cpf: string | null;
+  cnpj: string | null;
+  rg: string | null;
+  cep: string | null;
+  street: string | null;
+  number: string | null;
+  complement: string | null;
+  neighborhood: string | null;
   city: string;
   state: string;
   address: string | null;

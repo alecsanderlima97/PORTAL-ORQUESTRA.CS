@@ -63,6 +63,14 @@ function mapCompany(id: string, raw: FirebaseFirestore.DocumentData): CompanyRec
     contactEmail: stringValue(raw.contactEmail, stringValue(raw.email)),
     contactPhone: stringValue(raw.contactPhone, stringValue(raw.phone)),
     document: nullableString(raw.document),
+    cpf: nullableString(raw.cpf),
+    cnpj: nullableString(raw.cnpj),
+    rg: nullableString(raw.rg),
+    cep: nullableString(raw.cep),
+    street: nullableString(raw.street),
+    number: nullableString(raw.number),
+    complement: nullableString(raw.complement),
+    neighborhood: nullableString(raw.neighborhood),
     city: stringValue(raw.city),
     state: stringValue(raw.state),
     address: nullableString(raw.address),
@@ -218,13 +226,4 @@ export async function getTenantSnapshot(tenantId: string): Promise<TenantSnapsho
   };
 }
 
-export function formatMoney(value: number) {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
-}
-
-export function formatSnapshotDate(value: string | null) {
-  if (!value) return "Não informado";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Não informado";
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" }).format(date);
-}
+export { formatMoney, formatSnapshotDate } from "@/lib/formatters";

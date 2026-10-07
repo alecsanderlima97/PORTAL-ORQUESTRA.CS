@@ -18,6 +18,7 @@ import {
 import { BrandLogo } from "@/components/brand-logo";
 import { CheckServiceButton } from "@/components/check-service-button";
 import { SyncServiceButton } from "@/components/sync-service-button";
+import { LeadsCenter } from "@/components/leads-center";
 import { formatMoney, formatSnapshotDate } from "@/lib/control-center";
 import type { ControlSnapshot } from "@/lib/platform-types";
 
@@ -250,12 +251,11 @@ export function FinanceView({ snapshot }: { snapshot: ControlSnapshot }) {
 }
 
 export function OpportunitiesView({ snapshot }: { snapshot: ControlSnapshot }) {
-  const totalPotential = snapshot.opportunities.reduce((total, opportunity) => total + opportunity.potentialMonthlyFee, 0);
+  const leadCompanies = snapshot.companies.map(({ id, legalName, tradeName, responsibleName, city, state, plan, accessStatus, monthlyFee, renewalDate }) => ({ id, legalName, tradeName, responsibleName, city, state, plan, accessStatus, monthlyFee, renewalDate }));
   return (
     <>
-      <ControlHeading eyebrow="Desenvolvimento comercial" title="Oportunidades" description="Empresas potenciais, próximas tarefas e possibilidade de mensalidade ou projeto." />
-      <div className="mt-7 grid gap-3 sm:grid-cols-3"><Metric label="Oportunidades" value={String(snapshot.opportunities.length)} detail="em todos os estágios" /><Metric label="Potencial mensal" value={formatMoney(totalPotential)} detail="estimativa cadastrada" tone="success" /><Metric label="Próximas tarefas" value={String(snapshot.opportunities.filter((opportunity) => opportunity.nextTaskAt).length)} detail="com acompanhamento" /></div>
-      <div className="mt-6 rounded-lg border border-[#dfe6ee] bg-white">{snapshot.opportunities.length === 0 ? <div className="p-5"><EmptyState title="Nenhuma oportunidade registrada" description="As oportunidades vindas de indicação, site, Google ou prospecção manual aparecerão aqui. Use este módulo apenas para empresas potenciais, não para clientes ativos." /></div> : <div className="grid gap-3 p-5 md:grid-cols-2 xl:grid-cols-3">{snapshot.opportunities.map((opportunity) => <article key={opportunity.id} className="rounded-md border border-[#e5ebf1] p-4"><div className="flex items-start justify-between gap-3"><h2 className="font-semibold">{opportunity.companyName}</h2><span className="text-xs font-semibold text-[#1769b0]">{opportunity.commercialStatus}</span></div><p className="mt-2 text-sm text-[#60738a]">{opportunity.segment || "Segmento não informado"}</p><p className="mt-1 text-xs text-[#8593a5]">{opportunity.city}{opportunity.state ? ` · ${opportunity.state}` : ""}</p><p className="mt-4 text-sm font-semibold text-[#10243c]">{formatMoney(opportunity.potentialMonthlyFee)} / mês</p><p className="mt-1 text-xs text-[#8593a5]">Próxima tarefa: {formatSnapshotDate(opportunity.nextTaskAt)}</p></article>)}</div>}</div>
+      <ControlHeading eyebrow="Desenvolvimento comercial" title="Central de Leads" description="Clientes fidelizados, oportunidades, tarefas e potencial de negócio em uma visão comercial única." />
+      <LeadsCenter companies={leadCompanies} opportunities={snapshot.opportunities} />
     </>
   );
 }
