@@ -44,6 +44,9 @@ function usageSummary(value: unknown): UsageSummary | null {
     administrators: numberValue(data.administrators),
     staff: numberValue(data.staff),
     endUsers: numberValue(data.endUsers),
+    onlineUsers: numberValue(data.onlineUsers),
+    pendingInvitations: numberValue(data.pendingInvitations),
+    recentChangesLast30Days: numberValue(data.recentChangesLast30Days),
     activeUsersLast30Days: numberValue(data.activeUsersLast30Days),
     lastActivityAt: dateValue(data.lastActivityAt),
     updatedAt: dateValue(data.updatedAt),
@@ -87,6 +90,7 @@ function mapService(id: string, raw: FirebaseFirestore.DocumentData): ManagedSer
   return {
     id,
     name: stringValue(raw.name, "Serviço sem nome"),
+    sourceSystem: nullableString(raw.sourceSystem),
     type: (raw.type ?? "outro") as ServiceType,
     url: stringValue(raw.url),
     tenantId: stringValue(raw.tenantId),

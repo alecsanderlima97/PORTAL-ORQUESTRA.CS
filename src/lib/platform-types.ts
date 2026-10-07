@@ -62,6 +62,9 @@ export type UsageSummary = {
   administrators: number;
   staff: number;
   endUsers: number;
+  onlineUsers: number;
+  pendingInvitations: number;
+  recentChangesLast30Days: number;
   activeUsersLast30Days: number;
   lastActivityAt: string | null;
   updatedAt: string | null;
@@ -70,6 +73,7 @@ export type UsageSummary = {
 export type ManagedService = {
   id: string;
   name: string;
+  sourceSystem?: string | null;
   type: ServiceType;
   url: string;
   tenantId: string;

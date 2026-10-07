@@ -145,6 +145,7 @@ export async function POST(request: Request) {
     if (sourceSystem && externalTenantId && systemUrl) {
       batch.set(db.collection("managedServices").doc(), {
         name: sourceSystemNames[sourceSystem] ?? text(body.tradeName, 160) ?? sourceSystem,
+        sourceSystem,
         type: "sistema_web",
         url: systemUrl,
         tenantId: companyRef.id,
