@@ -7,6 +7,7 @@ type FormValues = {
   legalName: string;
   tradeName: string;
   responsibleName: string;
+  ownerGoogleEmail: string;
   contactEmail: string;
   contactPhone: string;
   document: string;
@@ -28,6 +29,7 @@ const initialValues: FormValues = {
   legalName: "",
   tradeName: "",
   responsibleName: "",
+  ownerGoogleEmail: "",
   contactEmail: "",
   contactPhone: "",
   document: "",
@@ -103,7 +105,8 @@ export function NewClientForm() {
         <Field label="Razão social" name="legalName" value={values.legalName} onChange={update} required />
         <Field label="Nome fantasia" name="tradeName" value={values.tradeName} onChange={update} />
         <Field label="Responsável" name="responsibleName" value={values.responsibleName} onChange={update} required />
-        <Field label="E-mail principal" name="contactEmail" value={values.contactEmail} onChange={update} type="email" required />
+        <Field label="Google do administrador" name="ownerGoogleEmail" value={values.ownerGoogleEmail} onChange={update} type="email" required placeholder="admin@empresa.com" />
+        <Field label="E-mail comercial" name="contactEmail" value={values.contactEmail} onChange={update} type="email" placeholder="contato@empresa.com" />
         <Field label="Telefone / WhatsApp" name="contactPhone" value={values.contactPhone} onChange={update} />
         <Field label="CPF ou CNPJ" name="document" value={values.document} onChange={update} />
         <Field label="Cidade" name="city" value={values.city} onChange={update} />

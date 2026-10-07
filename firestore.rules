@@ -29,6 +29,12 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    // Invitations are created and consumed only by the server. They bind a Google email
+    // to a tenant before the first login in the central portal.
+    match /userInvites/{inviteId} {
+      allow read, create, update, delete: if false;
+    }
+
     match /companies/{tenantId} {
       allow read: if isPlatformAdmin() || belongsToTenant(tenantId);
       allow create, update, delete: if false;

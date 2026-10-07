@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { FieldValue } from "firebase-admin/firestore";
 import { getFirebaseAdminAuth } from "@/lib/firebase-admin";
 import { getFirebaseAdminDb } from "@/lib/firebase-admin";
 import { SESSION_COOKIE } from "@/lib/session";
@@ -30,10 +31,40 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Faça login novamente para continuar." }, { status: 401 });
     }
 
-    const profile = await getFirebaseAdminDb().collection("users").doc(decoded.uid).get();
-    const profileData = profile.data();
+    const db = getFirebaseAdminDb();
+    const profile = await db.collection("users").doc(decoded.uid).get();
+    let profileData = profile.data();
 
-    if (!profile.exists || !profileData?.active || !profileData.role) {
+    if (!profile.exists && decoded.email) {
+      const email = decoded.email.toLowerCase();
+      const inviteSnapshot = await db.collection("userInvites").where("email", "==", email).limit(10).get();
+      const invite = inviteSnapshot.docs.find((doc) => doc.data().active === true);
+
+      if (invite) {
+        const inviteData = invite.data();
+        const newProfile = {
+          uid: decoded.uid,
+          name: decoded.name ?? email,
+          email,
+          role: inviteData.role ?? "company_owner",
+          tenantId: inviteData.tenantId ?? null,
+          active: true,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        };
+        const batch = db.batch();
+        batch.set(db.collection("users").doc(decoded.uid), newProfile);
+        batch.update(invite.ref, {
+          active: false,
+          acceptedAt: FieldValue.serverTimestamp(),
+          acceptedByUid: decoded.uid,
+        });
+        await batch.commit();
+        profileData = newProfile;
+      }
+    }
+
+    if (!profileData?.active || !profileData.role) {
       return NextResponse.json({ error: "Este usuário ainda não possui acesso ao Portal." }, { status: 403 });
     }
 

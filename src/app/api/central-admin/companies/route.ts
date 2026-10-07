@@ -39,7 +39,8 @@ export async function POST(request: Request) {
 
     const legalName = text(body.legalName, 160);
     const responsibleName = text(body.responsibleName, 120);
-    const contactEmail = text(body.contactEmail, 160).toLowerCase();
+    const ownerGoogleEmail = text(body.ownerGoogleEmail, 160).toLowerCase();
+    const contactEmail = text(body.contactEmail, 160).toLowerCase() || ownerGoogleEmail;
     const plan = text(body.plan, 80);
     const contractStatus = text(body.contractStatus, 30);
     const accessStatus = text(body.accessStatus, 30);
@@ -47,12 +48,12 @@ export async function POST(request: Request) {
     const graceDays = Math.round(numberValue(body.graceDays, 5));
     const monthlyFee = numberValue(body.monthlyFee, 0);
 
-    if (!legalName || !responsibleName || !contactEmail || !plan) {
-      return NextResponse.json({ error: "Preencha empresa, responsável, e-mail e plano." }, { status: 400 });
+    if (!legalName || !responsibleName || !ownerGoogleEmail || !plan) {
+      return NextResponse.json({ error: "Preencha empresa, responsável, Google do administrador e plano." }, { status: 400 });
     }
 
-    if (!/^\S+@\S+\.\S+$/.test(contactEmail)) {
-      return NextResponse.json({ error: "Informe um e-mail válido." }, { status: 400 });
+    if (!/^\S+@\S+\.\S+$/.test(ownerGoogleEmail) || (contactEmail && !/^\S+@\S+\.\S+$/.test(contactEmail))) {
+      return NextResponse.json({ error: "Informe e-mails válidos." }, { status: 400 });
     }
 
     if (!contractStatuses.has(contractStatus) || !accessStatuses.has(accessStatus)) {
@@ -65,11 +66,23 @@ export async function POST(request: Request) {
 
     const db = getFirebaseAdminDb();
     const companyRef = db.collection("companies").doc();
+    const existingProfile = await db.collection("users").where("email", "==", ownerGoogleEmail).limit(10).get();
+    if (!existingProfile.empty) {
+      return NextResponse.json({ error: "Este Google já possui um cadastro no Portal. Gerencie o acesso existente em vez de criar outro vínculo." }, { status: 409 });
+    }
+
+    const existingInvite = await db.collection("userInvites").where("email", "==", ownerGoogleEmail).limit(10).get();
+    const inviteAlreadyUsed = existingInvite.docs.some((doc) => doc.data().active === true);
+    if (inviteAlreadyUsed) {
+      return NextResponse.json({ error: "Este Google já possui um convite de acesso pendente." }, { status: 409 });
+    }
+
     const now = new Date().toISOString();
     const company = {
       legalName,
       tradeName: optionalText(body.tradeName, 160),
       responsibleName,
+      ownerGoogleEmail,
       contactEmail,
       contactPhone: text(body.contactPhone, 40),
       document: optionalText(body.document, 32),
@@ -92,6 +105,14 @@ export async function POST(request: Request) {
 
     const batch = db.batch();
     batch.set(companyRef, company);
+    batch.set(db.collection("userInvites").doc(), {
+      email: ownerGoogleEmail,
+      tenantId: companyRef.id,
+      role: "company_owner",
+      active: true,
+      invitedBy: session.uid,
+      createdAt: FieldValue.serverTimestamp(),
+    });
     batch.set(db.collection("auditLogs").doc(), {
       tenantId: companyRef.id,
       actorUserId: session.uid,
