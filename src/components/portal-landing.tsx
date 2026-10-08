@@ -428,14 +428,29 @@ export function PortalLanding() {
                   const project = deployedProjects.find((item) => item.id === id);
                   if (!project) return null;
                   const Icon = project.icon;
+                  const details = projectCatalogDetails[project.id];
                   const solutionContent = (
                     <>
-                      <span className="portal-solution__icon"><Icon className="size-4" /></span>
-                      <span className="portal-solution__name">{project.name}</span>
-                      <span className="portal-solution__category">{project.category}</span>
-                      <span className={`portal-solution__status portal-solution__status--${project.availability}`}>
-                        {project.availability === "online" ? "Online" : project.availability === "offline" ? "Offline" : "A verificar"}
-                      </span>
+                      <div className="portal-solution__media">
+                        {details?.previewImage ? <Image src={details.previewImage} alt={details.previewAlt || project.name} fill sizes="(max-width: 720px) 100vw, 220px" /> : <span className="portal-solution__media-empty"><Icon className="size-8" /><small>Prévia visual em preparação</small></span>}
+                      </div>
+                      <div className="portal-solution__details">
+                        <div className="portal-solution__topline">
+                          <span className="portal-solution__icon"><Icon className="size-4" /></span>
+                          <div className="min-w-0">
+                            <span className="portal-solution__name">{project.name}</span>
+                            <span className="portal-solution__category">{project.category}</span>
+                          </div>
+                          <span className={`portal-solution__status portal-solution__status--${project.availability}`}>
+                            {project.availability === "online" ? "Online" : project.availability === "offline" ? "Offline" : "A verificar"}
+                          </span>
+                        </div>
+                        <p className="portal-solution__description">{project.description}</p>
+                        {details ? <>
+                          <p className="portal-solution__audience"><strong>Indicado para:</strong> {details.audience}</p>
+                          <ul className="portal-solution__highlights">{details.highlights.map((highlight) => <li key={highlight}>{highlight}</li>)}</ul>
+                        </> : null}
+                      </div>
                       <ArrowRight className="portal-solution__arrow size-4" />
                     </>
                   );
@@ -443,33 +458,6 @@ export function PortalLanding() {
                 })}
               </div>
             ))}
-          </div>
-          <div className="portal-catalog" aria-label="Detalhes dos sistemas e projetos">
-            <div className="portal-catalog__heading">
-              <p className="portal-eyebrow">Conheça por dentro</p>
-              <h2>Uma solução para cada tipo de operação.</h2>
-              <p className="portal-section-intro">Veja para quem cada produto foi pensado e o que ele ajuda a organizar.</p>
-            </div>
-            <div className="portal-catalog__grid">
-              {deployedProjects.filter((project) => project.relation !== "site").map((project) => {
-                const details = projectCatalogDetails[project.id];
-                if (!details) return null;
-                const Icon = project.icon;
-                return (
-                  <article className="portal-catalog-card" key={project.id}>
-                    {details.previewImage ? <div className="portal-catalog-card__media"><Image src={details.previewImage} alt={details.previewAlt || project.name} fill sizes="(max-width: 900px) 100vw, 360px" /></div> : <div className="portal-catalog-card__media portal-catalog-card__media--empty"><Icon className="size-8" /><span>Prévia de interface em preparação</span></div>}
-                    <div className="portal-catalog-card__body">
-                      <div className="portal-catalog-card__meta"><span>{project.category}</span><span>{project.relation === "cliente_ativo" ? "Cliente ativo" : project.relation === "site" ? "Site" : "Produto próprio"}</span></div>
-                      <h3>{project.name}</h3>
-                      <p>{project.description}</p>
-                      <p className="portal-catalog-card__audience"><strong>Indicado para:</strong> {details.audience}</p>
-                      <ul>{details.highlights.map((highlight) => <li key={highlight}>{highlight}</li>)}</ul>
-                      {details.previewKind === "ambiente" ? <small>Prévia visual real do projeto. Capturas das telas entram na próxima etapa.</small> : null}
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
           </div>
         </section>
 
