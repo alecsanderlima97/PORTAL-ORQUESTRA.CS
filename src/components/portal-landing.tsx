@@ -11,6 +11,7 @@ import { PortalGravityField, PortalWarpCanvas } from "@/components/portal-visual
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 type GatewayPhase = "arrival" | "entering" | "inside";
+type EntranceMode = "video" | "procedural";
 
 const solutionGroups = [
   {
@@ -133,10 +134,13 @@ function playPortalTransitionSound() {
 
 export function PortalLanding() {
   const [phase, setPhase] = useState<GatewayPhase>("arrival");
+  const [entranceMode, setEntranceMode] = useState<EntranceMode>("video");
+  const [entranceVideoReady, setEntranceVideoReady] = useState(false);
   const [activeNavigationId, setActiveNavigationId] = useState<(typeof heroNavigation)[number]["id"]>("solucoes");
   const transitionTimerRef = useRef<number | null>(null);
   const gatewayRef = useRef<HTMLButtonElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  const entranceVideoRef = useRef<HTMLVideoElement>(null);
   const veilRef = useRef<HTMLSpanElement>(null);
   const apertureRef = useRef<HTMLSpanElement>(null);
   const transitionLightRef = useRef<HTMLSpanElement>(null);
@@ -148,9 +152,20 @@ export function PortalLanding() {
 
   const enterPortal = useCallback(() => {
     if (phase !== "arrival") return;
+
+    const entranceVideo = entranceVideoRef.current;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const canPlayVideo = !reducedMotion && entranceVideoReady && entranceVideo && entranceVideo.readyState >= 2;
+    setEntranceMode(canPlayVideo ? "video" : "procedural");
     playPortalTransitionSound();
+
+    if (canPlayVideo) {
+      entranceVideo.currentTime = 0;
+      void entranceVideo.play().catch(() => setEntranceMode("procedural"));
+    }
+
     setPhase("entering");
-  }, [phase]);
+  }, [entranceVideoReady, phase]);
 
   useLayoutEffect(() => {
     if (phase !== "entering") return;
@@ -162,6 +177,19 @@ export function PortalLanding() {
     const transitionLight = transitionLightRef.current;
     const content = contentRef.current;
     if (!gateway || !image || !veil || !aperture || !transitionLight || !content) return;
+
+    if (entranceMode === "video") {
+      const entranceVideo = entranceVideoRef.current;
+      const fallbackDuration = 6200;
+      const duration = entranceVideo && Number.isFinite(entranceVideo.duration) && entranceVideo.duration > 0
+        ? Math.ceil(entranceVideo.duration * 1000) + 180
+        : fallbackDuration;
+
+      transitionTimerRef.current = window.setTimeout(() => setPhase("inside"), duration);
+      return () => {
+        if (transitionTimerRef.current !== null) window.clearTimeout(transitionTimerRef.current);
+      };
+    }
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       transitionTimerRef.current = window.setTimeout(() => setPhase("inside"), 420);
@@ -220,7 +248,7 @@ export function PortalLanding() {
       if (completed) context.kill(false);
       else context.revert();
     };
-  }, [phase]);
+  }, [entranceMode, phase]);
 
   useEffect(() => {
     if (phase === "inside") siteRef.current?.focus({ preventScroll: true });
@@ -274,7 +302,7 @@ export function PortalLanding() {
   }, [enterPortal, phase]);
 
   return (
-    <main className={`portal-shell portal-shell--${phase}`}>
+    <main className={`portal-shell portal-shell--${phase} portal-shell--${entranceMode}`}>
       <button
         ref={gatewayRef}
         type="button"
@@ -295,6 +323,20 @@ export function PortalLanding() {
             sizes="100vw"
             className="portal-gateway__image"
           />
+          <video
+            ref={entranceVideoRef}
+            className="portal-gateway__video"
+            src="/portal-entry.mp4"
+            muted
+            playsInline
+            preload="auto"
+            aria-hidden="true"
+            onCanPlay={() => setEntranceVideoReady(true)}
+            onError={() => setEntranceVideoReady(false)}
+            onEnded={() => {
+              if (phase === "entering" && entranceMode === "video") setPhase("inside");
+            }}
+          />
           <span ref={veilRef} className="portal-gateway__veil" />
           <span className="portal-gateway__focus" />
           <span className="portal-gateway__light-sweep" />
@@ -303,7 +345,7 @@ export function PortalLanding() {
             <span className="portal-gateway__aperture-core" />
           </span>
           <span className="portal-gateway__depth" />
-          {phase === "entering" && <PortalWarpCanvas active />}
+          {phase === "entering" && entranceMode === "procedural" && <PortalWarpCanvas active />}
           <span ref={transitionLightRef} className="portal-gateway__transition-light" />
         </span>
         <span ref={contentRef} className="portal-gateway__content">

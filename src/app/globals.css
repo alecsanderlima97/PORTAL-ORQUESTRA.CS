@@ -59,6 +59,7 @@ body {
 
 .portal-gateway__scene,
 .portal-gateway__image,
+.portal-gateway__video,
 .portal-gateway__veil,
 .portal-gateway__focus,
 .portal-gateway__light-sweep,
@@ -83,6 +84,17 @@ body {
   transition: filter 600ms ease;
   animation: portal-idle-breathe 14s ease-in-out infinite alternate;
   will-change: transform, filter, opacity;
+}
+
+.portal-gateway__video {
+  z-index: 2;
+  object-fit: cover;
+  object-position: center center;
+  background: var(--blue-deep);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+  will-change: opacity;
 }
 
 .portal-gateway__veil {
@@ -226,9 +238,27 @@ body {
   animation: none;
 }
 
+.portal-shell--video.portal-shell--entering .portal-gateway__image {
+  opacity: 0;
+}
+
+.portal-shell--video.portal-shell--entering .portal-gateway__video {
+  opacity: 1;
+}
+
+.portal-shell--video.portal-shell--entering .portal-gateway__content {
+  opacity: 0;
+  transform: scale(1.02);
+  transition: opacity 320ms ease, transform 420ms ease;
+}
+
 .portal-shell--entering .portal-warp-canvas {
   opacity: 1;
   transition-delay: 320ms;
+}
+
+.portal-shell--video.portal-shell--entering .portal-warp-canvas {
+  opacity: 0;
 }
 
 .portal-shell--entering .portal-gateway__aperture-halo {
