@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   BarChart3,
@@ -21,7 +22,7 @@ import { SyncServiceButton } from "@/components/sync-service-button";
 import { LeadsCenter } from "@/components/leads-center";
 import { formatMoney, formatSnapshotDate } from "@/lib/control-center";
 import type { ControlSnapshot } from "@/lib/platform-types";
-import { deployedProjects } from "@/lib/portal-data";
+import { deployedProjects, projectCatalogDetails } from "@/lib/portal-data";
 
 const navItems = [
   ["Visão geral", "/central-admin", LayoutDashboard],
@@ -248,7 +249,11 @@ export function ServicesView({ snapshot }: { snapshot: ControlSnapshot }) {
             const availabilityLabel = project.availability === "online" ? "Online" : project.availability === "offline" ? "Offline" : "A verificar";
             const availabilityClass = project.availability === "online" ? "bg-[#eaf8f2] text-[#23825c]" : project.availability === "offline" ? "bg-[#fff0f0] text-[#b54444]" : "bg-[#fff5df] text-[#9b6a0b]";
             const relationLabel = project.relation === "cliente_ativo" ? "Cliente ativo" : project.relation === "site" ? "Site" : "Projeto próprio";
-            return <div key={project.id} className="rounded-md border border-[#edf1f5] bg-[#fbfcfe] p-4"><div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[#e9f1fb] text-[#1769b0]"><Icon className="size-4" /></span><div className="min-w-0"><p className="truncate text-sm font-semibold text-[#203752]">{project.name}</p><p className="mt-1 text-xs text-[#8290a1]">{relationLabel} · {project.category}</p></div></div><span className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${availabilityClass}`}>{availabilityLabel}</span></div><p className="mt-3 text-xs leading-5 text-[#708198]">{project.description}</p>{project.url ? <a className="mt-3 block truncate text-xs font-semibold text-[#1769b0] hover:underline" href={project.url} target="_blank" rel="noreferrer">{project.url}</a> : <p className="mt-3 text-xs text-[#9b6a0b]">Link de produção ainda não informado.</p>}</div>;
+            const details = projectCatalogDetails[project.id];
+            return <article key={project.id} className="overflow-hidden rounded-md border border-[#edf1f5] bg-[#fbfcfe]">
+              {details?.previewImage ? <div className="relative aspect-[16/8] overflow-hidden bg-[#e9f1fb]"><Image src={details.previewImage} alt={details.previewAlt || project.name} fill sizes="(max-width: 1280px) 50vw, 360px" className="object-cover" /></div> : null}
+              <div className="p-4"><div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[#e9f1fb] text-[#1769b0]"><Icon className="size-4" /></span><div className="min-w-0"><p className="truncate text-sm font-semibold text-[#203752]">{project.name}</p><p className="mt-1 text-xs text-[#8290a1]">{relationLabel} · {project.category}</p></div></div><span className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${availabilityClass}`}>{availabilityLabel}</span></div><p className="mt-3 text-xs leading-5 text-[#708198]">{project.description}</p>{details ? <><p className="mt-3 text-xs leading-5 text-[#526b80]"><strong>Indicado para:</strong> {details.audience}</p><ul className="mt-3 flex flex-wrap gap-1.5">{details.highlights.map((highlight) => <li key={highlight} className="rounded-full border border-[#dfe8ef] px-2 py-1 text-[11px] text-[#60788d]">{highlight}</li>)}</ul></> : null}{project.url ? <a className="mt-3 block truncate text-xs font-semibold text-[#1769b0] hover:underline" href={project.url} target="_blank" rel="noreferrer">{project.url}</a> : <p className="mt-3 text-xs text-[#9b6a0b]">Link de produção ainda não informado.</p>}</div>
+            </article>;
           })}
         </div>
       </section>

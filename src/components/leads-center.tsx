@@ -49,7 +49,7 @@ export function LeadsCenter({ companies, opportunities }: { companies: LeadCompa
   return (
     <div className="mt-6 space-y-5">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <LeadMetric icon={<Target className="size-4" />} label="Registros no radar" value={String(companies.length + uniqueOpportunities.length)} detail="clientes e oportunidades" />
+        <LeadMetric icon={<Target className="size-4" />} label="Registros comerciais" value={String(companies.length + uniqueOpportunities.length)} detail="clientes e oportunidades" />
         <LeadMetric icon={<CheckCircle2 className="size-4" />} label="Fidelizados" value={String(companies.length)} detail={`${activeCompanies.length} com acesso regular`} tone="success" />
         <LeadMetric icon={<Building2 className="size-4" />} label="Em pipeline" value={String(uniqueOpportunities.length)} detail="sem cliente duplicado" />
         <LeadMetric icon={<CalendarClock className="size-4" />} label="Potencial mensal" value={formatMoney(potentialMonthly)} detail="oportunidades abertas" />

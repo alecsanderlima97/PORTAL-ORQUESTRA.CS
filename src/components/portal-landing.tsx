@@ -23,11 +23,6 @@ const solutionGroups = [
     description: "Produtos que conectam gestão, madeira, serviços e crescimento.",
     ids: ["orquestra-hub", "orquestra-studio", "orquestra-blend", "orquestra-moda"],
   },
-  {
-    title: "Sites e presença digital",
-    description: "Projetos institucionais e comerciais publicados ou em manutenção.",
-    ids: ["site-porto-belo", "site-pr-perfumaria", "site-dama-de-ferro", "site-vanmarte"],
-  },
 ];
 
 const heroNavigation = [
@@ -456,7 +451,7 @@ export function PortalLanding() {
               <p className="portal-section-intro">Veja para quem cada produto foi pensado e o que ele ajuda a organizar.</p>
             </div>
             <div className="portal-catalog__grid">
-              {deployedProjects.map((project) => {
+              {deployedProjects.filter((project) => project.relation !== "site").map((project) => {
                 const details = projectCatalogDetails[project.id];
                 if (!details) return null;
                 const Icon = project.icon;

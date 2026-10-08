@@ -175,9 +175,9 @@ export const projectCatalogDetails: Record<string, ProjectCatalogDetails> = {
   "sistema-serraria": {
     audience: "Serrarias, indústrias e operações de madeira",
     highlights: ["Estoque e produção", "Frotas e manutenção", "Rotinas operacionais"],
-    previewImage: "/catalogo/mad360-industrial.jpg",
-    previewAlt: "Ambiente industrial de uma operação de madeira",
-    previewKind: "ambiente",
+    previewImage: "/catalogo/mad360-dashboard.jpg",
+    previewAlt: "Painel real do sistema Orquestra Mad360",
+    previewKind: "captura_interface",
   },
   "orquestracs-face-id": {
     audience: "Empresas com equipes, jornadas e controle de ponto",
@@ -186,10 +186,16 @@ export const projectCatalogDetails: Record<string, ProjectCatalogDetails> = {
   "orquestra-fit": {
     audience: "Academias, professores e alunos",
     highlights: ["Alunos e treinos", "Professores e permissões", "Rotina financeira e estoque"],
+    previewImage: "/catalogo/fit-identidade.jpg",
+    previewAlt: "Identidade visual real da academia atendida pelo Orquestra Fit",
+    previewKind: "ambiente",
   },
   "orquestra-hub": {
     audience: "Empresas que precisam organizar gestão e financeiro",
     highlights: ["Contas e fornecedores", "Compras e decisões", "Visão administrativa"],
+    previewImage: "/catalogo/hub-identidade.png",
+    previewAlt: "Identidade visual real do Orquestra Hub",
+    previewKind: "ambiente",
   },
   "orquestra-auto-detail": {
     audience: "Estéticas automotivas e centros de serviço",

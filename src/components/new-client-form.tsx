@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import { Building2, LoaderCircle, MapPin, Save } from "lucide-react";
 import { formatCep, formatCnpj, formatCpf, formatPhoneBR, formatRg } from "@/lib/client-data";
 
@@ -86,46 +86,6 @@ const initialValues: FormValues = {
   notes: "",
 };
 
-type RadarCandidate = {
-  placeId?: string;
-  name: string;
-  address: string;
-  phone: string;
-  city: string;
-  websiteUrl?: string;
-  googleUrl?: string;
-  coordinates?: { lat: number; lng: number };
-  segment?: string;
-  dataSource?: string;
-};
-
-function readRadarCandidate(searchParams: URLSearchParams): RadarCandidate | null {
-  if (searchParams.get("source") !== "radar") return null;
-  const raw = searchParams.get("candidate");
-  if (!raw || raw.length > 6000) return null;
-
-  try {
-    const value = JSON.parse(raw) as Partial<RadarCandidate>;
-    if (typeof value.name !== "string" || !value.name.trim() || typeof value.address !== "string" || !value.address.trim()) return null;
-    return {
-      placeId: typeof value.placeId === "string" ? value.placeId.slice(0, 200) : undefined,
-      name: value.name.trim().slice(0, 160),
-      address: value.address.trim().slice(0, 240),
-      phone: typeof value.phone === "string" ? value.phone.trim().slice(0, 40) : "",
-      city: typeof value.city === "string" ? value.city.trim().slice(0, 100) : "",
-      websiteUrl: typeof value.websiteUrl === "string" ? value.websiteUrl.trim().slice(0, 500) : undefined,
-      googleUrl: typeof value.googleUrl === "string" ? value.googleUrl.trim().slice(0, 500) : undefined,
-      coordinates: value.coordinates && Number.isFinite(value.coordinates.lat) && Number.isFinite(value.coordinates.lng)
-        ? { lat: value.coordinates.lat, lng: value.coordinates.lng }
-        : undefined,
-      segment: typeof value.segment === "string" ? value.segment.trim().slice(0, 80) : undefined,
-      dataSource: typeof value.dataSource === "string" ? value.dataSource.slice(0, 40) : undefined,
-    };
-  } catch {
-    return null;
-  }
-}
-
 function Field({ label, name, value, onChange, type = "text", required = false, placeholder }: { label: string; name: keyof FormValues; value: string; onChange: (name: keyof FormValues, value: string) => void; type?: string; required?: boolean; placeholder?: string }) {
   return (
     <label className="block">
@@ -142,42 +102,6 @@ export function NewClientForm() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLookingUpCep, setIsLookingUpCep] = useState(false);
   const [cepMessage, setCepMessage] = useState<string | null>(null);
-  const [radarNotice, setRadarNotice] = useState<string | null>(null);
-
-  useEffect(() => {
-    const candidate = readRadarCandidate(new URLSearchParams(window.location.search));
-    if (!candidate) return;
-
-    const timer = window.setTimeout(() => {
-      setValues((current) => ({
-        ...current,
-        tradeName: candidate.name,
-        contactPhone: candidate.phone && candidate.phone !== "Não informado" ? formatPhoneBR(candidate.phone) : "",
-        address: candidate.address,
-        city: candidate.city,
-        notes: [
-          "Dados públicos encontrados pelo Radar; confirme antes de salvar.",
-          candidate.segment ? `Segmento encontrado: ${candidate.segment}.` : "",
-          candidate.googleUrl ? `Google Maps: ${candidate.googleUrl}` : "",
-          candidate.websiteUrl ? `Site encontrado: ${candidate.websiteUrl}` : "",
-          candidate.placeId ? `Google Place ID: ${candidate.placeId}` : "",
-        ].filter(Boolean).join("\n"),
-        serviceType: "",
-        serviceName: "",
-        sourceSystem: "",
-        externalTenantId: "",
-        systemUrl: "",
-        plan: "A confirmar",
-        monthlyFee: "0",
-        contractStatus: "teste",
-        accessStatus: "revisao_manual",
-      }));
-      setRadarNotice("Ficha pública do Radar carregada. Confirme razão social, responsável, endereço e vínculo do sistema antes de cadastrar.");
-    }, 0);
-
-    return () => window.clearTimeout(timer);
-  }, []);
-
   function update(name: keyof FormValues, value: string) {
     const formattedValue = name === "contactPhone" ? formatPhoneBR(value)
       : name === "cpf" ? formatCpf(value)
@@ -257,8 +181,6 @@ export function NewClientForm() {
         <div><h2 className="text-base font-semibold text-[#173044]">Dados da empresa</h2><p className="mt-1 text-sm text-[#718196]">Cadastre a empresa pelo sistema que ela já utiliza. Não é necessário saber o Google dos funcionários.</p></div>
       </div>
 
-      {radarNotice ? <p className="mt-5 rounded-md border border-[#cfe3f1] bg-[#f2f8fc] px-3 py-3 text-sm leading-6 text-[#285a78]">{radarNotice}</p> : null}
-
       <div className="mt-6 grid gap-5 md:grid-cols-2">
         <Field label="Razão social" name="legalName" value={values.legalName} onChange={update} required />
         <Field label="Nome fantasia" name="tradeName" value={values.tradeName} onChange={update} />
@@ -270,7 +192,7 @@ export function NewClientForm() {
         <Field label="CNPJ" name="cnpj" value={values.cnpj} onChange={update} placeholder="00.000.000/0000-00" />
         <Field label="RG" name="rg" value={values.rg} onChange={update} placeholder="00.000.000-0" />
         <div className="md:col-span-2 mt-2 border-t border-[#edf1f5] pt-5"><div className="flex items-center gap-2"><MapPin className="size-4 text-[#1769b0]" /><div><p className="text-xs font-bold uppercase tracking-[0.12em] text-[#1769b0]">Endereço comercial</p><p className="mt-1 text-xs text-[#8290a1]">Digite o CEP e o cadastro preencherá a cidade, UF, rua e bairro automaticamente.</p></div></div></div>
-        <div className="md:col-span-2"><Field label="Endereço encontrado no Radar" name="address" value={values.address} onChange={update} placeholder="Confira o endereço comercial" /></div>
+        <div className="md:col-span-2"><Field label="Endereço comercial" name="address" value={values.address} onChange={update} placeholder="Informe o endereço comercial" /></div>
         <label className="block">
           <span className="text-xs font-semibold text-[#294052]">CEP</span>
           <div className="mt-2 flex gap-2">
