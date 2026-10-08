@@ -13,6 +13,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 type GatewayPhase = "arrival" | "entering" | "inside";
 type EntranceMode = "video" | "procedural";
 
+const PORTAL_HOLD_TIME_SECONDS = 0.08;
+
 const solutionGroups = [
   {
     title: "Sistemas de operação",
@@ -69,69 +71,6 @@ const heroNavigation = [
   },
 ] as const;
 
-function playPortalTransitionSound() {
-  const AudioContextConstructor =
-    window.AudioContext ??
-    (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-
-  if (!AudioContextConstructor) return;
-
-  const context = new AudioContextConstructor();
-  const now = context.currentTime;
-  const master = context.createGain();
-  const filter = context.createBiquadFilter();
-
-  filter.type = "lowpass";
-  filter.frequency.setValueAtTime(900, now);
-  filter.frequency.exponentialRampToValueAtTime(2100, now + 2.1);
-  master.gain.setValueAtTime(0.0001, now);
-  master.gain.exponentialRampToValueAtTime(0.045, now + 0.22);
-  master.gain.exponentialRampToValueAtTime(0.018, now + 1.65);
-  master.gain.exponentialRampToValueAtTime(0.0001, now + 2.72);
-
-  filter.connect(master);
-  master.connect(context.destination);
-
-  [146.83, 220, 293.66].forEach((frequency, index) => {
-    const voice = context.createOscillator();
-    const voiceGain = context.createGain();
-    voice.type = index === 0 ? "sine" : "triangle";
-    voice.frequency.setValueAtTime(frequency, now);
-    voice.detune.setValueAtTime(index * 4 - 4, now);
-    voiceGain.gain.setValueAtTime(index === 0 ? 0.62 : 0.26, now);
-    voice.connect(voiceGain);
-    voiceGain.connect(filter);
-    voice.start(now);
-    voice.stop(now + 2.75);
-  });
-
-  const noiseBuffer = context.createBuffer(1, Math.floor(context.sampleRate * 2.65), context.sampleRate);
-  const noiseData = noiseBuffer.getChannelData(0);
-  for (let index = 0; index < noiseData.length; index += 1) {
-    noiseData[index] = (Math.random() * 2 - 1) * (1 - index / noiseData.length);
-  }
-
-  const noise = context.createBufferSource();
-  const noiseFilter = context.createBiquadFilter();
-  const noiseGain = context.createGain();
-  noise.buffer = noiseBuffer;
-  noiseFilter.type = "bandpass";
-  noiseFilter.frequency.setValueAtTime(240, now);
-  noiseFilter.frequency.exponentialRampToValueAtTime(1700, now + 2.35);
-  noiseFilter.Q.setValueAtTime(0.55, now);
-  noiseGain.gain.setValueAtTime(0.0001, now);
-  noiseGain.gain.exponentialRampToValueAtTime(0.018, now + 1.72);
-  noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.62);
-  noise.connect(noiseFilter);
-  noiseFilter.connect(noiseGain);
-  noiseGain.connect(context.destination);
-  noise.start(now);
-  noise.stop(now + 2.65);
-
-  void context.resume();
-  window.setTimeout(() => void context.close(), 3900);
-}
-
 export function PortalLanding() {
   const [phase, setPhase] = useState<GatewayPhase>("arrival");
   const [entranceMode, setEntranceMode] = useState<EntranceMode>("video");
@@ -146,9 +85,37 @@ export function PortalLanding() {
   const transitionLightRef = useRef<HTMLSpanElement>(null);
   const contentRef = useRef<HTMLSpanElement>(null);
   const siteRef = useRef<HTMLDivElement>(null);
+  const roomRef = useRef<HTMLDivElement>(null);
+  const roomGeometryRef = useRef<HTMLDivElement>(null);
   const orchestratorRef = useRef<HTMLDivElement>(null);
   const orchestratorGlowRef = useRef<HTMLSpanElement>(null);
   const activeNavigation = heroNavigation.find((item) => item.id === activeNavigationId) ?? heroNavigation[0];
+
+  useEffect(() => {
+    const video = entranceVideoRef.current;
+    if (!video) return;
+
+    const preparePortalFrame = () => {
+      video.pause();
+      video.muted = true;
+      video.volume = 0.72;
+      setEntranceVideoReady(false);
+      video.currentTime = Math.min(PORTAL_HOLD_TIME_SECONDS, Math.max(video.duration - 0.1, 0));
+    };
+    const confirmPortalFrame = () => {
+      video.pause();
+      setEntranceVideoReady(true);
+    };
+
+    video.addEventListener("loadedmetadata", preparePortalFrame);
+    video.addEventListener("seeked", confirmPortalFrame);
+    if (video.readyState >= 1) preparePortalFrame();
+
+    return () => {
+      video.removeEventListener("loadedmetadata", preparePortalFrame);
+      video.removeEventListener("seeked", confirmPortalFrame);
+    };
+  }, []);
 
   const enterPortal = useCallback(() => {
     if (phase !== "arrival") return;
@@ -157,11 +124,14 @@ export function PortalLanding() {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const canPlayVideo = !reducedMotion && entranceVideoReady && entranceVideo && entranceVideo.readyState >= 2;
     setEntranceMode(canPlayVideo ? "video" : "procedural");
-    playPortalTransitionSound();
 
     if (canPlayVideo) {
-      entranceVideo.currentTime = 0;
-      void entranceVideo.play().catch(() => setEntranceMode("procedural"));
+      entranceVideo.muted = false;
+      entranceVideo.volume = 0.72;
+      void entranceVideo.play().catch(() => {
+        entranceVideo.muted = true;
+        setEntranceMode("procedural");
+      });
     }
 
     setPhase("entering");
@@ -181,13 +151,38 @@ export function PortalLanding() {
     if (entranceMode === "video") {
       const entranceVideo = entranceVideoRef.current;
       const fallbackDuration = 6200;
-      const duration = entranceVideo && Number.isFinite(entranceVideo.duration) && entranceVideo.duration > 0
-        ? Math.ceil(entranceVideo.duration * 1000) + 180
+      const remainingDuration = entranceVideo && Number.isFinite(entranceVideo.duration) && entranceVideo.duration > 0
+        ? Math.max(entranceVideo.duration - entranceVideo.currentTime, 0.4)
+        : fallbackDuration / 1000;
+      const duration = entranceVideo
+        ? Math.ceil(remainingDuration * 1000) + 180
         : fallbackDuration;
+
+      const context = gsap.context(() => {
+        gsap.set(entranceVideo, {
+          scale: 1,
+          filter: "none",
+          transformOrigin: "50% 50%",
+          force3D: true,
+        });
+        gsap.timeline({ defaults: { overwrite: "auto" } })
+          .to(content, { autoAlpha: 0, scale: 1.02, duration: 0.32, ease: "power2.out" }, 0)
+          .to(veil, { opacity: 0.02, duration: 0.8, ease: "power2.out" }, 0)
+          .to(
+            entranceVideo,
+            {
+              scale: 1.035,
+              duration: remainingDuration,
+              ease: "none",
+            },
+            0,
+          );
+      }, gateway);
 
       transitionTimerRef.current = window.setTimeout(() => setPhase("inside"), duration);
       return () => {
         if (transitionTimerRef.current !== null) window.clearTimeout(transitionTimerRef.current);
+        context.revert();
       };
     }
 
@@ -255,21 +250,30 @@ export function PortalLanding() {
   }, [phase]);
 
   useEffect(() => {
+    const room = roomRef.current;
+    const geometry = roomGeometryRef.current;
     const character = orchestratorRef.current;
     const glow = orchestratorGlowRef.current;
-    if (phase !== "inside" || !character || !glow || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (phase !== "inside" || !room || !geometry || !character || !glow || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     let removePointerListener: (() => void) | undefined;
     const context = gsap.context(() => {
+      gsap.fromTo(room, { autoAlpha: 0, scale: 1.015 }, { autoAlpha: 1, scale: 1, duration: 2.2, ease: "power2.out" });
       gsap.from(character, { autoAlpha: 0, xPercent: 8, scale: 0.97, duration: 1.35, ease: "power3.out" });
       gsap.fromTo(glow, { opacity: 0.28, scale: 0.92 }, { opacity: 0.62, scale: 1.08, duration: 1.7, ease: "sine.inOut" });
 
       if (window.matchMedia("(pointer: fine)").matches) {
-        const moveX = gsap.quickTo(character, "x", { duration: 0.9, ease: "power3.out" });
-        const moveY = gsap.quickTo(character, "y", { duration: 0.9, ease: "power3.out" });
+        const roomX = gsap.quickTo(geometry, "rotationY", { duration: 1.7, ease: "power2.out" });
+        const roomY = gsap.quickTo(geometry, "rotationX", { duration: 1.7, ease: "power2.out" });
+        const moveX = gsap.quickTo(character, "x", { duration: 1.1, ease: "power2.out" });
+        const moveY = gsap.quickTo(character, "y", { duration: 1.1, ease: "power2.out" });
         const handlePointerMove = (event: PointerEvent) => {
-          moveX((event.clientX / window.innerWidth - 0.5) * 12);
-          moveY((event.clientY / window.innerHeight - 0.5) * 8);
+          const normalizedX = event.clientX / window.innerWidth - 0.5;
+          const normalizedY = event.clientY / window.innerHeight - 0.5;
+          roomX(normalizedX * 0.85);
+          roomY(normalizedY * -0.65);
+          moveX(normalizedX * 8);
+          moveY(normalizedY * 5);
         };
         window.addEventListener("pointermove", handlePointerMove, { passive: true });
         removePointerListener = () => window.removeEventListener("pointermove", handlePointerMove);
@@ -302,7 +306,7 @@ export function PortalLanding() {
   }, [enterPortal, phase]);
 
   return (
-    <main className={`portal-shell portal-shell--${phase} portal-shell--${entranceMode}`}>
+    <main className={`portal-shell portal-shell--${phase} portal-shell--${entranceMode} ${entranceVideoReady ? "portal-shell--video-ready" : ""}`}>
       <button
         ref={gatewayRef}
         type="button"
@@ -311,6 +315,7 @@ export function PortalLanding() {
         aria-label="Entrar no Portal Orquestra.cs"
         aria-hidden={phase === "inside"}
         tabIndex={phase === "inside" ? -1 : 0}
+        disabled={phase === "arrival" && entranceMode === "video" && !entranceVideoReady}
       >
         <span className="portal-gateway__scene" aria-hidden="true">
           <Image
@@ -327,12 +332,13 @@ export function PortalLanding() {
             ref={entranceVideoRef}
             className="portal-gateway__video"
             src="/portal-entry.mp4"
-            muted
             playsInline
             preload="auto"
             aria-hidden="true"
-            onCanPlay={() => setEntranceVideoReady(true)}
-            onError={() => setEntranceVideoReady(false)}
+            onError={() => {
+              setEntranceVideoReady(false);
+              setEntranceMode("procedural");
+            }}
             onEnded={() => {
               if (phase === "entering" && entranceMode === "video") setPhase("inside");
             }}
@@ -354,11 +360,24 @@ export function PortalLanding() {
             <span>Acessar plataforma</span>
             <ChevronDown className="size-4" />
           </span>
-          <span className="portal-gateway__hint">Clique para entrar</span>
+          <span className="portal-gateway__hint">{entranceMode === "video" && !entranceVideoReady ? "Preparando portal" : "Clique para entrar"}</span>
         </span>
       </button>
 
       <div ref={siteRef} className="portal-site" tabIndex={-1} inert={phase !== "inside"} aria-hidden={phase !== "inside"}>
+        <div ref={roomRef} className="portal-room" aria-hidden="true">
+          <div ref={roomGeometryRef} className="portal-room__geometry">
+            <span className="portal-room__back-wall" />
+            <span className="portal-room__ceiling" />
+            <span className="portal-room__wall portal-room__wall--left" />
+            <span className="portal-room__wall portal-room__wall--right" />
+            <span className="portal-room__floor" />
+            <span className="portal-room__vanishing-light" />
+            <span className="portal-room__rib portal-room__rib--one" />
+            <span className="portal-room__rib portal-room__rib--two" />
+            <span className="portal-room__rib portal-room__rib--three" />
+          </div>
+        </div>
         {phase !== "arrival" && <PortalGravityField />}
         <header className="portal-header">
           <Link href="/" className="portal-header__brand" aria-label="Orquestra.cs - início">
