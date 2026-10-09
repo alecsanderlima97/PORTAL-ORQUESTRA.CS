@@ -54,22 +54,6 @@ const heroNavigation = [
     position: "east",
     icon: MessageCircle,
   },
-  {
-    id: "planos",
-    label: "Planos",
-    detail: "Caminhos para começar",
-    href: "#planos",
-    position: "southeast",
-    icon: Workflow,
-  },
-  {
-    id: "quem-somos",
-    label: "Quem somos",
-    detail: "A Orquestra.cs",
-    href: "#sobre",
-    position: "southwest",
-    icon: LockKeyhole,
-  },
 ] as const;
 
 export function PortalLanding() {
@@ -653,14 +637,13 @@ export function PortalLanding() {
 
         <section className="portal-contact portal-room-section portal-room-section--contact" id="orcamento">
           <div className="portal-contact__copy">
-            <p className="portal-eyebrow">Vamos conversar</p>
-            <h2>Conte o que sua empresa precisa resolver.</h2>
-            <p>Receba uma orientação inicial para escolher o sistema, projeto ou estrutura mais adequada.</p>
+            <p className="portal-eyebrow">Vamos tirar seu projeto do papel</p>
+            <h2>Uma operação mais clara começa com uma boa conversa.</h2>
+            <p>Conte o que sua empresa precisa. A Orquestra.cs ajuda você a encontrar o sistema, site ou automação certa para avançar.</p>
           </div>
           <div className="portal-contact__actions">
-            <a href="mailto:orquestracs@gmail.com?subject=Orçamento Orquestra.cs" className="portal-action portal-action--primary"><Mail className="size-4" /> Solicitar orçamento</a>
-            <a href="mailto:orquestracs@gmail.com?subject=Suporte Orquestra.cs" className="portal-action portal-action--quiet"><MessageCircle className="size-4" /> Falar com suporte</a>
-            <span>orquestracs@gmail.com</span>
+            <a href="https://wa.me/5515998478705?text=Ol%C3%A1%2C%20quero%20conversar%20sobre%20um%20or%C3%A7amento%20com%20a%20Orquestra.cs." target="_blank" rel="noreferrer" className="portal-action portal-action--primary"><MessageCircle className="size-4" /> Falar sobre meu projeto</a>
+            <a href="mailto:orquestracs@gmail.com?subject=Suporte Orquestra.cs" className="portal-action portal-action--quiet"><Mail className="size-4" /> Enviar e-mail ao suporte</a>
           </div>
         </section>
 
