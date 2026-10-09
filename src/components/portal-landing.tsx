@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Activity, ArrowRight, ChevronDown, LockKeyhole, Mail, MessageCircle, Network, Workflow } from "lucide-react";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import { deployedProjects, projectCatalogDetails } from "@/lib/portal-data";
 import { BrandLogo } from "@/components/brand-logo";
 import { PortalGravityField, PortalWarpCanvas } from "@/components/portal-visual-effects";
@@ -89,6 +90,8 @@ export function PortalLanding() {
   const roomGeometryRef = useRef<HTMLDivElement>(null);
   const orchestratorRef = useRef<HTMLDivElement>(null);
   const orchestratorGlowRef = useRef<HTMLSpanElement>(null);
+  const descentRef = useRef<HTMLElement>(null);
+  const descentSceneRef = useRef<HTMLDivElement>(null);
   const activeNavigation = heroNavigation.find((item) => item.id === activeNavigationId) ?? heroNavigation[0];
 
   useEffect(() => {
@@ -146,7 +149,8 @@ export function PortalLanding() {
     const aperture = apertureRef.current;
     const transitionLight = transitionLightRef.current;
     const content = contentRef.current;
-    if (!gateway || !image || !veil || !aperture || !transitionLight || !content) return;
+    const site = siteRef.current;
+    if (!gateway || !image || !veil || !aperture || !transitionLight || !content || !site) return;
 
     if (entranceMode === "video") {
       const entranceVideo = entranceVideoRef.current;
@@ -157,32 +161,39 @@ export function PortalLanding() {
       const duration = entranceVideo
         ? Math.ceil(remainingDuration * 1000) + 180
         : fallbackDuration;
+      let completed = false;
+      let crossfadeStarted = false;
+      let crossfadeTimeline: gsap.core.Timeline | null = null;
 
       const context = gsap.context(() => {
-        gsap.set(entranceVideo, {
-          scale: 1,
-          filter: "none",
-          transformOrigin: "50% 50%",
-          force3D: true,
-        });
         gsap.timeline({ defaults: { overwrite: "auto" } })
           .to(content, { autoAlpha: 0, scale: 1.02, duration: 0.32, ease: "power2.out" }, 0)
-          .to(veil, { opacity: 0.02, duration: 0.8, ease: "power2.out" }, 0)
-          .to(
-            entranceVideo,
-            {
-              scale: 1.035,
-              duration: remainingDuration,
-              ease: "none",
-            },
-            0,
-          );
+          .to(veil, { opacity: 0.02, duration: 0.8, ease: "power2.out" }, 0);
       }, gateway);
 
-      transitionTimerRef.current = window.setTimeout(() => setPhase("inside"), duration);
+      const startCrossfade = () => {
+        if (crossfadeStarted) return;
+        crossfadeStarted = true;
+        crossfadeTimeline = gsap.timeline({
+          defaults: { overwrite: "auto" },
+          onComplete: () => {
+            completed = true;
+            setPhase("inside");
+          },
+        })
+          .set([gateway, site], { transition: "none" })
+          .to(site, { opacity: 1, duration: 0.82, ease: "power2.inOut" }, 0)
+          .to(gateway, { opacity: 0, duration: 0.82, ease: "power2.inOut" }, 0);
+      };
+
+      entranceVideo?.addEventListener("ended", startCrossfade, { once: true });
+      transitionTimerRef.current = window.setTimeout(startCrossfade, duration + 900);
       return () => {
+        entranceVideo?.removeEventListener("ended", startCrossfade);
         if (transitionTimerRef.current !== null) window.clearTimeout(transitionTimerRef.current);
-        context.revert();
+        if (!completed) crossfadeTimeline?.kill();
+        if (completed) context.kill(false);
+        else context.revert();
       };
     }
 
@@ -249,6 +260,62 @@ export function PortalLanding() {
     if (phase === "inside") siteRef.current?.focus({ preventScroll: true });
   }, [phase]);
 
+  useLayoutEffect(() => {
+    const site = siteRef.current;
+    const descent = descentRef.current;
+    const scene = descentSceneRef.current;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (phase !== "inside" || !site || !descent || !scene || reducedMotion) return;
+
+    gsap.registerPlugin(ScrollTrigger);
+    const context = gsap.context(() => {
+      const lights = gsap.utils.toArray<HTMLElement>(".portal-descent__light", scene);
+      const rails = gsap.utils.toArray<HTMLElement>(".portal-descent__rail", scene);
+
+      gsap.timeline({
+        scrollTrigger: {
+          trigger: descent,
+          start: "top bottom",
+          end: "bottom top",
+          scrub: 0.7,
+        },
+      })
+        .fromTo(scene, { "--descent-depth": 0 }, { "--descent-depth": 1, duration: 1, ease: "none" }, 0)
+        .fromTo(rails, { scaleY: 0.82, opacity: 0.35 }, { scaleY: 1.16, opacity: 0.92, duration: 1, ease: "none" }, 0)
+        .fromTo(
+          lights,
+          { y: () => window.innerHeight * -0.3, opacity: 0.08 },
+          { y: () => window.innerHeight * 1.25, opacity: 0.92, stagger: 0.035, duration: 0.92, ease: "none" },
+          0.04,
+        );
+
+      gsap.utils.toArray<HTMLElement>(".portal-room-section", site).forEach((section) => {
+        ScrollTrigger.create({
+          trigger: section,
+          start: "top 72%",
+          end: "bottom 28%",
+          toggleClass: { targets: section, className: "portal-room-section--active" },
+        });
+        gsap.fromTo(
+          section,
+          { "--room-drift": -2 },
+          {
+            "--room-drift": 2,
+            ease: "none",
+            scrollTrigger: {
+              trigger: section,
+              start: "top bottom",
+              end: "bottom top",
+              scrub: 0.8,
+            },
+          },
+        );
+      });
+    }, site);
+
+    return () => context.revert();
+  }, [phase]);
+
   useEffect(() => {
     const room = roomRef.current;
     const geometry = roomGeometryRef.current;
@@ -306,7 +373,7 @@ export function PortalLanding() {
   }, [enterPortal, phase]);
 
   return (
-    <main className={`portal-shell portal-shell--${phase} portal-shell--${entranceMode} ${entranceVideoReady ? "portal-shell--video-ready" : ""}`}>
+    <main className={`portal-shell portal-shell--${phase} portal-shell--${entranceMode} ${entranceVideoReady ? "portal-shell--video-ready" : ""} ${phase === "inside" ? "portal-shell--powering" : ""}`}>
       <button
         ref={gatewayRef}
         type="button"
@@ -338,9 +405,6 @@ export function PortalLanding() {
             onError={() => {
               setEntranceVideoReady(false);
               setEntranceMode("procedural");
-            }}
-            onEnded={() => {
-              if (phase === "entering" && entranceMode === "video") setPhase("inside");
             }}
           />
           <span ref={veilRef} className="portal-gateway__veil" />
@@ -378,24 +442,38 @@ export function PortalLanding() {
             <span className="portal-room__rib portal-room__rib--three" />
           </div>
         </div>
-        {phase !== "arrival" && <PortalGravityField />}
-        <header className="portal-header">
-          <Link href="/" className="portal-header__brand" aria-label="Orquestra.cs - início">
-            <BrandLogo variant="essential" size={34} showWordmark tone="light" />
-          </Link>
-          <nav className="portal-header__nav" aria-label="Navegação principal">
-            <a href="#solucoes">Soluções</a>
-            <a href="#solucoes">Sistemas publicados</a>
-            <a href="#servicos">Consultoria</a>
-            <a href="#planos">Planos</a>
-            <a href="#sobre">Quem somos</a>
-          </nav>
-          <Link href="/login" className="portal-header__login">
-            Entrar
-          </Link>
-        </header>
+        {phase === "inside" && <PortalGravityField />}
+        <div className="portal-site__hero">
+          <div className="portal-power-system" aria-hidden="true">
+            <span className="portal-power-system__lamp portal-power-system__lamp--one" />
+            <span className="portal-power-system__lamp portal-power-system__lamp--two" />
+            <span className="portal-power-system__lamp portal-power-system__lamp--three" />
+            <span className="portal-power-system__lamp portal-power-system__lamp--four" />
+            <span className="portal-room__energy-beam portal-room__energy-beam--left" />
+            <span className="portal-room__energy-beam portal-room__energy-beam--right" />
+            <span className="portal-room__energy-orb">
+              <span className="portal-room__energy-ring portal-room__energy-ring--outer" />
+              <span className="portal-room__energy-ring portal-room__energy-ring--inner" />
+              <span className="portal-room__energy-core" />
+            </span>
+          </div>
+          <header className="portal-header">
+            <Link href="/" className="portal-header__brand" aria-label="Orquestra.cs - início">
+              <BrandLogo variant="essential" size={34} showWordmark tone="light" />
+            </Link>
+            <nav className="portal-header__nav" aria-label="Navegação principal">
+              <a href="#solucoes">Soluções</a>
+              <a href="#solucoes">Sistemas publicados</a>
+              <a href="#servicos">Consultoria</a>
+              <a href="#planos">Planos</a>
+              <a href="#sobre">Quem somos</a>
+            </nav>
+            <Link href="/login" className="portal-header__login">
+              Entrar
+            </Link>
+          </header>
 
-        <section className="portal-home" id="empresa">
+          <section className="portal-home" id="empresa">
           <div className="portal-home__copy">
             <p className="portal-eyebrow">Tecnologia para fazer sua operação avançar</p>
             <h1>A chave para uma operação que funciona.</h1>
@@ -470,9 +548,28 @@ export function PortalLanding() {
               </div>
             </div>
           </div>
+          </section>
+        </div>
+
+        <section ref={descentRef} className="portal-descent" aria-label="Transição para o núcleo de sistemas">
+          <div ref={descentSceneRef} className="portal-descent__scene" aria-hidden="true">
+            <span className="portal-descent__rail portal-descent__rail--left" />
+            <span className="portal-descent__rail portal-descent__rail--right" />
+            <span className="portal-descent__light portal-descent__light--one" />
+            <span className="portal-descent__light portal-descent__light--two" />
+            <span className="portal-descent__light portal-descent__light--three" />
+            <span className="portal-descent__light portal-descent__light--four" />
+            <span className="portal-descent__light portal-descent__light--five" />
+            <span className="portal-descent__light portal-descent__light--six" />
+            <div className="portal-descent__core">
+              <span>Nível 01</span>
+              <strong>Núcleo de sistemas</strong>
+              <i />
+            </div>
+          </div>
         </section>
 
-        <section className="portal-solutions" id="solucoes">
+        <section className="portal-solutions portal-room-section portal-room-section--systems" id="solucoes">
           <div className="portal-solutions__heading">
             <p className="portal-eyebrow">Sistemas publicados</p>
             <h2>Produtos reais da Orquestra.cs.</h2>
@@ -522,7 +619,7 @@ export function PortalLanding() {
           </div>
         </section>
 
-        <section className="portal-services" id="servicos">
+        <section className="portal-services portal-room-section portal-room-section--services" id="servicos">
           <div className="portal-services__heading">
             <p className="portal-eyebrow">Como ajudamos</p>
             <h2>Do problema à solução em uma única direção.</h2>
@@ -534,7 +631,7 @@ export function PortalLanding() {
           </div>
         </section>
 
-        <section className="portal-plans" id="planos">
+        <section className="portal-plans portal-room-section portal-room-section--plans" id="planos">
           <div>
             <p className="portal-eyebrow">Planos e projetos</p>
             <h2>Comece pelo que sua operação precisa hoje.</h2>
@@ -546,7 +643,7 @@ export function PortalLanding() {
           </div>
         </section>
 
-        <section className="portal-about" id="sobre">
+        <section className="portal-about portal-room-section portal-room-section--about" id="sobre">
           <div>
             <p className="portal-eyebrow">Quem somos</p>
             <h2>A Orquestra.cs resolve problemas através de tecnologia.</h2>
@@ -554,7 +651,7 @@ export function PortalLanding() {
           <p>Somos uma empresa de consultoria, infraestrutura comercial, corporativa e industrial. Unimos visão de negócio, equipamentos, software e automação para transformar complexidade em uma operação mais clara, segura e eficiente.</p>
         </section>
 
-        <section className="portal-contact" id="orcamento">
+        <section className="portal-contact portal-room-section portal-room-section--contact" id="orcamento">
           <div className="portal-contact__copy">
             <p className="portal-eyebrow">Vamos conversar</p>
             <h2>Conte o que sua empresa precisa resolver.</h2>
