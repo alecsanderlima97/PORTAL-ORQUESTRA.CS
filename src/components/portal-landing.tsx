@@ -18,13 +18,13 @@ const PORTAL_HOLD_TIME_SECONDS = 0.08;
 
 const solutionGroups = [
   {
-    title: "Sistemas de operação",
-    description: "Sistemas reais publicados para organizar rotinas e ganhar clareza.",
+    title: "Controle da operação",
+    description: "Produção, equipes, academias e serviços sob controle.",
     ids: ["sistema-serraria", "orquestracs-face-id", "orquestra-fit", "orquestra-auto-detail"],
   },
   {
-    title: "Gestão e ecossistema",
-    description: "Produtos que conectam gestão, madeira, serviços e crescimento.",
+    title: "Soluções para negócios",
+    description: "Financeiro, beleza, bares, adegas e moda com gestão especializada.",
     ids: ["orquestra-hub", "orquestra-studio", "orquestra-blend", "orquestra-moda"],
   },
 ];
