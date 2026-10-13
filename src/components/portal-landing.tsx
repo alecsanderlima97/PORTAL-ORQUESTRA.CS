@@ -2,12 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Activity, ArrowRight, ChevronDown, LockKeyhole, Mail, MessageCircle, Network, Workflow } from "lucide-react";
+import { Activity, ArrowRight, LockKeyhole, Mail, MessageCircle, Network, Workflow } from "lucide-react";
 import gsap from "gsap";
-import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import { deployedProjects, projectCatalogDetails } from "@/lib/portal-data";
 import { BrandLogo } from "@/components/brand-logo";
-import { PortalGravityField, PortalWarpCanvas } from "@/components/portal-visual-effects";
+import { PortalWarpCanvas } from "@/components/portal-visual-effects";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
@@ -82,24 +81,32 @@ export function PortalLanding() {
     const video = entranceVideoRef.current;
     if (!video) return;
 
+    const markVideoReady = () => {
+      setEntranceVideoReady(true);
+    };
+
     const preparePortalFrame = () => {
       video.pause();
       video.muted = true;
       video.volume = 0.72;
-      setEntranceVideoReady(false);
-      video.currentTime = Math.min(PORTAL_HOLD_TIME_SECONDS, Math.max(video.duration - 0.1, 0));
+      if (Number.isFinite(video.duration) && video.duration > 0) {
+        video.currentTime = Math.min(PORTAL_HOLD_TIME_SECONDS, Math.max(video.duration - 0.1, 0));
+      }
+      if (video.readyState >= 2) markVideoReady();
     };
     const confirmPortalFrame = () => {
-      video.pause();
-      setEntranceVideoReady(true);
+      markVideoReady();
     };
-
     video.addEventListener("loadedmetadata", preparePortalFrame);
+    video.addEventListener("loadeddata", confirmPortalFrame);
+    video.addEventListener("canplay", confirmPortalFrame);
     video.addEventListener("seeked", confirmPortalFrame);
     if (video.readyState >= 1) preparePortalFrame();
 
     return () => {
       video.removeEventListener("loadedmetadata", preparePortalFrame);
+      video.removeEventListener("loadeddata", confirmPortalFrame);
+      video.removeEventListener("canplay", confirmPortalFrame);
       video.removeEventListener("seeked", confirmPortalFrame);
     };
   }, []);
@@ -109,10 +116,10 @@ export function PortalLanding() {
 
     const entranceVideo = entranceVideoRef.current;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const canPlayVideo = !reducedMotion && entranceVideoReady && entranceVideo && entranceVideo.readyState >= 2;
+    const canPlayVideo = !reducedMotion && Boolean(entranceVideo);
     setEntranceMode(canPlayVideo ? "video" : "procedural");
 
-    if (canPlayVideo) {
+    if (canPlayVideo && entranceVideo) {
       entranceVideo.muted = false;
       entranceVideo.volume = 0.72;
       void entranceVideo.play().catch(() => {
@@ -122,7 +129,7 @@ export function PortalLanding() {
     }
 
     setPhase("entering");
-  }, [entranceVideoReady, phase]);
+  }, [phase]);
 
   useLayoutEffect(() => {
     if (phase !== "entering") return;
@@ -244,62 +251,6 @@ export function PortalLanding() {
     if (phase === "inside") siteRef.current?.focus({ preventScroll: true });
   }, [phase]);
 
-  useLayoutEffect(() => {
-    const site = siteRef.current;
-    const descent = descentRef.current;
-    const scene = descentSceneRef.current;
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (phase !== "inside" || !site || !descent || !scene || reducedMotion) return;
-
-    gsap.registerPlugin(ScrollTrigger);
-    const context = gsap.context(() => {
-      const lights = gsap.utils.toArray<HTMLElement>(".portal-descent__light", scene);
-      const rails = gsap.utils.toArray<HTMLElement>(".portal-descent__rail", scene);
-
-      gsap.timeline({
-        scrollTrigger: {
-          trigger: descent,
-          start: "top bottom",
-          end: "bottom top",
-          scrub: 0.7,
-        },
-      })
-        .fromTo(scene, { "--descent-depth": 0 }, { "--descent-depth": 1, duration: 1, ease: "none" }, 0)
-        .fromTo(rails, { scaleY: 0.82, opacity: 0.35 }, { scaleY: 1.16, opacity: 0.92, duration: 1, ease: "none" }, 0)
-        .fromTo(
-          lights,
-          { y: () => window.innerHeight * -0.3, opacity: 0.08 },
-          { y: () => window.innerHeight * 1.25, opacity: 0.92, stagger: 0.035, duration: 0.92, ease: "none" },
-          0.04,
-        );
-
-      gsap.utils.toArray<HTMLElement>(".portal-room-section", site).forEach((section) => {
-        ScrollTrigger.create({
-          trigger: section,
-          start: "top 72%",
-          end: "bottom 28%",
-          toggleClass: { targets: section, className: "portal-room-section--active" },
-        });
-        gsap.fromTo(
-          section,
-          { "--room-drift": -2 },
-          {
-            "--room-drift": 2,
-            ease: "none",
-            scrollTrigger: {
-              trigger: section,
-              start: "top bottom",
-              end: "bottom top",
-              scrub: 0.8,
-            },
-          },
-        );
-      });
-    }, site);
-
-    return () => context.revert();
-  }, [phase]);
-
   useEffect(() => {
     const room = roomRef.current;
     const geometry = roomGeometryRef.current;
@@ -366,7 +317,6 @@ export function PortalLanding() {
         aria-label="Entrar no Portal Orquestra.cs"
         aria-hidden={phase === "inside"}
         tabIndex={phase === "inside" ? -1 : 0}
-        disabled={phase === "arrival" && entranceMode === "video" && !entranceVideoReady}
       >
         <span className="portal-gateway__scene" aria-hidden="true">
           <Image
@@ -384,8 +334,11 @@ export function PortalLanding() {
             className="portal-gateway__video"
             src="/portal-entry.mp4"
             playsInline
+            muted
             preload="auto"
+            poster="/orquestra-portal-altar-clean.png"
             aria-hidden="true"
+            onCanPlay={() => setEntranceVideoReady(true)}
             onError={() => {
               setEntranceVideoReady(false);
               setEntranceMode("procedural");
@@ -404,11 +357,7 @@ export function PortalLanding() {
         </span>
         <span ref={contentRef} className="portal-gateway__content">
           <BrandLogo variant="essential" size={54} showWordmark tone="light" />
-          <span className="portal-gateway__prompt">
-            <span>Acessar plataforma</span>
-            <ChevronDown className="size-4" />
-          </span>
-          <span className="portal-gateway__hint">{entranceMode === "video" && !entranceVideoReady ? "Preparando portal" : "Clique para entrar"}</span>
+          <span className="portal-gateway__hint">Clique para entrar</span>
         </span>
       </button>
 
@@ -426,7 +375,6 @@ export function PortalLanding() {
             <span className="portal-room__rib portal-room__rib--three" />
           </div>
         </div>
-        {phase === "inside" && <PortalGravityField />}
         <div className="portal-site__hero">
           <div className="portal-power-system" aria-hidden="true">
             <span className="portal-power-system__lamp portal-power-system__lamp--one" />

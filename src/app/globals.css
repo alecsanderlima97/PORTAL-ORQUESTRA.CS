@@ -88,6 +88,9 @@ body {
 
 .portal-gateway__video {
   z-index: 2;
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   object-position: center center;
   background: var(--blue-deep);
@@ -102,25 +105,12 @@ body {
   opacity: 0;
 }
 
-.portal-shell--video-ready .portal-gateway__video {
+.portal-shell--video:not(.portal-shell--video-ready) .portal-gateway__image {
   opacity: 1;
 }
 
-.portal-shell--video .portal-gateway__prompt {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.portal-shell--video .portal-gateway__hint {
-  opacity: 0;
-}
-
-.portal-gateway:disabled {
-  cursor: progress;
-}
-
-.portal-gateway:disabled .portal-gateway__prompt {
-  opacity: 0.52;
+.portal-shell--video-ready .portal-gateway__video {
+  opacity: 1;
 }
 
 .portal-gateway__veil {
@@ -223,31 +213,6 @@ body {
   flex-direction: column;
   justify-content: space-between;
   padding: 2rem 0 3rem;
-}
-
-.portal-gateway__prompt {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  align-self: center;
-  margin-top: auto;
-  padding: 0.75rem 1rem;
-  border: 1px solid rgba(220, 240, 252, 0.3);
-  border-radius: 999px;
-  background: rgba(3, 19, 35, 0.34);
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  backdrop-filter: blur(10px);
-  transition: background 300ms ease, border-color 300ms ease, transform 300ms ease;
-}
-
-.portal-gateway:hover .portal-gateway__prompt,
-.portal-gateway:focus-visible .portal-gateway__prompt {
-  border-color: rgba(166, 221, 251, 0.72);
-  background: rgba(9, 47, 75, 0.58);
-  transform: translateY(-3px);
 }
 
 .portal-gateway__hint {
@@ -1142,7 +1107,7 @@ body {
   opacity: 0.46;
   pointer-events: none;
   transform: translate(-50%, -50%);
-  animation: contact-signal 7s ease-in-out infinite;
+  animation: none;
 }
 
 .portal-contact::after {
@@ -1260,6 +1225,11 @@ body {
 
   .portal-gateway__focus {
     inset: 25% 10% 28%;
+  }
+
+  .portal-gateway__video {
+    object-position: 50% 50%;
+    transform: translateZ(0);
   }
 
   .portal-header,
@@ -1460,14 +1430,14 @@ body {
 .portal-descent {
   position: relative;
   z-index: 1;
-  height: 125svh;
+  height: 100svh;
   overflow: clip;
   background: #031426;
 }
 
 .portal-descent__scene {
   --descent-depth: 0;
-  position: sticky;
+  position: relative;
   top: 0;
   display: grid;
   width: 100%;
@@ -1489,9 +1459,8 @@ body {
   clip-path: polygon(32% 0, 68% 0, 100% 100%, 0 100%);
   content: "";
   opacity: 0.72;
-  transform: translate3d(0, calc(var(--descent-depth) * 7%), 0) scale(calc(0.88 + (var(--descent-depth) * 0.24)));
+  transform: translateZ(0) scale(0.94);
   transform-origin: 50% 20%;
-  will-change: transform;
 }
 
 .portal-descent__scene::after {
@@ -1513,7 +1482,6 @@ body {
   background: linear-gradient(180deg, transparent, rgba(129, 212, 248, 0.9) 15% 84%, transparent);
   box-shadow: 0 0 18px rgba(106, 199, 242, 0.42);
   transform-origin: 50% 10%;
-  will-change: transform, opacity;
 }
 
 .portal-descent__rail--left { left: 28%; transform: rotate(-13deg); }
@@ -1527,7 +1495,6 @@ body {
   height: 3px;
   background: rgba(192, 239, 255, 0.92);
   box-shadow: 0 0 8px rgba(139, 218, 250, 0.86), 0 0 28px rgba(77, 171, 219, 0.68);
-  will-change: transform, opacity;
 }
 
 .portal-descent__light--one { left: 12%; }
@@ -1575,7 +1542,6 @@ body {
 }
 
 .portal-room-section {
-  --room-drift: 0;
   isolation: isolate;
 }
 
@@ -1596,9 +1562,9 @@ body {
     linear-gradient(180deg, rgba(3, 18, 31, 0.84), rgba(3, 18, 31, 0.46) 42%, rgba(3, 18, 31, 0.88)),
     var(--room-image) center center / cover no-repeat;
   opacity: 0.46;
-  transform: translate3d(-50%, calc(var(--room-drift) * 1vh), 0) scale(1.04);
+  transform: translateX(-50%) scale(1.04);
   transition: opacity 700ms ease;
-  will-change: transform, opacity;
+  will-change: auto;
 }
 
 .portal-room-section::after {
@@ -1610,13 +1576,26 @@ body {
   transform: translateX(-50%);
 }
 
-.portal-room-section--active::before { opacity: 0.68; }
-.portal-room-section--active::after { animation: room-power-pulse 4.8s steps(1, end) both; }
-.portal-room-section--systems { --room-image: url('/orquestra-portal-room-3d-v3.png'); }
-.portal-room-section--services { --room-image: url('/orquestra-portal-room-3d-v2.png'); }
-.portal-room-section--plans { --room-image: url('/orquestra-portal-room-3d-v4.png'); }
-.portal-room-section--about { --room-image: url('/orquestra-portal-dimension-v2.png'); }
-.portal-room-section--contact { --room-image: url('/orquestra-portal-dimension.png'); }
+.portal-room-section--systems { --room-image: url('/orquestra-portal-room-3d-v3.webp'); }
+.portal-room-section--services { --room-image: url('/orquestra-portal-room-3d-v2.webp'); }
+.portal-room-section--plans { --room-image: url('/orquestra-portal-room-3d-v4.webp'); }
+.portal-room-section--about { --room-image: url('/orquestra-portal-dimension-v2.webp'); }
+.portal-room-section--contact {
+  --room-image: none;
+}
+
+.portal-room-section--contact::before {
+  background:
+    linear-gradient(180deg, rgba(3, 18, 31, 0.92), rgba(3, 18, 31, 0.78)),
+    linear-gradient(135deg, rgba(5, 37, 62, 0.84), rgba(2, 16, 30, 0.96));
+  opacity: 0.9;
+  transform: translateX(-50%);
+  will-change: auto;
+}
+
+.portal-room-section--contact::after {
+  animation: none;
+}
 
 .portal-site::before,
 .portal-site::after {
