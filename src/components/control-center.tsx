@@ -237,7 +237,7 @@ export function ServicesView({ snapshot }: { snapshot: ControlSnapshot }) {
 
   return (
     <>
-      <ControlHeading eyebrow="Catálogo operacional" title="Serviços e sistemas" description="Links, ambientes, conectores e último estado conhecido de cada solução contratada." />
+      <ControlHeading eyebrow="Catálogo operacional" title="Serviços e sistemas" description="Links, ambientes, conectores e último estado conhecido de cada solução contratada." action={<Link href="/central-admin/servicos/novo" className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[#12345b] px-4 text-sm font-semibold text-white hover:bg-[#0d2949]"><Plus className="size-4" /> Cadastrar sistema</Link>} />
       <section className="mt-7 rounded-lg border border-[#dfe6ee] bg-white p-5 sm:p-6">
         <div className="flex flex-col justify-between gap-3 border-b border-[#edf1f5] pb-4 sm:flex-row sm:items-end">
           <div><h2 className="font-semibold">Carteira de projetos Orquestra.cs</h2><p className="mt-1 text-sm text-[#708198]">Lista real informada por você. O status abaixo é a referência atual e pode ser confirmado pelo botão de verificação quando houver serviço cadastrado.</p></div>

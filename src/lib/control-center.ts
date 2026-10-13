@@ -102,7 +102,7 @@ function mapService(id: string, raw: FirebaseFirestore.DocumentData): ManagedSer
     sourceSystem: nullableString(raw.sourceSystem),
     type: (raw.type ?? "outro") as ServiceType,
     url: stringValue(raw.url),
-    tenantId: stringValue(raw.tenantId),
+    tenantId: nullableString(raw.tenantId),
     plan: stringValue(raw.plan, "Sem plano"),
     monthlyFee: raw.monthlyFee == null ? null : numberValue(raw.monthlyFee),
     developmentFee: raw.developmentFee == null ? null : numberValue(raw.developmentFee),

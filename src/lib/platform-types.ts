@@ -77,7 +77,7 @@ export type ManagedService = {
   sourceSystem?: string | null;
   type: ServiceType;
   url: string;
-  tenantId: string;
+  tenantId: string | null;
   plan: string;
   monthlyFee: number | null;
   developmentFee: number | null;
