@@ -34,7 +34,7 @@ export const deployedProjects: DeployedProject[] = [
     description: "Gestão operacional para serraria, madeira, estoque e produção.",
     icon: Factory,
     status: "publicado",
-    availability: "nao_verificado",
+    availability: "online",
     relation: "cliente_ativo",
   },
   {
@@ -46,7 +46,7 @@ export const deployedProjects: DeployedProject[] = [
     description: "Batida de ponto, jornadas e identificação para equipes.",
     icon: Clock3,
     status: "publicado",
-    availability: "nao_verificado",
+    availability: "online",
     relation: "cliente_ativo",
   },
   {
@@ -58,7 +58,7 @@ export const deployedProjects: DeployedProject[] = [
     description: "Gestão de academia, alunos, treinos e acompanhamento operacional.",
     icon: HeartHandshake,
     status: "publicado",
-    availability: "nao_verificado",
+    availability: "online",
     relation: "cliente_ativo",
   },
   {
@@ -70,7 +70,7 @@ export const deployedProjects: DeployedProject[] = [
     description: "Gestão financeira, fornecedores, compras e decisões empresariais.",
     icon: WalletCards,
     status: "publicado",
-    availability: "nao_verificado",
+    availability: "online",
     relation: "cliente_ativo",
   },
   {
@@ -82,7 +82,7 @@ export const deployedProjects: DeployedProject[] = [
     description: "Agenda, ordens de serviço, clientes e operação de estética automotiva.",
     icon: Car,
     status: "publicado",
-    availability: "nao_verificado",
+    availability: "online",
     relation: "cliente_ativo",
   },
   {
@@ -94,7 +94,7 @@ export const deployedProjects: DeployedProject[] = [
     description: "Sistema para serviços, agenda e relacionamento com clientes.",
     icon: Scissors,
     status: "publicado",
-    availability: "nao_verificado",
+    availability: "online",
     relation: "cliente_ativo",
   },
   {
