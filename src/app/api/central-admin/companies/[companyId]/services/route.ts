@@ -6,6 +6,7 @@ import { getCurrentSession } from "@/lib/session";
 
 const platformRoles = new Set(["platform_owner", "orquestra_admin"]);
 const serviceTypes = new Set(["sistema_web", "site", "landing_page", "crm", "erp", "saas", "consultoria", "marketing_digital", "trafego_pago", "automacao", "integracao", "suporte_tecnico", "outro"]);
+const subscriptionStatuses = new Set(["trial", "ativo", "vencido", "bloqueado", "cancelado", "revisao_manual"]);
 const sourceSystemNames: Record<string, string> = {
   mad360: "Orquestra Mad360 / Serraria",
   orquestra_blend: "Orquestra Blend",
@@ -56,6 +57,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ com
     const supportFee = optionalMoney(body.supportFee);
     const billingDayValue = body.billingDay === null || body.billingDay === "" || body.billingDay === undefined ? null : Number(body.billingDay);
     const billingDay = billingDayValue === null ? null : Math.round(billingDayValue);
+    const startDate = optionalText(body.startDate, 20);
+    const subscriptionStatus = text(body.subscriptionStatus, 30) || "revisao_manual";
     const renewalDate = optionalText(body.renewalDate, 20);
     const currentVersion = optionalText(body.currentVersion, 80);
     const lastUpdatedAt = optionalText(body.lastUpdatedAt, 20);
@@ -63,16 +66,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ com
     const vercelProjectName = optionalText(body.vercelProjectName, 120);
     const repositoryUrl = optionalText(body.repositoryUrl, 500);
 
-    if (!serviceTypes.has(serviceType) || !serviceName || !systemUrl || !plan) return NextResponse.json({ error: "Preencha tipo, nome, link e plano do serviço." }, { status: 400 });
+    if (!serviceTypes.has(serviceType) || !serviceName || !plan) return NextResponse.json({ error: "Preencha tipo, nome e plano do serviço." }, { status: 400 });
+    if (!subscriptionStatuses.has(subscriptionStatus)) return NextResponse.json({ error: "Status da assinatura inválido." }, { status: 400 });
     if ([monthlyFee, developmentFee, implementationFee, supportFee].some((value) => value === undefined)) return NextResponse.json({ error: "Confira os valores comerciais informados." }, { status: 400 });
     if (billingDay !== null && (!Number.isFinite(billingDay) || billingDay < 1 || billingDay > 31)) return NextResponse.json({ error: "O vencimento deve estar entre os dias 1 e 31." }, { status: 400 });
     if (sourceSystem && !externalTenantId) return NextResponse.json({ error: "Informe o ID externo da empresa quando houver sistema de origem." }, { status: 400 });
 
-    try {
-      const parsedUrl = new URL(systemUrl);
-      if (!["http:", "https:"].includes(parsedUrl.protocol)) throw new Error("invalid protocol");
-    } catch {
-      return NextResponse.json({ error: "Informe um link de produção válido." }, { status: 400 });
+    if (systemUrl) {
+      try {
+        const parsedUrl = new URL(systemUrl);
+        if (!["http:", "https:"].includes(parsedUrl.protocol)) throw new Error("invalid protocol");
+      } catch {
+        return NextResponse.json({ error: "Informe um link de produção válido." }, { status: 400 });
+      }
     }
 
     if (repositoryUrl) {
@@ -105,7 +111,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ com
       implementationFee,
       supportFee,
       billingDay,
+      startDate,
       renewalDate,
+      subscriptionStatus,
       currentVersion,
       lastUpdatedAt,
       lastUpdateSummary,

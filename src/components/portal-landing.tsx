@@ -14,6 +14,7 @@ type GatewayPhase = "arrival" | "entering" | "inside";
 type EntranceMode = "video" | "procedural";
 
 const PORTAL_HOLD_TIME_SECONDS = 0.08;
+const PORTAL_ASSET_VERSION = "20261015";
 
 const solutionGroups = [
   {
@@ -321,7 +322,7 @@ export function PortalLanding() {
         <span className="portal-gateway__scene" aria-hidden="true">
           <Image
             ref={imageRef}
-            src="/orquestra-portal-altar-clean.png"
+            src={`/orquestra-portal-altar-clean.png?v=${PORTAL_ASSET_VERSION}`}
             alt=""
             fill
             priority
@@ -332,11 +333,11 @@ export function PortalLanding() {
           <video
             ref={entranceVideoRef}
             className="portal-gateway__video"
-            src="/portal-entry.mp4"
+            src={`/portal-entry.mp4?v=${PORTAL_ASSET_VERSION}`}
             playsInline
             muted
             preload="auto"
-            poster="/orquestra-portal-altar-clean.png"
+            poster={`/orquestra-portal-altar-clean.png?v=${PORTAL_ASSET_VERSION}`}
             aria-hidden="true"
             onCanPlay={() => setEntranceVideoReady(true)}
             onError={() => {
@@ -373,6 +374,10 @@ export function PortalLanding() {
             <span className="portal-room__rib portal-room__rib--one" />
             <span className="portal-room__rib portal-room__rib--two" />
             <span className="portal-room__rib portal-room__rib--three" />
+            <span className="portal-room__wall-panel portal-room__wall-panel--left" />
+            <span className="portal-room__wall-panel portal-room__wall-panel--right" />
+            <span className="portal-room__data-run portal-room__data-run--one" />
+            <span className="portal-room__data-run portal-room__data-run--two" />
           </div>
         </div>
         <div className="portal-site__hero">
@@ -383,10 +388,18 @@ export function PortalLanding() {
             <span className="portal-power-system__lamp portal-power-system__lamp--four" />
             <span className="portal-room__energy-beam portal-room__energy-beam--left" />
             <span className="portal-room__energy-beam portal-room__energy-beam--right" />
-            <span className="portal-room__energy-orb">
-              <span className="portal-room__energy-ring portal-room__energy-ring--outer" />
-              <span className="portal-room__energy-ring portal-room__energy-ring--inner" />
-              <span className="portal-room__energy-core" />
+            <span className="portal-power-pillar">
+              <span className="portal-power-pillar__halo" />
+              <span className="portal-power-pillar__beam portal-power-pillar__beam--top" />
+              <span className="portal-power-pillar__beam portal-power-pillar__beam--bottom" />
+              <span className="portal-power-pillar__body">
+                <span className="portal-power-pillar__core" />
+                <span className="portal-power-pillar__scan portal-power-pillar__scan--one" />
+                <span className="portal-power-pillar__scan portal-power-pillar__scan--two" />
+                <span className="portal-power-pillar__window portal-power-pillar__window--one" />
+                <span className="portal-power-pillar__window portal-power-pillar__window--two" />
+              </span>
+              <span className="portal-power-pillar__base" />
             </span>
           </div>
           <header className="portal-header">
@@ -526,7 +539,7 @@ export function PortalLanding() {
                       </div>
                       <div className="portal-solution__details">
                         <div className="portal-solution__topline">
-                          <span className="portal-solution__icon"><Icon className="size-4" /></span>
+                          <span className={`portal-solution__icon portal-solution__icon--${project.accent}`}><Icon className="size-4" /></span>
                           <div className="min-w-0">
                             <span className="portal-solution__name">{project.name}</span>
                             <span className="portal-solution__category">{project.category}</span>
@@ -544,7 +557,7 @@ export function PortalLanding() {
                       <ArrowRight className="portal-solution__arrow size-4" />
                     </>
                   );
-                  return project.url ? <a href={project.url} target="_blank" rel="noreferrer" className="portal-solution" key={project.id}>{solutionContent}</a> : <div className="portal-solution portal-solution--disabled" key={project.id}>{solutionContent}</div>;
+                  return project.url ? <a href={project.url} target="_blank" rel="noreferrer" className={`portal-solution portal-solution--${project.accent}`} key={project.id}>{solutionContent}</a> : <div className={`portal-solution portal-solution--${project.accent} portal-solution--disabled`} key={project.id}>{solutionContent}</div>;
                 })}
               </div>
             ))}

@@ -9,6 +9,10 @@ type FormValues = {
   tradeName: string;
   responsibleName: string;
   ownerGoogleEmail: string;
+  googleBusinessName: string;
+  googleBusinessUrl: string;
+  googleAddress: string;
+  instagramUrl: string;
   contactEmail: string;
   contactPhone: string;
   document: string;
@@ -50,6 +54,10 @@ const initialValues: FormValues = {
   tradeName: "",
   responsibleName: "",
   ownerGoogleEmail: "",
+  googleBusinessName: "",
+  googleBusinessUrl: "",
+  googleAddress: "",
+  instagramUrl: "",
   contactEmail: "",
   contactPhone: "",
   document: "",
@@ -185,6 +193,7 @@ export function NewClientForm() {
         <Field label="Razão social" name="legalName" value={values.legalName} onChange={update} required />
         <Field label="Nome fantasia" name="tradeName" value={values.tradeName} onChange={update} />
         <Field label="Responsável" name="responsibleName" value={values.responsibleName} onChange={update} required />
+        <Field label="Google do responsável (opcional)" name="ownerGoogleEmail" value={values.ownerGoogleEmail} onChange={update} type="email" placeholder="cliente@gmail.com" />
         <Field label="E-mail comercial" name="contactEmail" value={values.contactEmail} onChange={update} type="email" placeholder="contato@empresa.com" />
         <Field label="Telefone / WhatsApp" name="contactPhone" value={values.contactPhone} onChange={update} placeholder="(15) 99847-8705" />
         <div className="md:col-span-2"><p className="text-xs font-bold uppercase tracking-[0.12em] text-[#1769b0]">Documentos e identificação</p><p className="mt-1 text-xs text-[#8290a1]">Preencha apenas o que for necessário para o cadastro do cliente.</p></div>
@@ -207,6 +216,14 @@ export function NewClientForm() {
         <Field label="Bairro" name="neighborhood" value={values.neighborhood} onChange={update} />
         <Field label="Cidade" name="city" value={values.city} onChange={update} />
         <Field label="UF" name="state" value={values.state} onChange={update} placeholder="SP" />
+      </div>
+
+      <div className="mt-8 border-t border-[#edf1f5] pt-6"><h2 className="text-base font-semibold text-[#173044]">Referências públicas</h2><p className="mt-1 text-sm text-[#718196]">Guarde os links públicos do cliente para localizar a operação. Nunca informe senha ou token nesta tela.</p></div>
+      <div className="mt-5 grid gap-5 md:grid-cols-2">
+        <Field label="Nome no Google" name="googleBusinessName" value={values.googleBusinessName} onChange={update} placeholder="Ex.: Serraria Vanmarte" />
+        <Field label="Link do Google Maps / Perfil" name="googleBusinessUrl" value={values.googleBusinessUrl} onChange={update} type="url" placeholder="https://maps.google.com/..." />
+        <div className="md:col-span-2"><Field label="Endereço confirmado no Google (opcional)" name="googleAddress" value={values.googleAddress} onChange={update} placeholder="Rua, número, bairro, cidade - UF" /></div>
+        <Field label="Instagram público (opcional)" name="instagramUrl" value={values.instagramUrl} onChange={update} type="url" placeholder="https://www.instagram.com/..." />
       </div>
 
       <div className="mt-8 border-t border-[#edf1f5] pt-6"><h2 className="text-base font-semibold text-[#173044]">Serviço vinculado</h2><p className="mt-1 text-sm text-[#718196]">Sistemas têm ponte de usuários; sites têm monitoramento técnico. O financeiro de cada serviço fica separado.</p></div>

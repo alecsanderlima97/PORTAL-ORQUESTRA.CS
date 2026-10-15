@@ -7,6 +7,7 @@ import { getCurrentSession } from "@/lib/session";
 const platformRoles = new Set(["platform_owner", "orquestra_admin"]);
 const serviceTypes = new Set(["sistema_web", "site", "landing_page", "crm", "erp", "saas", "consultoria", "marketing_digital", "trafego_pago", "automacao", "integracao", "suporte_tecnico", "outro"]);
 const availabilityStatuses = new Set(["online", "offline", "erro", "nao_verificado"]);
+const subscriptionStatuses = new Set(["trial", "ativo", "vencido", "bloqueado", "cancelado", "revisao_manual"]);
 
 function text(value: unknown, maxLength: number) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
@@ -45,10 +46,13 @@ export async function POST(request: Request) {
     const implementationFee = optionalMoney(body.implementationFee);
     const supportFee = optionalMoney(body.supportFee);
     const billingDay = body.billingDay === null || body.billingDay === "" || body.billingDay === undefined ? null : Number(body.billingDay);
+    const startDate = optionalText(body.startDate, 20);
+    const subscriptionStatus = text(body.subscriptionStatus, 30) || "revisao_manual";
     const vercelProjectName = optionalText(body.vercelProjectName, 120);
     const repositoryUrl = optionalText(body.repositoryUrl, 500);
 
     if (!name || !serviceTypes.has(type) || !availabilityStatuses.has(availabilityStatus)) return NextResponse.json({ error: "Preencha nome, tipo e disponibilidade válidos." }, { status: 400 });
+    if (!subscriptionStatuses.has(subscriptionStatus)) return NextResponse.json({ error: "Status da assinatura inválido." }, { status: 400 });
     if ([monthlyFee, developmentFee, implementationFee, supportFee].some((value) => value === undefined)) return NextResponse.json({ error: "Confira os valores comerciais informados." }, { status: 400 });
     if (billingDay !== null && (!Number.isFinite(billingDay) || billingDay < 1 || billingDay > 31)) return NextResponse.json({ error: "O vencimento deve estar entre os dias 1 e 31." }, { status: 400 });
     if (url) {
@@ -62,8 +66,10 @@ export async function POST(request: Request) {
 
     const db = getFirebaseAdminDb();
     if (tenantId && !(await db.collection("companies").doc(tenantId).get()).exists) return NextResponse.json({ error: "Cliente vinculado não encontrado." }, { status: 404 });
-    const duplicateQuery = sourceSystem
-      ? await db.collection("managedServices").where("sourceSystem", "==", sourceSystem).limit(1).get()
+    const duplicateQuery = sourceSystem && externalTenantId
+      ? await db.collection("managedServices").where("sourceSystem", "==", sourceSystem).where("externalTenantId", "==", externalTenantId).limit(1).get()
+      : sourceSystem
+        ? await db.collection("managedServices").where("sourceSystem", "==", sourceSystem).where("externalTenantId", "==", null).limit(1).get()
       : await db.collection("managedServices").where("name", "==", name).limit(1).get();
     if (!duplicateQuery.empty) return NextResponse.json({ error: "Este sistema já está cadastrado na Central." }, { status: 409 });
 
@@ -82,7 +88,9 @@ export async function POST(request: Request) {
       implementationFee,
       supportFee,
       billingDay,
+      startDate,
       renewalDate: null,
+      subscriptionStatus,
       environment: "production",
       accessStatus: tenantId ? "revisao_manual" : "revisao_manual",
       connectorStatus: "pendente",

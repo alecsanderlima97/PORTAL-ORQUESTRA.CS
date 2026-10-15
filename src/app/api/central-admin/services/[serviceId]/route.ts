@@ -6,7 +6,8 @@ import { getCurrentSession } from "@/lib/session";
 
 const platformRoles = new Set(["platform_owner", "orquestra_admin"]);
 const serviceTypes = new Set(["sistema_web", "site", "landing_page", "crm", "erp", "saas", "consultoria", "marketing_digital", "trafego_pago", "automacao", "integracao", "suporte_tecnico", "outro"]);
-const editableFields = ["name", "type", "url", "plan", "monthlyFee", "developmentFee", "implementationFee", "supportFee", "billingDay", "renewalDate", "currentVersion", "lastUpdatedAt", "lastUpdateSummary", "vercelProjectName", "repositoryUrl"] as const;
+const subscriptionStatuses = new Set(["trial", "ativo", "vencido", "bloqueado", "cancelado", "revisao_manual"]);
+const editableFields = ["name", "type", "url", "plan", "monthlyFee", "developmentFee", "implementationFee", "supportFee", "billingDay", "startDate", "renewalDate", "subscriptionStatus", "currentVersion", "lastUpdatedAt", "lastUpdateSummary", "vercelProjectName", "repositoryUrl"] as const;
 
 function text(value: unknown, maxLength: number) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
@@ -59,22 +60,27 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ se
     const supportFee = optionalMoney(body.supportFee);
     const billingDayValue = body.billingDay === null || body.billingDay === "" || body.billingDay === undefined ? null : Number(body.billingDay);
     const billingDay = billingDayValue === null ? null : Math.round(billingDayValue);
+    const startDate = optionalText(body.startDate, 20);
     const renewalDate = optionalText(body.renewalDate, 20);
+    const subscriptionStatus = text(body.subscriptionStatus, 30) || "revisao_manual";
     const currentVersion = optionalText(body.currentVersion, 80);
     const lastUpdatedAt = optionalText(body.lastUpdatedAt, 20);
     const lastUpdateSummary = optionalText(body.lastUpdateSummary, 500);
     const vercelProjectName = optionalText(body.vercelProjectName, 120);
     const repositoryUrl = optionalText(body.repositoryUrl, 500);
 
-    if (!name || !plan || !url || !serviceTypes.has(type)) {
-      return NextResponse.json({ error: "Preencha nome, tipo, plano e link do serviço." }, { status: 400 });
+    if (!name || !plan || !serviceTypes.has(type)) {
+      return NextResponse.json({ error: "Preencha nome, tipo e plano do serviço." }, { status: 400 });
     }
+    if (!subscriptionStatuses.has(subscriptionStatus)) return NextResponse.json({ error: "Status da assinatura inválido." }, { status: 400 });
 
-    try {
-      const parsedUrl = new URL(url);
-      if (!["http:", "https:"].includes(parsedUrl.protocol)) throw new Error("invalid protocol");
-    } catch {
-      return NextResponse.json({ error: "Informe um link válido com http ou https." }, { status: 400 });
+    if (url) {
+      try {
+        const parsedUrl = new URL(url);
+        if (!["http:", "https:"].includes(parsedUrl.protocol)) throw new Error("invalid protocol");
+      } catch {
+        return NextResponse.json({ error: "Informe um link válido com http ou https." }, { status: 400 });
+      }
     }
 
     if (repositoryUrl) {
@@ -94,7 +100,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ se
       return NextResponse.json({ error: "O vencimento deve estar entre os dias 1 e 31." }, { status: 400 });
     }
 
-    const updatedFields = { name, type, url, plan, monthlyFee, developmentFee, implementationFee, supportFee, billingDay, renewalDate, currentVersion, lastUpdatedAt, lastUpdateSummary, vercelProjectName, repositoryUrl };
+    const updatedFields = { name, type, url, plan, monthlyFee, developmentFee, implementationFee, supportFee, billingDay, startDate, renewalDate, subscriptionStatus, currentVersion, lastUpdatedAt, lastUpdateSummary, vercelProjectName, repositoryUrl };
     const previousData = serviceSnapshot.data() ?? {};
     const batch = db.batch();
     batch.update(serviceRef, { ...updatedFields, updatedAt: FieldValue.serverTimestamp() });

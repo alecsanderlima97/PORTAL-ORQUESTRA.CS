@@ -47,6 +47,7 @@ export type ServiceType =
 
 export type ConnectorStatus = "pendente" | "ativo" | "com_falha" | "desativado";
 export type ServiceAvailabilityStatus = "online" | "offline" | "erro" | "nao_verificado";
+export type SubscriptionStatus = "trial" | "ativo" | "vencido" | "bloqueado" | "cancelado" | "revisao_manual";
 
 export type UserProfile = {
   uid: string;
@@ -69,6 +70,26 @@ export type UsageSummary = {
   activeUsersLast30Days: number;
   lastActivityAt: string | null;
   updatedAt: string | null;
+  presenceTracking: boolean;
+};
+
+export type ManagedServiceUser = {
+  id: string;
+  serviceId: string;
+  tenantId: string;
+  sourceSystem: string;
+  externalTenantId: string;
+  externalUserId: string;
+  name: string;
+  email: string;
+  role: string;
+  active: boolean;
+  lastActivityAt: string | null;
+  lastSeenAt: string | null;
+  deviceType: string | null;
+  operatingSystem: string | null;
+  browser: string | null;
+  updatedAt: string | null;
 };
 
 export type ManagedService = {
@@ -84,7 +105,9 @@ export type ManagedService = {
   implementationFee: number | null;
   supportFee: number | null;
   billingDay: number | null;
+  startDate: string | null;
   renewalDate: string | null;
+  subscriptionStatus: SubscriptionStatus;
   currentVersion: string | null;
   lastUpdatedAt: string | null;
   lastUpdateSummary: string | null;
@@ -109,6 +132,7 @@ export type CompanyRecord = {
   legalName: string;
   tradeName: string | null;
   responsibleName: string;
+  ownerGoogleEmail: string | null;
   contactEmail: string;
   contactPhone: string;
   document: string | null;
@@ -136,6 +160,10 @@ export type CompanyRecord = {
   startDate: string | null;
   renewalDate: string | null;
   notes: string | null;
+  googleBusinessName: string | null;
+  googleBusinessUrl: string | null;
+  googleAddress: string | null;
+  instagramUrl: string | null;
 };
 
 export type ConnectorCommand = "suspender_acesso" | "liberar_acesso" | "consultar_status" | "sincronizar_cliente";
@@ -177,6 +205,7 @@ export type AuditRecord = {
 export type ControlSnapshot = {
   companies: CompanyRecord[];
   services: ManagedService[];
+  serviceUsers: ManagedServiceUser[];
   charges: ChargeRecord[];
   opportunities: OpportunityRecord[];
   audits: AuditRecord[];

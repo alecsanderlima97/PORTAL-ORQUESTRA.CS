@@ -270,14 +270,12 @@ body {
 .portal-site {
   position: relative;
   min-height: 100svh;
-  background:
-    linear-gradient(180deg, rgba(2, 15, 28, 0.24), rgba(2, 14, 26, 0.48)),
-    url('/orquestra-portal-video-final.png') center top / cover no-repeat,
-    var(--blue-deep);
-  background-blend-mode: normal;
+  background: var(--blue-deep);
   opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
   transform: none;
-  transition: opacity 780ms ease;
+  transition: opacity 780ms ease, visibility 0s linear 780ms;
 }
 
 .portal-room {
@@ -426,82 +424,215 @@ body {
 .portal-room__ceiling::before { left: 12%; transform: rotate(10deg); }
 .portal-room__ceiling::after { right: 12%; transform: rotate(-10deg); }
 
-.portal-room__energy-orb {
+.portal-room__wall-panel,
+.portal-room__data-run {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}
+
+.portal-room__wall-panel {
+  top: 29%;
+  width: clamp(92px, 12vw, 180px);
+  height: 21%;
+  border: 1px solid rgba(142, 211, 239, 0.2);
+  background:
+    linear-gradient(135deg, rgba(51, 117, 153, 0.18), rgba(3, 19, 33, 0.08)),
+    repeating-linear-gradient(180deg, transparent 0 17px, rgba(145, 218, 244, 0.12) 18px, transparent 19px),
+    repeating-linear-gradient(90deg, transparent 0 28px, rgba(145, 218, 244, 0.08) 29px, transparent 30px);
+  box-shadow: inset 0 0 24px rgba(75, 157, 199, 0.12), 0 0 20px rgba(55, 135, 178, 0.08);
+  opacity: 0.2;
+}
+
+.portal-room__wall-panel::before,
+.portal-room__wall-panel::after {
+  position: absolute;
+  content: "";
+}
+
+.portal-room__wall-panel::before {
+  top: 18%;
+  right: 12%;
+  left: 12%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(186, 232, 249, 0.66), transparent);
+  box-shadow: 0 28px 0 rgba(112, 202, 234, 0.28), 0 56px 0 rgba(112, 202, 234, 0.16);
+}
+
+.portal-room__wall-panel::after {
+  top: 34%;
+  left: 14%;
+  width: 18%;
+  height: 18%;
+  border: 1px solid rgba(180, 229, 247, 0.42);
+  box-shadow: 22px 0 0 -1px rgba(180, 229, 247, 0.18), 44px 0 0 -1px rgba(180, 229, 247, 0.12);
+}
+
+.portal-room__wall-panel--left {
+  left: 8%;
+  transform: perspective(700px) rotateY(12deg) skewY(-7deg) translateZ(24px);
+}
+
+.portal-room__wall-panel--right {
+  right: 8%;
+  transform: perspective(700px) rotateY(-12deg) skewY(7deg) translateZ(24px);
+}
+
+.portal-room__data-run {
+  top: 21%;
+  width: clamp(120px, 17vw, 260px);
+  height: 14px;
+  background: repeating-linear-gradient(90deg, rgba(158, 226, 247, 0.75) 0 12px, transparent 12px 28px, rgba(94, 185, 221, 0.42) 28px 31px, transparent 31px 52px);
+  filter: drop-shadow(0 0 8px rgba(80, 181, 223, 0.48));
+  opacity: 0.13;
+  mask-image: linear-gradient(90deg, transparent, #000 18% 82%, transparent);
+}
+
+.portal-room__data-run--one {
+  left: 5%;
+  transform: rotate(-7deg);
+}
+
+.portal-room__data-run--two {
+  right: 5%;
+  top: 25%;
+  transform: rotate(7deg) scaleX(-1);
+}
+
+.portal-power-pillar {
   position: absolute;
   display: block;
   top: 47%;
-  left: 50%;
+  left: 58%;
   z-index: 5;
-  width: 76px;
-  height: 76px;
-  border-radius: 50%;
+  width: clamp(62px, 6.2vw, 104px);
+  height: clamp(188px, 31vh, 310px);
   opacity: 0;
-  transform: translate(-50%, -50%) scale(0.18);
-  will-change: transform, opacity;
+  transform: translate(-50%, -50%) scale(0.24);
+  will-change: transform, opacity, filter;
 }
 
-.portal-room__energy-orb::before,
-.portal-room__energy-orb::after {
+.portal-power-pillar__halo,
+.portal-power-pillar__beam,
+.portal-power-pillar__body,
+.portal-power-pillar__base {
   position: absolute;
-  border-radius: 50%;
+  display: block;
   content: "";
   pointer-events: none;
 }
 
-.portal-room__energy-orb::before {
-  inset: -25px;
-  background: conic-gradient(from 8deg, transparent 0 5%, rgba(191, 240, 255, 0.98) 6% 7%, transparent 8% 17%, rgba(108, 208, 244, 0.92) 18% 20%, transparent 21% 39%, rgba(218, 248, 255, 0.95) 40% 42%, transparent 43% 63%, rgba(105, 204, 243, 0.88) 64% 66%, transparent 67% 82%, rgba(191, 240, 255, 0.94) 83% 85%, transparent 86%);
-  filter: drop-shadow(0 0 8px rgba(137, 221, 250, 0.92));
-  -webkit-mask: radial-gradient(circle, transparent 62%, #000 63% 68%, transparent 70%);
-  mask: radial-gradient(circle, transparent 62%, #000 63% 68%, transparent 70%);
-  opacity: 0.92;
-  animation: room-energy-electric 1.1s steps(2, end) infinite;
-}
-
-.portal-room__energy-orb::after {
-  inset: -40px;
-  background: conic-gradient(from 88deg, transparent 0 12%, rgba(92, 194, 238, 0.8) 13% 14%, transparent 15% 29%, rgba(215, 248, 255, 0.8) 30% 31%, transparent 32% 51%, rgba(104, 208, 244, 0.78) 52% 54%, transparent 55% 74%, rgba(173, 232, 252, 0.76) 75% 76%, transparent 77%);
-  filter: blur(0.35px) drop-shadow(0 0 14px rgba(79, 179, 225, 0.62));
-  -webkit-mask: radial-gradient(circle, transparent 67%, #000 68% 70%, transparent 72%);
-  mask: radial-gradient(circle, transparent 67%, #000 68% 70%, transparent 72%);
-  opacity: 0.66;
-  animation: room-energy-electric 2.2s linear infinite reverse;
-}
-
-.portal-room__energy-ring,
-.portal-room__energy-core {
-  position: absolute;
-  display: block;
+.portal-power-pillar__halo {
+  inset: -22% -95%;
   border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(92, 192, 231, 0.26), rgba(36, 116, 163, 0.1) 34%, transparent 70%);
+  filter: blur(8px);
+  opacity: 0.7;
 }
 
-.portal-room__energy-ring {
-  border: 1px solid rgba(161, 225, 250, 0.7);
-  box-shadow: 0 0 14px rgba(104, 193, 232, 0.28), inset 0 0 12px rgba(111, 201, 239, 0.16);
+.portal-power-pillar__body {
+  inset: 8% 15% 12%;
+  overflow: hidden;
+  border: 1px solid rgba(186, 232, 249, 0.58);
+  background:
+    linear-gradient(90deg, rgba(6, 32, 51, 0.96), rgba(88, 159, 190, 0.32) 48%, rgba(3, 20, 35, 0.94)),
+    repeating-linear-gradient(180deg, transparent 0 12px, rgba(157, 222, 244, 0.14) 13px, transparent 15px);
+  box-shadow: inset 0 0 24px rgba(114, 210, 241, 0.2), 0 0 20px rgba(85, 183, 224, 0.28);
+  clip-path: polygon(18% 0, 82% 0, 100% 8%, 100% 92%, 82% 100%, 18% 100%, 0 92%, 0 8%);
 }
 
-.portal-room__energy-ring::before,
-.portal-room__energy-ring::after {
+.portal-power-pillar__body::before,
+.portal-power-pillar__body::after {
   position: absolute;
-  top: 50%;
-  width: 12px;
-  height: 3px;
-  border-radius: 999px;
-  background: #dff7ff;
-  box-shadow: 0 0 8px rgba(167, 228, 252, 0.9);
   content: "";
+  pointer-events: none;
 }
 
-.portal-room__energy-ring::before { left: -6px; }
-.portal-room__energy-ring::after { right: -6px; }
+.portal-power-pillar__body::before {
+  inset: 7% 25%;
+  border: 1px solid rgba(177, 231, 249, 0.24);
+  border-radius: 50%;
+  box-shadow: inset 0 0 22px rgba(107, 204, 238, 0.22), 0 0 16px rgba(93, 190, 229, 0.16);
+}
 
-.portal-room__energy-ring--outer { inset: -28px; border-color: rgba(120, 205, 240, 0.44); }
-.portal-room__energy-ring--inner { inset: -10px; }
+.portal-power-pillar__body::after {
+  inset: 0 44%;
+  background: linear-gradient(180deg, transparent, rgba(215, 246, 255, 0.7) 46%, transparent 54%);
+  opacity: 0.44;
+}
 
-.portal-room__energy-core {
-  inset: 13px;
-  background: radial-gradient(circle at 38% 34%, #ffffff 0 8%, #bceeff 21%, #65c8ee 46%, rgba(18, 112, 166, 0.78) 66%, rgba(3, 28, 48, 0.28) 78%);
-  box-shadow: 0 0 18px rgba(161, 227, 252, 0.9), 0 0 52px rgba(80, 181, 226, 0.62), 0 0 110px rgba(46, 137, 188, 0.36);
+.portal-power-pillar__core {
+  position: absolute;
+  top: 21%;
+  left: 31%;
+  width: 38%;
+  height: 57%;
+  border: 1px solid rgba(206, 242, 252, 0.68);
+  border-radius: 46% 46% 38% 38%;
+  background: radial-gradient(ellipse at 50% 48%, rgba(199, 241, 253, 0.74), rgba(89, 185, 222, 0.26) 32%, rgba(6, 38, 59, 0.32) 66%, transparent 70%);
+  box-shadow: 0 0 16px rgba(136, 218, 245, 0.58), inset 0 0 14px rgba(153, 225, 247, 0.4);
+}
+
+.portal-power-pillar__scan {
+  position: absolute;
+  left: 17%;
+  width: 66%;
+  height: 1px;
+  background: rgba(205, 242, 252, 0.78);
+  box-shadow: 0 0 8px rgba(135, 216, 244, 0.72);
+  opacity: 0.36;
+}
+
+.portal-power-pillar__scan--one { top: 28%; }
+.portal-power-pillar__scan--two { top: 65%; }
+
+.portal-power-pillar__window {
+  position: absolute;
+  right: 14%;
+  width: 18%;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(185, 234, 250, 0.8);
+  box-shadow: 0 0 7px rgba(124, 211, 242, 0.7);
+  opacity: 0.42;
+}
+
+.portal-power-pillar__window--one { top: 18%; }
+.portal-power-pillar__window--two { bottom: 18%; }
+
+.portal-power-pillar__base {
+  right: 2%;
+  bottom: 0;
+  left: 2%;
+  height: 8%;
+  border: 1px solid rgba(170, 228, 247, 0.62);
+  border-radius: 50%;
+  background: linear-gradient(90deg, transparent, rgba(115, 200, 232, 0.24), transparent);
+  box-shadow: 0 0 18px rgba(92, 192, 231, 0.36), inset 0 0 12px rgba(196, 239, 251, 0.2);
+}
+
+.portal-power-pillar__beam {
+  left: 50%;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, rgba(211, 245, 255, 0.9), transparent);
+  box-shadow: 0 0 12px rgba(129, 218, 245, 0.72);
+  transform: translateX(-50%) scaleY(0);
+  transform-origin: center;
+}
+
+.portal-power-pillar__beam--top {
+  top: -12%;
+  height: 25%;
+}
+
+.portal-power-pillar__beam--bottom {
+  bottom: -14%;
+  height: 28%;
+}
+
+.portal-power-pillar__scan--one,
+.portal-power-pillar__scan--two {
+  transform: translateX(-12%);
 }
 
 .portal-room__energy-beam {
@@ -544,12 +675,15 @@ body {
   animation: room-lamps-start 2.7s steps(1, end) both;
 }
 
-.portal-shell--powering .portal-room__energy-orb {
-  animation: room-energy-start 2.4s cubic-bezier(0.18, 0.82, 0.22, 1) 0.35s both, room-energy-float 3.8s ease-in-out 2.75s infinite alternate;
+.portal-shell--powering .portal-power-pillar {
+  animation: room-power-pillar-start 2.4s cubic-bezier(0.18, 0.82, 0.22, 1) 0.35s both, room-power-pillar-float 5.4s ease-in-out 2.75s infinite alternate;
 }
 
-.portal-shell--powering .portal-room__energy-ring--outer { animation: room-energy-rotate 10s linear 2.2s infinite; }
-.portal-shell--powering .portal-room__energy-ring--inner { animation: room-energy-rotate-reverse 6.5s linear 2.2s infinite; }
+.portal-shell--powering .portal-power-pillar__scan--one { animation: room-pillar-scan 2.8s ease-in-out 2.2s infinite alternate; }
+.portal-shell--powering .portal-power-pillar__scan--two { animation: room-pillar-scan 3.6s ease-in-out 2.6s infinite alternate-reverse; }
+.portal-shell--powering .portal-power-pillar__beam { animation: room-pillar-beam 1.8s cubic-bezier(0.2, 0.78, 0.2, 1) 1.15s both; }
+.portal-shell--powering .portal-room__wall-panel { animation: room-panel-wake 2.7s steps(1, end) both; }
+.portal-shell--powering .portal-room__data-run { animation: room-data-run 5.8s linear 2.1s infinite; }
 
 .portal-shell--powering .portal-room__energy-beam {
   animation: room-energy-distribute 1.8s cubic-bezier(0.2, 0.78, 0.2, 1) 1.15s both;
@@ -587,6 +721,42 @@ body {
   38% { opacity: 0.26; transform: translate(-50%, -50%) scale(0.42); }
   64% { opacity: 1; transform: translate(-50%, -50%) scale(1.14); }
   100% { opacity: 0.92; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes room-power-pillar-start {
+  0% { opacity: 0; filter: brightness(0.7); transform: translate(-50%, -50%) scale(0.24); }
+  34% { opacity: 0.34; filter: brightness(1.15); transform: translate(-50%, -50%) scale(0.68); }
+  68% { opacity: 1; filter: brightness(1.4); transform: translate(-50%, -50%) scale(1.05); }
+  100% { opacity: 0.86; filter: brightness(1); transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes room-power-pillar-float {
+  from { opacity: 0.74; transform: translate(-50%, -51%) scale(0.98); }
+  to { opacity: 0.94; transform: translate(-50%, -49%) scale(1.02); }
+}
+
+@keyframes room-pillar-scan {
+  from { opacity: 0.2; transform: translateX(-18%); }
+  to { opacity: 0.82; transform: translateX(18%); }
+}
+
+@keyframes room-pillar-beam {
+  0% { opacity: 0; transform: translateX(-50%) scaleY(0); }
+  52% { opacity: 0.8; transform: translateX(-50%) scaleY(1); }
+  100% { opacity: 0.26; transform: translateX(-50%) scaleY(1); }
+}
+
+@keyframes room-panel-wake {
+  0%, 12%, 28% { opacity: 0.05; }
+  7%, 20%, 38% { opacity: 0.34; }
+  52% { opacity: 0.12; }
+  68%, 100% { opacity: 0.2; }
+}
+
+@keyframes room-data-run {
+  from { background-position: 0 0; opacity: 0.08; }
+  45% { opacity: 0.18; }
+  to { background-position: 180px 0; opacity: 0.08; }
 }
 
 @keyframes room-energy-float {
@@ -647,6 +817,8 @@ body {
 
 .portal-shell--inside .portal-site {
   opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
   transform: none;
 }
 
@@ -1364,7 +1536,7 @@ body {
     radial-gradient(ellipse at 78% 16%, rgba(72, 149, 192, .13), transparent 34%),
     radial-gradient(ellipse at 16% 76%, rgba(31, 112, 179, .1), transparent 32%),
     linear-gradient(180deg, rgba(7, 28, 47, .2), rgba(3, 18, 32, .42)),
-    url('/orquestra-portal-room-3d-v4.png');
+    url('/orquestra-portal-room-3d-v4.png?v=20261015');
   background-size: 100% 100%, 100% 100%, 100% 100%, cover;
   background-position: 50% 50%, 50% 50%, 50% 50%, center center;
   background-attachment: scroll, scroll, scroll, fixed;
@@ -1377,8 +1549,7 @@ body {
   z-index: 1;
   min-height: 100svh;
   background:
-    linear-gradient(180deg, rgba(2, 15, 28, 0.12), rgba(2, 14, 26, 0.34)),
-    url('/orquestra-portal-video-final.png') center center / cover no-repeat;
+    linear-gradient(180deg, rgba(2, 15, 28, 0.08), rgba(2, 14, 26, 0.2));
 }
 
 .portal-power-system {
@@ -1814,6 +1985,26 @@ body {
   border-radius: 6px;
   background: rgba(123, 197, 232, 0.1);
 }
+
+.portal-solution__icon--wood { background: rgba(191, 145, 91, 0.16); color: #e3b77f; }
+.portal-solution__icon--teal { background: rgba(104, 177, 169, 0.16); color: #a7d3cd; }
+.portal-solution__icon--olive { background: rgba(145, 164, 92, 0.16); color: #c4d49a; }
+.portal-solution__icon--green { background: rgba(101, 173, 126, 0.16); color: #a9d5b3; }
+.portal-solution__icon--graphite { background: rgba(163, 181, 193, 0.16); color: #c4d0d8; }
+.portal-solution__icon--rose { background: rgba(202, 135, 152, 0.16); color: #e4b4c0; }
+.portal-solution__icon--wine { background: rgba(171, 88, 99, 0.18); color: #e5a6ae; }
+.portal-solution__icon--denim { background: rgba(91, 133, 180, 0.18); color: #b3cbe4; }
+.portal-solution__icon--slate { background: rgba(122, 158, 174, 0.16); color: #b9d0d9; }
+
+.portal-solution-group .portal-solution.portal-solution--wood { border-top-color: rgba(205, 155, 94, 0.68); }
+.portal-solution-group .portal-solution.portal-solution--teal { border-top-color: rgba(111, 187, 177, 0.68); }
+.portal-solution-group .portal-solution.portal-solution--olive { border-top-color: rgba(153, 174, 97, 0.68); }
+.portal-solution-group .portal-solution.portal-solution--green { border-top-color: rgba(112, 185, 133, 0.68); }
+.portal-solution-group .portal-solution.portal-solution--graphite { border-top-color: rgba(174, 193, 205, 0.68); }
+.portal-solution-group .portal-solution.portal-solution--rose { border-top-color: rgba(211, 145, 162, 0.68); }
+.portal-solution-group .portal-solution.portal-solution--wine { border-top-color: rgba(183, 93, 106, 0.72); }
+.portal-solution-group .portal-solution.portal-solution--denim { border-top-color: rgba(103, 148, 197, 0.72); }
+.portal-solution-group .portal-solution.portal-solution--slate { border-top-color: rgba(129, 169, 184, 0.68); }
 
 .portal-solution__name {
   display: block;
@@ -2327,10 +2518,12 @@ body {
     transform: translate3d(-50%, 0, 0) scale(1.03);
   }
 
-  .portal-room__energy-orb {
+  .portal-power-pillar {
     top: 44%;
-    width: 54px;
-    height: 54px;
+    left: 50%;
+    width: 58px;
+    height: 188px;
+    opacity: 0.76;
   }
 
   .portal-room__energy-beam {
@@ -2426,14 +2619,17 @@ body {
   .portal-shell--powering .portal-room__geometry,
   .portal-shell--powering .portal-room__ceiling::before,
   .portal-shell--powering .portal-room__ceiling::after,
-  .portal-shell--powering .portal-room__energy-orb,
-  .portal-shell--powering .portal-room__energy-ring,
+  .portal-shell--powering .portal-power-pillar,
+  .portal-shell--powering .portal-power-pillar__scan,
+  .portal-shell--powering .portal-power-pillar__beam,
+  .portal-shell--powering .portal-room__wall-panel,
+  .portal-shell--powering .portal-room__data-run,
   .portal-shell--powering .portal-room__energy-beam {
     animation: none;
   }
 
-  .portal-shell--powering .portal-room__energy-orb {
-    opacity: 0.82;
+  .portal-shell--powering .portal-power-pillar {
+    opacity: 0.86;
     transform: translate(-50%, -50%) scale(1);
   }
 
@@ -2454,8 +2650,6 @@ body {
     animation: none;
   }
 
-  .portal-room__energy-orb::before,
-  .portal-room__energy-orb::after,
   .portal-contact::before,
   .portal-contact::after {
     animation: none;

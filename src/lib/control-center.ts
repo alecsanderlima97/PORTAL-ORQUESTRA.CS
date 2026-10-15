@@ -9,9 +9,11 @@ import type {
   ConnectorStatus,
   ControlSnapshot,
   ManagedService,
+  ManagedServiceUser,
   OpportunityRecord,
   ServiceType,
   ServiceAvailabilityStatus,
+  SubscriptionStatus,
   TenantSnapshot,
   UsageSummary,
 } from "@/lib/platform-types";
@@ -51,6 +53,28 @@ function usageSummary(value: unknown): UsageSummary | null {
     activeUsersLast30Days: numberValue(data.activeUsersLast30Days),
     lastActivityAt: dateValue(data.lastActivityAt),
     updatedAt: dateValue(data.updatedAt),
+    presenceTracking: data.presenceTracking === true,
+  };
+}
+
+function mapServiceUser(id: string, raw: FirebaseFirestore.DocumentData): ManagedServiceUser {
+  return {
+    id,
+    serviceId: stringValue(raw.serviceId),
+    tenantId: stringValue(raw.tenantId),
+    sourceSystem: stringValue(raw.sourceSystem),
+    externalTenantId: stringValue(raw.externalTenantId),
+    externalUserId: stringValue(raw.externalUserId),
+    name: stringValue(raw.name, "Usuário sem nome"),
+    email: stringValue(raw.email),
+    role: stringValue(raw.role, "Não informado"),
+    active: raw.active !== false,
+    lastActivityAt: dateValue(raw.lastActivityAt),
+    lastSeenAt: dateValue(raw.lastSeenAt),
+    deviceType: nullableString(raw.deviceType),
+    operatingSystem: nullableString(raw.operatingSystem),
+    browser: nullableString(raw.browser),
+    updatedAt: dateValue(raw.updatedAt),
   };
 }
 
@@ -60,6 +84,7 @@ function mapCompany(id: string, raw: FirebaseFirestore.DocumentData): CompanyRec
     legalName: stringValue(raw.legalName, stringValue(raw.name, "Empresa sem nome")),
     tradeName: nullableString(raw.tradeName),
     responsibleName: stringValue(raw.responsibleName, stringValue(raw.owner)),
+    ownerGoogleEmail: nullableString(raw.ownerGoogleEmail),
     contactEmail: stringValue(raw.contactEmail, stringValue(raw.email)),
     contactPhone: stringValue(raw.contactPhone, stringValue(raw.phone)),
     document: nullableString(raw.document),
@@ -92,6 +117,10 @@ function mapCompany(id: string, raw: FirebaseFirestore.DocumentData): CompanyRec
     startDate: nullableString(raw.startDate),
     renewalDate: nullableString(raw.renewalDate),
     notes: nullableString(raw.notes),
+    googleBusinessName: nullableString(raw.googleBusinessName),
+    googleBusinessUrl: nullableString(raw.googleBusinessUrl),
+    googleAddress: nullableString(raw.googleAddress),
+    instagramUrl: nullableString(raw.instagramUrl),
   };
 }
 
@@ -109,7 +138,9 @@ function mapService(id: string, raw: FirebaseFirestore.DocumentData): ManagedSer
     implementationFee: raw.implementationFee == null ? null : numberValue(raw.implementationFee),
     supportFee: raw.supportFee == null ? null : numberValue(raw.supportFee),
     billingDay: raw.billingDay == null ? null : numberValue(raw.billingDay),
+    startDate: nullableString(raw.startDate),
     renewalDate: nullableString(raw.renewalDate),
+    subscriptionStatus: (raw.subscriptionStatus ?? "revisao_manual") as SubscriptionStatus,
     currentVersion: nullableString(raw.currentVersion),
     lastUpdatedAt: dateValue(raw.lastUpdatedAt),
     lastUpdateSummary: nullableString(raw.lastUpdateSummary),
@@ -132,9 +163,10 @@ function mapService(id: string, raw: FirebaseFirestore.DocumentData): ManagedSer
 
 export async function getControlSnapshot(): Promise<ControlSnapshot> {
   const db = getFirebaseAdminDb();
-  const [companiesSnapshot, servicesSnapshot, chargesSnapshot, opportunitiesSnapshot, auditsSnapshot] = await Promise.all([
+  const [companiesSnapshot, servicesSnapshot, serviceUsersSnapshot, chargesSnapshot, opportunitiesSnapshot, auditsSnapshot] = await Promise.all([
     db.collection("companies").limit(250).get(),
     db.collection("managedServices").limit(500).get(),
+    db.collection("managedServiceUsers").limit(2000).get(),
     db.collection("billingCharges").limit(500).get(),
     db.collection("opportunities").limit(500).get(),
     db.collection("auditLogs").orderBy("createdAt", "desc").limit(30).get(),
@@ -143,6 +175,7 @@ export async function getControlSnapshot(): Promise<ControlSnapshot> {
   return {
     companies: companiesSnapshot.docs.map((doc) => mapCompany(doc.id, doc.data())),
     services: servicesSnapshot.docs.map((doc) => mapService(doc.id, doc.data())),
+    serviceUsers: serviceUsersSnapshot.docs.map((doc) => mapServiceUser(doc.id, doc.data())),
     charges: chargesSnapshot.docs.map((doc) => {
       const raw = doc.data();
       return {

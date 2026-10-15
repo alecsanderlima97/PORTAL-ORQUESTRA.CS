@@ -112,6 +112,7 @@ export async function POST(request: Request) {
     if ((await eventRef.get()).exists) return NextResponse.json({ ok: true, duplicate: true });
 
     const serviceSnapshot = await db.collection("managedServices")
+      .where("sourceSystem", "==", SOURCE_SYSTEM)
       .where("externalTenantId", "==", externalTenantId)
       .limit(5)
       .get();

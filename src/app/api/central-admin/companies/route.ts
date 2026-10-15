@@ -8,6 +8,7 @@ import { digits, isValidCnpj, isValidCpf } from "@/lib/client-data";
 const platformRoles = new Set(["platform_owner", "orquestra_admin"]);
 const contractStatuses = new Set(["ativo", "teste", "suspenso", "encerrado"]);
 const accessStatuses = new Set(["ativo", "em_tolerancia", "bloqueado", "liberacao_pendente", "revisao_manual"]);
+const subscriptionStatuses = new Set(["trial", "ativo", "vencido", "bloqueado", "cancelado", "revisao_manual"]);
 const serviceTypes = new Set(["sistema_web", "site", "landing_page", "crm", "erp", "saas", "consultoria", "marketing_digital", "trafego_pago", "automacao", "integracao", "suporte_tecnico", "outro"]);
 const sourceSystemNames: Record<string, string> = {
   mad360: "Orquestra Mad360 / Serraria",
@@ -15,6 +16,9 @@ const sourceSystemNames: Record<string, string> = {
   orquestra_hub: "Orquestra Hub",
   orquestra_fit: "Orquestra Fit",
   orquestracs_face_id: "Orquestra Face ID",
+  orquestra_studio: "Orquestra Studio",
+  orquestra_auto_detail: "Orquestra Auto Detail",
+  orquestra_moda: "Orquestra Moda",
 };
 
 function text(value: unknown, maxLength: number) {
@@ -68,6 +72,10 @@ export async function POST(request: Request) {
     const systemUrl = optionalText(body.systemUrl, 500);
     const serviceType = text(body.serviceType, 40) || (sourceSystem ? "sistema_web" : null);
     const serviceName = optionalText(body.serviceName, 160);
+    const googleBusinessName = optionalText(body.googleBusinessName, 160);
+    const googleBusinessUrl = optionalText(body.googleBusinessUrl, 500);
+    const googleAddress = optionalText(body.googleAddress, 240);
+    const instagramUrl = optionalText(body.instagramUrl, 500);
     const contractStatus = text(body.contractStatus, 30);
     const accessStatus = text(body.accessStatus, 30);
     const billingDay = Math.round(numberValue(body.billingDay, 10));
@@ -86,7 +94,9 @@ export async function POST(request: Request) {
       ? null
       : numberValue(body.serviceSupportFee, 0);
     const serviceBillingDay = Math.round(numberValue(body.serviceBillingDay, billingDay));
+    const serviceStartDate = optionalText(body.serviceStartDate, 20) ?? optionalText(body.startDate, 20);
     const serviceRenewalDate = optionalText(body.serviceRenewalDate, 20) ?? optionalText(body.renewalDate, 20);
+    const subscriptionStatus = text(body.subscriptionStatus, 30) || "revisao_manual";
 
     if (!legalName || !responsibleName || !plan) {
       return NextResponse.json({ error: "Preencha empresa, responsável e plano." }, { status: 400 });
@@ -112,16 +122,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Informe um CEP válido com 8 números." }, { status: 400 });
     }
 
-    if ((externalTenantId && !sourceSystem) || (sourceSystem && (!externalTenantId || !systemUrl))) {
-      return NextResponse.json({ error: "Informe o sistema, o ID externo da empresa e o link de produção." }, { status: 400 });
+    if ((externalTenantId && !sourceSystem) || (sourceSystem && !externalTenantId)) {
+      return NextResponse.json({ error: "Informe o sistema e o ID externo da empresa." }, { status: 400 });
     }
 
     if (serviceType && !serviceTypes.has(serviceType)) {
       return NextResponse.json({ error: "Tipo de serviço inválido." }, { status: 400 });
-    }
-
-    if (serviceType && !systemUrl) {
-      return NextResponse.json({ error: "Informe o link do site ou sistema vinculado." }, { status: 400 });
     }
 
     if (serviceType && !sourceSystem && !serviceName) {
@@ -137,8 +143,21 @@ export async function POST(request: Request) {
       }
     }
 
+    for (const referenceUrl of [googleBusinessUrl, instagramUrl]) {
+      if (!referenceUrl) continue;
+      try {
+        const parsedUrl = new URL(referenceUrl);
+        if (!["http:", "https:"].includes(parsedUrl.protocol)) throw new Error("invalid protocol");
+      } catch {
+        return NextResponse.json({ error: "Informe links públicos válidos." }, { status: 400 });
+      }
+    }
+
     if (!contractStatuses.has(contractStatus) || !accessStatuses.has(accessStatus)) {
       return NextResponse.json({ error: "Status inicial inválido." }, { status: 400 });
+    }
+    if (!subscriptionStatuses.has(subscriptionStatus)) {
+      return NextResponse.json({ error: "Status da assinatura inválido." }, { status: 400 });
     }
 
     if (billingDay < 1 || billingDay > 31 || serviceBillingDay < 1 || serviceBillingDay > 31 || graceDays < 0 || graceDays > 30 || monthlyFee < 0 || serviceMonthlyFee < 0 || (serviceDevelopmentFee !== null && serviceDevelopmentFee < 0) || (serviceImplementationFee !== null && serviceImplementationFee < 0) || (serviceSupportFee !== null && serviceSupportFee < 0)) {
@@ -166,6 +185,10 @@ export async function POST(request: Request) {
       tradeName: optionalText(body.tradeName, 160),
       responsibleName,
       ownerGoogleEmail,
+      googleBusinessName,
+      googleBusinessUrl,
+      googleAddress,
+      instagramUrl,
       contactEmail,
       contactPhone,
       document: cnpj ?? cpf ?? legacyDocument,
@@ -209,12 +232,12 @@ export async function POST(request: Request) {
       });
     }
 
-    if (serviceType && systemUrl && (sourceSystem || serviceName)) {
+    if (serviceType && (sourceSystem || serviceName)) {
       batch.set(db.collection("managedServices").doc(), {
         name: sourceSystemNames[sourceSystem ?? ""] || serviceName || text(body.tradeName, 160) || sourceSystem || "Serviço sem nome",
         sourceSystem,
         type: serviceType,
-        url: systemUrl,
+        url: systemUrl ?? "",
         tenantId: companyRef.id,
         plan,
         monthlyFee: Math.round(serviceMonthlyFee * 100) / 100,
@@ -222,7 +245,9 @@ export async function POST(request: Request) {
         implementationFee: serviceImplementationFee === null ? null : Math.round(serviceImplementationFee * 100) / 100,
         supportFee: serviceSupportFee === null ? null : Math.round(serviceSupportFee * 100) / 100,
         billingDay: serviceBillingDay,
+        startDate: serviceStartDate,
         renewalDate: serviceRenewalDate,
+        subscriptionStatus,
         environment: "production",
         accessStatus,
         connectorStatus: "pendente",
