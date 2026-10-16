@@ -61,6 +61,16 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    match /asaasWebhookEvents/{eventId} {
+      allow read: if isPlatformAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /asaasUnmatchedEvents/{eventId} {
+      allow read: if isPlatformAdmin();
+      allow create, update, delete: if false;
+    }
+
     match /usageSummaries/{summaryId} {
       allow read: if isPlatformAdmin() || belongsToTenant(resource.data.tenantId);
       allow create, update, delete: if false;

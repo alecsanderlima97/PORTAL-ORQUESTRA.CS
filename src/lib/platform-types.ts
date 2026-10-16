@@ -30,6 +30,9 @@ export type BillingStatus =
   | "falha_pagamento"
   | "revisao_manual";
 
+export type BillingProvider = "asaas";
+export type BillingEnvironment = "sandbox" | "production";
+
 export type ServiceType =
   | "sistema_web"
   | "site"
@@ -125,6 +128,11 @@ export type ManagedService = {
   lastSyncAt: string | null;
   lastKnownStatus: string | null;
   usageSummary: UsageSummary | null;
+  billingProvider?: BillingProvider | null;
+  billingEnvironment?: BillingEnvironment | null;
+  asaasCustomerId?: string | null;
+  asaasSubscriptionId?: string | null;
+  billingCheckoutUrl?: string | null;
 };
 
 export type CompanyRecord = {
@@ -164,6 +172,7 @@ export type CompanyRecord = {
   googleBusinessUrl: string | null;
   googleAddress: string | null;
   instagramUrl: string | null;
+  asaasCustomerId?: string | null;
 };
 
 export type ConnectorCommand = "suspender_acesso" | "liberar_acesso" | "consultar_status" | "sincronizar_cliente";
@@ -184,11 +193,16 @@ export type OpportunityRecord = {
 export type ChargeRecord = {
   id: string;
   tenantId: string;
+  serviceId?: string | null;
   referenceMonth: string;
   amount: number;
   dueDate: string | null;
   status: BillingStatus;
   paidAt: string | null;
+  billingProvider?: BillingProvider | null;
+  asaasPaymentId?: string | null;
+  asaasSubscriptionId?: string | null;
+  invoiceUrl?: string | null;
 };
 
 export type AuditRecord = {

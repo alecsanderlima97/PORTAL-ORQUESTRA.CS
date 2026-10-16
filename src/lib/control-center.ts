@@ -121,6 +121,7 @@ function mapCompany(id: string, raw: FirebaseFirestore.DocumentData): CompanyRec
     googleBusinessUrl: nullableString(raw.googleBusinessUrl),
     googleAddress: nullableString(raw.googleAddress),
     instagramUrl: nullableString(raw.instagramUrl),
+    asaasCustomerId: nullableString(raw.asaasCustomerId),
   };
 }
 
@@ -158,7 +159,29 @@ function mapService(id: string, raw: FirebaseFirestore.DocumentData): ManagedSer
     lastSyncAt: dateValue(raw.lastSyncAt),
     lastKnownStatus: nullableString(raw.lastKnownStatus),
     usageSummary: usageSummary(raw.usageSummary),
+    billingProvider: raw.billingProvider === "asaas" ? "asaas" : null,
+    billingEnvironment: raw.billingEnvironment === "sandbox" || raw.billingEnvironment === "production" ? raw.billingEnvironment : null,
+    asaasCustomerId: nullableString(raw.asaasCustomerId),
+    asaasSubscriptionId: nullableString(raw.asaasSubscriptionId),
+    billingCheckoutUrl: nullableString(raw.billingCheckoutUrl),
   };
+}
+
+function mapCharge(id: string, raw: FirebaseFirestore.DocumentData): ChargeRecord {
+  return {
+    id,
+    tenantId: stringValue(raw.tenantId),
+    serviceId: nullableString(raw.serviceId),
+    referenceMonth: stringValue(raw.referenceMonth),
+    amount: numberValue(raw.amount),
+    dueDate: dateValue(raw.dueDate),
+    status: raw.status ?? "revisao_manual",
+    paidAt: dateValue(raw.paidAt),
+    billingProvider: raw.billingProvider === "asaas" ? "asaas" : null,
+    asaasPaymentId: nullableString(raw.asaasPaymentId),
+    asaasSubscriptionId: nullableString(raw.asaasSubscriptionId),
+    invoiceUrl: nullableString(raw.invoiceUrl),
+  } satisfies ChargeRecord;
 }
 
 export async function getControlSnapshot(): Promise<ControlSnapshot> {
@@ -176,18 +199,7 @@ export async function getControlSnapshot(): Promise<ControlSnapshot> {
     companies: companiesSnapshot.docs.map((doc) => mapCompany(doc.id, doc.data())),
     services: servicesSnapshot.docs.map((doc) => mapService(doc.id, doc.data())),
     serviceUsers: serviceUsersSnapshot.docs.map((doc) => mapServiceUser(doc.id, doc.data())),
-    charges: chargesSnapshot.docs.map((doc) => {
-      const raw = doc.data();
-      return {
-        id: doc.id,
-        tenantId: stringValue(raw.tenantId),
-        referenceMonth: stringValue(raw.referenceMonth),
-        amount: numberValue(raw.amount),
-        dueDate: dateValue(raw.dueDate),
-        status: raw.status ?? "revisao_manual",
-        paidAt: dateValue(raw.paidAt),
-      } satisfies ChargeRecord;
-    }),
+    charges: chargesSnapshot.docs.map((doc) => mapCharge(doc.id, doc.data())),
     opportunities: opportunitiesSnapshot.docs.map((doc) => {
       const raw = doc.data();
       return {
@@ -236,18 +248,7 @@ export async function getTenantSnapshot(tenantId: string): Promise<TenantSnapsho
     company: companySnapshot.exists ? mapCompany(companySnapshot.id, companySnapshot.data() ?? {}) : null,
     services,
     charges: chargesSnapshot.docs
-      .map((doc) => {
-        const raw = doc.data();
-        return {
-          id: doc.id,
-          tenantId: stringValue(raw.tenantId),
-          referenceMonth: stringValue(raw.referenceMonth),
-          amount: numberValue(raw.amount),
-          dueDate: dateValue(raw.dueDate),
-          status: raw.status ?? "revisao_manual",
-          paidAt: dateValue(raw.paidAt),
-        } satisfies ChargeRecord;
-      })
+      .map((doc) => mapCharge(doc.id, doc.data()))
       .sort((left, right) => (right.dueDate ?? "").localeCompare(left.dueDate ?? "")),
     totalUsers: usage.reduce((total, summary) => total + summary.totalUsers, 0),
     activeUsersLast30Days: usage.reduce((total, summary) => total + summary.activeUsersLast30Days, 0),

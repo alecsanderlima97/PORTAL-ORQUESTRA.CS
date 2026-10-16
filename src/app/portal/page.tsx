@@ -3,6 +3,7 @@ import {
   Bell,
   ChevronRight,
   CircleHelp,
+  CreditCard,
   ExternalLink,
   LayoutGrid,
   Settings,
@@ -107,23 +108,34 @@ function PortalSidebar() {
   return (
     <aside className="h-fit rounded-lg border border-zinc-200 bg-white p-3 shadow-sm">
       {items.map(([label, Icon], index) => (
-        <button
-          key={label}
-          type="button"
-          disabled={index > 0}
-          className={`flex h-11 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium transition ${index === 0 ? "bg-zinc-50 text-zinc-950" : "text-zinc-500 hover:bg-zinc-50 disabled:cursor-not-allowed"}`}
-        >
-          <Icon className="size-4" />
-          {label}
-          {index > 0 && <span className="ml-auto text-[10px] uppercase tracking-[0.12em] text-zinc-400">Em breve</span>}
-        </button>
+        label === "Plano e vencimento" ? (
+          <Link href="/portal/pagamentos" key={label} className="flex h-11 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium text-zinc-700 transition hover:bg-zinc-50">
+            <Icon className="size-4" />
+            {label}
+          </Link>
+        ) : (
+          <button
+            key={label}
+            type="button"
+            disabled={index > 0}
+            className={`flex h-11 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium transition ${index === 0 ? "bg-zinc-50 text-zinc-950" : "text-zinc-500 hover:bg-zinc-50 disabled:cursor-not-allowed"}`}
+          >
+            <Icon className="size-4" />
+            {label}
+            {index > 0 && <span className="ml-auto text-[10px] uppercase tracking-[0.12em] text-zinc-400">Em breve</span>}
+          </button>
+        )
       ))}
     </aside>
   );
 }
 
-function ServiceCard({ service }: { service: ManagedService }) {
+function ServiceCard({ service, charge }: { service: ManagedService; charge?: TenantSnapshot["charges"][number] }) {
   const canOpen = Boolean(service.url) && service.accessStatus !== "bloqueado";
+  const openCharge = charge && !["paga", "cancelada"].includes(charge.status);
+  const paymentQuery = service.sourceSystem
+    ? `system=${encodeURIComponent(service.sourceSystem)}`
+    : `serviceId=${encodeURIComponent(service.id)}`;
 
   return (
     <article className="rounded-lg border border-zinc-200 p-4">
@@ -140,16 +152,22 @@ function ServiceCard({ service }: { service: ManagedService }) {
             <p className="mt-1 text-sm text-zinc-500">{service.plan} · {serviceLabel(service)}</p>
           </div>
         </div>
-        {canOpen ? (
-          <a href={service.url} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-zinc-950 px-3 text-sm font-semibold text-white transition hover:bg-zinc-800">
-            Abrir sistema
-            <ChevronRight className="size-4" />
-          </a>
-        ) : (
-          <span className="inline-flex h-10 items-center justify-center rounded-md border border-zinc-200 px-3 text-sm font-semibold text-zinc-400">
-            Acesso indisponível
-          </span>
-        )}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Link href={`/portal/pagamentos?${paymentQuery}`} className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-zinc-200 px-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50">
+            <CreditCard className="size-4" />
+            {openCharge ? "Pagar mensalidade" : "Ver plano"}
+          </Link>
+          {canOpen ? (
+            <a href={service.url} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-zinc-950 px-3 text-sm font-semibold text-white transition hover:bg-zinc-800">
+              Abrir sistema
+              <ChevronRight className="size-4" />
+            </a>
+          ) : (
+            <span className="inline-flex h-10 items-center justify-center rounded-md border border-zinc-200 px-3 text-sm font-semibold text-zinc-400">
+              Acesso indisponível
+            </span>
+          )}
+        </div>
       </div>
     </article>
   );
@@ -189,7 +207,7 @@ function PortalOverview({ snapshot, userName, userEmail }: { snapshot: TenantSna
                 <ExternalLink className="size-5 text-zinc-400" />
               </div>
               <div className="mt-5 space-y-3">
-                {snapshot.services.length > 0 ? snapshot.services.map((service) => <ServiceCard key={service.id} service={service} />) : (
+                {snapshot.services.length > 0 ? snapshot.services.map((service) => <ServiceCard key={service.id} service={service} charge={snapshot.charges.find((charge) => charge.serviceId === service.id && !["paga", "cancelada"].includes(charge.status))} />) : (
                   <div className="rounded-lg border border-dashed border-zinc-300 p-6 text-sm leading-6 text-zinc-500">Nenhum sistema foi liberado para esta empresa ainda. O suporte poderá informar o próximo passo.</div>
                 )}
               </div>
