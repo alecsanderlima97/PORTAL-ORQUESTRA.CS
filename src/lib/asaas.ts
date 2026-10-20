@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { BillingStatus } from "@/lib/platform-types";
+
 export type AsaasEnvironment = "sandbox" | "production";
 
 type AsaasCustomer = {
@@ -15,17 +17,36 @@ type AsaasSubscription = {
   value?: number;
 };
 
+export type AsaasPayment = {
+  id: string;
+  customer?: string | null;
+  subscription?: string | null;
+  status?: string | null;
+  value?: number | null;
+  dueDate?: string | null;
+  paymentDate?: string | null;
+  confirmedDate?: string | null;
+  invoiceUrl?: string | null;
+  externalReference?: string | null;
+};
+
+type AsaasListResponse<T> = {
+  data?: T[];
+};
+
 export class AsaasConfigError extends Error {}
 
 export class AsaasRequestError extends Error {
   status: number;
   details: unknown;
+  path: string;
 
-  constructor(status: number, message: string, details: unknown) {
+  constructor(status: number, message: string, details: unknown, path: string) {
     super(message);
     this.name = "AsaasRequestError";
     this.status = status;
     this.details = details;
+    this.path = path;
   }
 }
 
@@ -68,7 +89,7 @@ async function asaasRequest<T>(path: string, init: RequestInit = {}) {
   }
 
   if (!response.ok) {
-    throw new AsaasRequestError(response.status, "O Asaas recusou a solicitação.", data);
+    throw new AsaasRequestError(response.status, "O Asaas recusou a solicitação.", data, path);
   }
 
   return data as T;
@@ -80,6 +101,7 @@ export async function createAsaasCustomer(input: {
   phone?: string | null;
   cpfCnpj?: string | null;
   externalReference: string;
+  notificationDisabled?: boolean;
 }) {
   return asaasRequest<AsaasCustomer>("/customers", {
     method: "POST",
@@ -89,7 +111,15 @@ export async function createAsaasCustomer(input: {
       phone: input.phone || undefined,
       cpfCnpj: input.cpfCnpj || undefined,
       externalReference: input.externalReference,
+      notificationDisabled: input.notificationDisabled ?? false,
     }),
+  });
+}
+
+export async function updateAsaasCustomer(customerId: string, input: { notificationDisabled: boolean }) {
+  return asaasRequest<AsaasCustomer>(`/customers/${encodeURIComponent(customerId)}`, {
+    method: "PUT",
+    body: JSON.stringify({ notificationDisabled: input.notificationDisabled }),
   });
 }
 
@@ -112,4 +142,44 @@ export async function createAsaasSubscription(input: {
       externalReference: input.externalReference,
     }),
   });
+}
+
+export async function createAsaasPayment(input: {
+  customer: string;
+  value: number;
+  dueDate: string;
+  description: string;
+  externalReference: string;
+  notificationDisabled?: boolean;
+}) {
+  return asaasRequest<AsaasPayment>("/payments", {
+    method: "POST",
+    body: JSON.stringify({
+      customer: input.customer,
+      billingType: "UNDEFINED",
+      value: input.value,
+      dueDate: input.dueDate,
+      description: input.description,
+      externalReference: input.externalReference,
+      notificationDisabled: input.notificationDisabled ?? false,
+    }),
+  });
+}
+
+export async function listAsaasSubscriptionPayments(subscriptionId: string) {
+  const result = await asaasRequest<AsaasListResponse<AsaasPayment>>(
+    `/subscriptions/${encodeURIComponent(subscriptionId)}/payments`,
+  );
+  return Array.isArray(result.data) ? result.data : [];
+}
+
+export function mapAsaasPaymentStatus(event: string, paymentStatus: string): BillingStatus {
+  const normalized = `${event} ${paymentStatus}`.toUpperCase();
+  if (normalized.includes("RECEIVED") || normalized.includes("CONFIRMED")) return "paga";
+  if (normalized.includes("OVERDUE")) return "vencida";
+  if (normalized.includes("REFUND") || normalized.includes("CHARGEBACK")) return "estornada";
+  if (normalized.includes("DELETED") || normalized.includes("CANCELED")) return "cancelada";
+  if (normalized.includes("REFUSED") || normalized.includes("FAILED")) return "falha_pagamento";
+  if (normalized.includes("CREATED") || normalized.includes("PENDING")) return "aberta";
+  return "revisao_manual";
 }

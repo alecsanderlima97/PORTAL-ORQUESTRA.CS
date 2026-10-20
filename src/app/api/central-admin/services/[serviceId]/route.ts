@@ -3,11 +3,12 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getFirebaseAdminDb } from "@/lib/firebase-admin";
 import { getCurrentSession } from "@/lib/session";
+import { sendConnectorCommand } from "@/lib/connector-commands";
 
 const platformRoles = new Set(["platform_owner", "orquestra_admin"]);
 const serviceTypes = new Set(["sistema_web", "site", "landing_page", "crm", "erp", "saas", "consultoria", "marketing_digital", "trafego_pago", "automacao", "integracao", "suporte_tecnico", "outro"]);
-const subscriptionStatuses = new Set(["trial", "ativo", "vencido", "bloqueado", "cancelado", "revisao_manual"]);
-const editableFields = ["name", "type", "url", "plan", "monthlyFee", "developmentFee", "implementationFee", "supportFee", "billingDay", "startDate", "renewalDate", "subscriptionStatus", "currentVersion", "lastUpdatedAt", "lastUpdateSummary", "vercelProjectName", "repositoryUrl"] as const;
+const subscriptionStatuses = new Set(["trial", "ativo", "pausado", "vencido", "bloqueado", "cancelado", "revisao_manual"]);
+const editableFields = ["name", "type", "url", "plan", "monthlyFee", "developmentFee", "implementationFee", "supportFee", "billingDay", "graceDays", "startDate", "renewalDate", "subscriptionStatus", "currentVersion", "lastUpdatedAt", "lastUpdateSummary", "vercelProjectName", "repositoryUrl"] as const;
 
 function text(value: unknown, maxLength: number) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
@@ -60,6 +61,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ se
     const supportFee = optionalMoney(body.supportFee);
     const billingDayValue = body.billingDay === null || body.billingDay === "" || body.billingDay === undefined ? null : Number(body.billingDay);
     const billingDay = billingDayValue === null ? null : Math.round(billingDayValue);
+    const graceDays = body.graceDays === null || body.graceDays === "" || body.graceDays === undefined ? 3 : Math.round(Number(body.graceDays));
     const startDate = optionalText(body.startDate, 20);
     const renewalDate = optionalText(body.renewalDate, 20);
     const subscriptionStatus = text(body.subscriptionStatus, 30) || "revisao_manual";
@@ -99,8 +101,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ se
     if (billingDay !== null && (!Number.isFinite(billingDay) || billingDay < 1 || billingDay > 31)) {
       return NextResponse.json({ error: "O vencimento deve estar entre os dias 1 e 31." }, { status: 400 });
     }
+    if (!Number.isInteger(graceDays) || graceDays < 0 || graceDays > 30) {
+      return NextResponse.json({ error: "A tolerância deve estar entre 0 e 30 dias." }, { status: 400 });
+    }
 
-    const updatedFields = { name, type, url, plan, monthlyFee, developmentFee, implementationFee, supportFee, billingDay, startDate, renewalDate, subscriptionStatus, currentVersion, lastUpdatedAt, lastUpdateSummary, vercelProjectName, repositoryUrl };
+    const updatedFields = { name, type, url, plan, monthlyFee, developmentFee, implementationFee, supportFee, billingDay, graceDays, startDate, renewalDate, subscriptionStatus, currentVersion, lastUpdatedAt, lastUpdateSummary, vercelProjectName, repositoryUrl };
     const previousData = serviceSnapshot.data() ?? {};
     const batch = db.batch();
     batch.update(serviceRef, { ...updatedFields, updatedAt: FieldValue.serverTimestamp() });
@@ -116,7 +121,22 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ se
     });
     await batch.commit();
 
-    return NextResponse.json({ ok: true });
+    const connector = await sendConnectorCommand(previousData, {
+      commandType: "tenant.updated",
+      contract: {
+        plan,
+        monthlyFee,
+        billingDay,
+        graceDays,
+        startDate,
+        renewalDate,
+        nextDueDate: renewalDate,
+        subscriptionStatus,
+        dataVersion: Number(previousData.sourceDataVersion || 0) + 1,
+      },
+    }).catch(() => ({ sent: false, skipped: false }));
+
+    return NextResponse.json({ ok: true, connectorSync: connector.sent ? "sent" : connector.skipped ? "not_configured" : "pending" });
   } catch {
     return NextResponse.json({ error: "Não foi possível atualizar o serviço agora." }, { status: 500 });
   }

@@ -1,8 +1,9 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
+import { mapAsaasPaymentStatus } from "@/lib/asaas";
 import { getFirebaseAdminDb } from "@/lib/firebase-admin";
-import type { BillingStatus } from "@/lib/platform-types";
+import { sendConnectorCommand } from "@/lib/connector-commands";
 
 const MAX_BODY_BYTES = 128 * 1024;
 
@@ -34,17 +35,6 @@ function sameSecret(expected: string, received: string | null) {
   return expectedBuffer.length === receivedBuffer.length && timingSafeEqual(expectedBuffer, receivedBuffer);
 }
 
-function billingStatus(event: string, paymentStatus: string): BillingStatus {
-  const normalized = `${event} ${paymentStatus}`.toUpperCase();
-  if (normalized.includes("RECEIVED") || normalized.includes("CONFIRMED")) return "paga";
-  if (normalized.includes("OVERDUE")) return "vencida";
-  if (normalized.includes("REFUND") || normalized.includes("CHARGEBACK")) return "estornada";
-  if (normalized.includes("DELETED") || normalized.includes("CANCELED")) return "cancelada";
-  if (normalized.includes("REFUSED") || normalized.includes("FAILED")) return "falha_pagamento";
-  if (normalized.includes("CREATED") || normalized.includes("PENDING")) return "aberta";
-  return "revisao_manual";
-}
-
 function eventKey(eventId: string) {
   return createHash("sha256").update(eventId).digest("hex");
 }
@@ -61,6 +51,7 @@ export async function POST(request: Request) {
   const contentLength = Number(request.headers.get("content-length"));
   if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) return NextResponse.json({ error: "Evento muito grande." }, { status: 413 });
 
+  let eventRef: FirebaseFirestore.DocumentReference | null = null;
   try {
     const payload = await request.json() as AsaasWebhookPayload;
     const payment = payload.payment;
@@ -70,19 +61,47 @@ export async function POST(request: Request) {
     if (!event || !paymentId) return NextResponse.json({ error: "Evento sem identificação suficiente." }, { status: 400 });
 
     const db = getFirebaseAdminDb();
-    const eventRef = db.collection("asaasWebhookEvents").doc(eventKey(eventId));
-    try {
-      await eventRef.create({ eventId, event, paymentId, receivedAt: FieldValue.serverTimestamp() });
-    } catch (error) {
-      const errorCode = (error as { code?: number | string }).code;
-      if (errorCode === 6 || errorCode === "already-exists") return NextResponse.json({ ok: true, duplicate: true });
-      throw error;
-    }
+    eventRef = db.collection("asaasWebhookEvents").doc(eventKey(eventId));
+    const existingEvent = await eventRef.get();
+    if (existingEvent.exists && existingEvent.data()?.processedAt) return NextResponse.json({ ok: true, duplicate: true });
+    await eventRef.set({ eventId, event, paymentId, receivedAt: FieldValue.serverTimestamp(), processingAt: FieldValue.serverTimestamp() }, { merge: true });
 
     const paymentQuery = await db.collection("billingCharges").where("asaasPaymentId", "==", paymentId).limit(1).get();
     let chargeRef = paymentQuery.docs[0]?.ref ?? null;
+    let creditOrderRef = null as FirebaseFirestore.DocumentReference | null;
+    let creditOrderData: FirebaseFirestore.DocumentData | null = null;
     let serviceRef = null as FirebaseFirestore.DocumentReference | null;
     let serviceData: FirebaseFirestore.DocumentData | null = null;
+
+    const externalReference = safeText(payment?.externalReference, 220);
+    if (externalReference.startsWith("ai-credits:")) {
+      const orderId = externalReference.slice("ai-credits:".length).trim();
+      if (orderId && orderId.length <= 160) {
+        const candidate = db.collection("creditOrders").doc(orderId);
+        const orderSnapshot = await candidate.get();
+        if (orderSnapshot.exists) {
+          creditOrderRef = candidate;
+          creditOrderData = orderSnapshot.data() ?? null;
+        }
+      }
+    }
+    if (!creditOrderRef) {
+      const orderQuery = await db.collection("creditOrders").where("asaasPaymentId", "==", paymentId).limit(1).get();
+      const orderSnapshot = orderQuery.docs[0];
+      if (orderSnapshot) {
+        creditOrderRef = orderSnapshot.ref;
+        creditOrderData = orderSnapshot.data();
+      }
+    }
+
+    if (creditOrderRef && creditOrderData) {
+      const serviceId = safeText(creditOrderData.serviceId, 160);
+      if (serviceId) {
+        serviceRef = db.collection("managedServices").doc(serviceId);
+        const serviceSnapshot = await serviceRef.get();
+        serviceData = serviceSnapshot.exists ? serviceSnapshot.data() ?? null : null;
+      }
+    }
 
     if (chargeRef) {
       const charge = await chargeRef.get();
@@ -115,7 +134,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const status = billingStatus(event, safeText(payment?.status, 40));
+    const status = mapAsaasPaymentStatus(event, safeText(payment?.status, 40));
     const paidAt = status === "paga" ? (payment?.paymentDate || payment?.confirmedDate || new Date().toISOString()) : null;
     const chargeData = {
       billingProvider: "asaas",
@@ -137,6 +156,7 @@ export async function POST(request: Request) {
       await chargeRef.set({
         tenantId: serviceData.tenantId,
         serviceId: serviceRef.id,
+        ...(creditOrderRef ? { creditOrderId: creditOrderRef.id, creditPackageId: creditOrderData?.packageId || null, creditAmount: Number(creditOrderData?.creditAmount) || null } : {}),
         referenceMonth: referenceMonth(payment?.dueDate),
         ...chargeData,
         createdAt: FieldValue.serverTimestamp(),
@@ -165,8 +185,35 @@ export async function POST(request: Request) {
       metadata: { provider: "asaas", event, paymentId, status },
     });
 
+    if (creditOrderRef && creditOrderData && status === "paga") {
+      const creditAmount = Math.round(Number(creditOrderData.creditAmount));
+      const amount = Number(creditOrderData.amount || payment?.value || 0);
+      const packageId = safeText(creditOrderData.packageId, 80);
+      if (!Number.isInteger(creditAmount) || creditAmount <= 0 || !packageId || !serviceData) throw new Error("credit-order-invalid");
+
+      const connector = await sendConnectorCommand(serviceData, {
+        commandId: creditOrderRef.id,
+        commandType: "ai_credits.granted",
+        creditGrant: {
+          amount,
+          credits: creditAmount,
+          packageId,
+          paymentId,
+          purchaseId: creditOrderRef.id,
+        },
+      });
+      if (!connector.sent) {
+        await creditOrderRef.set({ grantStatus: "pending", grantError: connector.skipped ? "connector_not_configured" : `http_${connector.status}`, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+        throw new Error("credit-grant-pending");
+      }
+      await creditOrderRef.set({ grantStatus: "applied", grantedAt: FieldValue.serverTimestamp(), status: "paga", paidAt, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    }
+
+    await eventRef.set({ processedAt: FieldValue.serverTimestamp(), status: "completed" }, { merge: true });
+
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (error) {
+    if (eventRef) await eventRef.set({ status: "error", lastError: error instanceof Error ? error.message : "unknown-error", updatedAt: FieldValue.serverTimestamp() }, { merge: true }).catch(() => undefined);
     return NextResponse.json({ error: "Não foi possível processar o evento." }, { status: 500 });
   }
 }

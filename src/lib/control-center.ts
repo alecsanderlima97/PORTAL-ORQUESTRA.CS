@@ -71,6 +71,7 @@ function mapServiceUser(id: string, raw: FirebaseFirestore.DocumentData): Manage
     active: raw.active !== false,
     lastActivityAt: dateValue(raw.lastActivityAt),
     lastSeenAt: dateValue(raw.lastSeenAt),
+    lastLoginAt: dateValue(raw.lastLoginAt),
     deviceType: nullableString(raw.deviceType),
     operatingSystem: nullableString(raw.operatingSystem),
     browser: nullableString(raw.browser),
@@ -88,6 +89,7 @@ function mapCompany(id: string, raw: FirebaseFirestore.DocumentData): CompanyRec
     contactEmail: stringValue(raw.contactEmail, stringValue(raw.email)),
     contactPhone: stringValue(raw.contactPhone, stringValue(raw.phone)),
     document: nullableString(raw.document),
+    documentType: nullableString(raw.documentType),
     cpf: nullableString(raw.cpf),
     cnpj: nullableString(raw.cnpj),
     rg: nullableString(raw.rg),
@@ -109,6 +111,8 @@ function mapCompany(id: string, raw: FirebaseFirestore.DocumentData): CompanyRec
     contractStatus: raw.contractStatus ?? "teste",
     accessStatus: raw.accessStatus ?? raw.status ?? "revisao_manual",
     billingDay: numberValue(raw.billingDay),
+    billingMethod: typeof raw.billingMethod === "string" && raw.billingMethod.length > 0 ? raw.billingMethod : null,
+    nextDueDate: nullableString(raw.nextDueDate),
     graceDays: numberValue(raw.graceDays),
     developmentFee: raw.developmentFee == null ? null : numberValue(raw.developmentFee),
     implementationFee: raw.implementationFee == null ? null : numberValue(raw.implementationFee),
@@ -121,6 +125,11 @@ function mapCompany(id: string, raw: FirebaseFirestore.DocumentData): CompanyRec
     googleBusinessUrl: nullableString(raw.googleBusinessUrl),
     googleAddress: nullableString(raw.googleAddress),
     instagramUrl: nullableString(raw.instagramUrl),
+    sourceSystem: nullableString(raw.sourceSystem),
+    externalTenantId: nullableString(raw.externalTenantId),
+    lastSyncAt: dateValue(raw.lastSyncAt),
+    sourceDataVersion: raw.sourceDataVersion == null ? null : numberValue(raw.sourceDataVersion),
+    sourceUpdatedAt: dateValue(raw.sourceUpdatedAt),
     asaasCustomerId: nullableString(raw.asaasCustomerId),
   };
 }
@@ -139,6 +148,9 @@ function mapService(id: string, raw: FirebaseFirestore.DocumentData): ManagedSer
     implementationFee: raw.implementationFee == null ? null : numberValue(raw.implementationFee),
     supportFee: raw.supportFee == null ? null : numberValue(raw.supportFee),
     billingDay: raw.billingDay == null ? null : numberValue(raw.billingDay),
+    graceDays: numberValue(raw.graceDays, 3),
+    billingMethod: typeof raw.billingMethod === "string" && raw.billingMethod.length > 0 ? raw.billingMethod : null,
+    nextDueDate: nullableString(raw.nextDueDate),
     startDate: nullableString(raw.startDate),
     renewalDate: nullableString(raw.renewalDate),
     subscriptionStatus: (raw.subscriptionStatus ?? "revisao_manual") as SubscriptionStatus,
@@ -156,6 +168,10 @@ function mapService(id: string, raw: FirebaseFirestore.DocumentData): ManagedSer
     accessStatus: (raw.accessStatus ?? "revisao_manual") as CompanyAccessStatus,
     connectorStatus: (raw.connectorStatus ?? "pendente") as ConnectorStatus,
     externalTenantId: nullableString(raw.externalTenantId),
+    sourceDataVersion: raw.sourceDataVersion == null ? null : numberValue(raw.sourceDataVersion),
+    sourceUpdatedAt: dateValue(raw.sourceUpdatedAt),
+    sourceBillingStatus: nullableString(raw.sourceBillingStatus),
+    sourcePaidThroughDate: nullableString(raw.sourcePaidThroughDate),
     lastSyncAt: dateValue(raw.lastSyncAt),
     lastKnownStatus: nullableString(raw.lastKnownStatus),
     usageSummary: usageSummary(raw.usageSummary),
@@ -195,10 +211,17 @@ export async function getControlSnapshot(): Promise<ControlSnapshot> {
     db.collection("auditLogs").orderBy("createdAt", "desc").limit(30).get(),
   ]);
 
+  const activeServiceDocs = servicesSnapshot.docs.filter((doc) => doc.data().isArchived !== true);
+  const activeServiceIds = new Set(activeServiceDocs.map((doc) => doc.id));
+
   return {
-    companies: companiesSnapshot.docs.map((doc) => mapCompany(doc.id, doc.data())),
-    services: servicesSnapshot.docs.map((doc) => mapService(doc.id, doc.data())),
-    serviceUsers: serviceUsersSnapshot.docs.map((doc) => mapServiceUser(doc.id, doc.data())),
+    companies: companiesSnapshot.docs
+      .filter((doc) => doc.data().isArchived !== true)
+      .map((doc) => mapCompany(doc.id, doc.data())),
+    services: activeServiceDocs.map((doc) => mapService(doc.id, doc.data())),
+    serviceUsers: serviceUsersSnapshot.docs
+      .filter((doc) => activeServiceIds.has(stringValue(doc.data().serviceId)))
+      .map((doc) => mapServiceUser(doc.id, doc.data())),
     charges: chargesSnapshot.docs.map((doc) => mapCharge(doc.id, doc.data())),
     opportunities: opportunitiesSnapshot.docs.map((doc) => {
       const raw = doc.data();
@@ -239,13 +262,17 @@ export async function getTenantSnapshot(tenantId: string): Promise<TenantSnapsho
     db.collection("billingCharges").where("tenantId", "==", tenantId).limit(50).get(),
   ]);
 
-  const services = servicesSnapshot.docs.map((doc) => mapService(doc.id, doc.data()));
+  const services = servicesSnapshot.docs
+    .filter((doc) => doc.data().isArchived !== true)
+    .map((doc) => mapService(doc.id, doc.data()));
   const usage = services
     .map((service) => service.usageSummary)
     .filter((summary): summary is UsageSummary => summary !== null);
 
   return {
-    company: companySnapshot.exists ? mapCompany(companySnapshot.id, companySnapshot.data() ?? {}) : null,
+    company: companySnapshot.exists && companySnapshot.data()?.isArchived !== true
+      ? mapCompany(companySnapshot.id, companySnapshot.data() ?? {})
+      : null,
     services,
     charges: chargesSnapshot.docs
       .map((doc) => mapCharge(doc.id, doc.data()))

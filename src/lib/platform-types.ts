@@ -32,6 +32,7 @@ export type BillingStatus =
 
 export type BillingProvider = "asaas";
 export type BillingEnvironment = "sandbox" | "production";
+export type BillingMethod = "PIX" | "BOLETO" | "CREDIT_CARD" | "UNDEFINED" | string;
 
 export type ServiceType =
   | "sistema_web"
@@ -50,7 +51,7 @@ export type ServiceType =
 
 export type ConnectorStatus = "pendente" | "ativo" | "com_falha" | "desativado";
 export type ServiceAvailabilityStatus = "online" | "offline" | "erro" | "nao_verificado";
-export type SubscriptionStatus = "trial" | "ativo" | "vencido" | "bloqueado" | "cancelado" | "revisao_manual";
+export type SubscriptionStatus = "trial" | "ativo" | "pausado" | "vencido" | "bloqueado" | "cancelado" | "revisao_manual";
 
 export type UserProfile = {
   uid: string;
@@ -89,6 +90,7 @@ export type ManagedServiceUser = {
   active: boolean;
   lastActivityAt: string | null;
   lastSeenAt: string | null;
+  lastLoginAt: string | null;
   deviceType: string | null;
   operatingSystem: string | null;
   browser: string | null;
@@ -108,6 +110,9 @@ export type ManagedService = {
   implementationFee: number | null;
   supportFee: number | null;
   billingDay: number | null;
+  graceDays: number;
+  billingMethod: BillingMethod | null;
+  nextDueDate: string | null;
   startDate: string | null;
   renewalDate: string | null;
   subscriptionStatus: SubscriptionStatus;
@@ -125,6 +130,10 @@ export type ManagedService = {
   accessStatus: CompanyAccessStatus;
   connectorStatus: ConnectorStatus;
   externalTenantId: string | null;
+  sourceDataVersion: number | null;
+  sourceUpdatedAt: string | null;
+  sourceBillingStatus: string | null;
+  sourcePaidThroughDate: string | null;
   lastSyncAt: string | null;
   lastKnownStatus: string | null;
   usageSummary: UsageSummary | null;
@@ -144,6 +153,7 @@ export type CompanyRecord = {
   contactEmail: string;
   contactPhone: string;
   document: string | null;
+  documentType: string | null;
   cpf: string | null;
   cnpj: string | null;
   rg: string | null;
@@ -172,6 +182,13 @@ export type CompanyRecord = {
   googleBusinessUrl: string | null;
   googleAddress: string | null;
   instagramUrl: string | null;
+  sourceSystem: string | null;
+  externalTenantId: string | null;
+  lastSyncAt: string | null;
+  billingMethod: BillingMethod | null;
+  nextDueDate: string | null;
+  sourceDataVersion: number | null;
+  sourceUpdatedAt: string | null;
   asaasCustomerId?: string | null;
 };
 

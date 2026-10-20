@@ -136,6 +136,7 @@ function ServiceCard({ service, charge }: { service: ManagedService; charge?: Te
   const paymentQuery = service.sourceSystem
     ? `system=${encodeURIComponent(service.sourceSystem)}`
     : `serviceId=${encodeURIComponent(service.id)}`;
+  const paymentHref = service.billingCheckoutUrl ?? `/portal/pagamentos?${paymentQuery}`;
 
   return (
     <article className="rounded-lg border border-zinc-200 p-4">
@@ -153,10 +154,10 @@ function ServiceCard({ service, charge }: { service: ManagedService; charge?: Te
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <Link href={`/portal/pagamentos?${paymentQuery}`} className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-zinc-200 px-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50">
+          <a href={paymentHref} target={service.billingCheckoutUrl ? "_blank" : undefined} rel={service.billingCheckoutUrl ? "noreferrer" : undefined} className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-zinc-200 px-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50">
             <CreditCard className="size-4" />
             {openCharge ? "Pagar mensalidade" : "Ver plano"}
-          </Link>
+          </a>
           {canOpen ? (
             <a href={service.url} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-zinc-950 px-3 text-sm font-semibold text-white transition hover:bg-zinc-800">
               Abrir sistema

@@ -7,7 +7,7 @@ import { getCurrentSession } from "@/lib/session";
 const platformRoles = new Set(["platform_owner", "orquestra_admin"]);
 const serviceTypes = new Set(["sistema_web", "site", "landing_page", "crm", "erp", "saas", "consultoria", "marketing_digital", "trafego_pago", "automacao", "integracao", "suporte_tecnico", "outro"]);
 const availabilityStatuses = new Set(["online", "offline", "erro", "nao_verificado"]);
-const subscriptionStatuses = new Set(["trial", "ativo", "vencido", "bloqueado", "cancelado", "revisao_manual"]);
+const subscriptionStatuses = new Set(["trial", "ativo", "pausado", "vencido", "bloqueado", "cancelado", "revisao_manual"]);
 
 function text(value: unknown, maxLength: number) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
@@ -46,6 +46,7 @@ export async function POST(request: Request) {
     const implementationFee = optionalMoney(body.implementationFee);
     const supportFee = optionalMoney(body.supportFee);
     const billingDay = body.billingDay === null || body.billingDay === "" || body.billingDay === undefined ? null : Number(body.billingDay);
+    const graceDays = body.graceDays === null || body.graceDays === "" || body.graceDays === undefined ? 3 : Math.round(Number(body.graceDays));
     const startDate = optionalText(body.startDate, 20);
     const subscriptionStatus = text(body.subscriptionStatus, 30) || "revisao_manual";
     const vercelProjectName = optionalText(body.vercelProjectName, 120);
@@ -55,6 +56,7 @@ export async function POST(request: Request) {
     if (!subscriptionStatuses.has(subscriptionStatus)) return NextResponse.json({ error: "Status da assinatura inválido." }, { status: 400 });
     if ([monthlyFee, developmentFee, implementationFee, supportFee].some((value) => value === undefined)) return NextResponse.json({ error: "Confira os valores comerciais informados." }, { status: 400 });
     if (billingDay !== null && (!Number.isFinite(billingDay) || billingDay < 1 || billingDay > 31)) return NextResponse.json({ error: "O vencimento deve estar entre os dias 1 e 31." }, { status: 400 });
+    if (!Number.isInteger(graceDays) || graceDays < 0 || graceDays > 30) return NextResponse.json({ error: "A tolerância deve estar entre 0 e 30 dias." }, { status: 400 });
     if (url) {
       const parsedUrl = new URL(url);
       if (!["http:", "https:"].includes(parsedUrl.protocol)) return NextResponse.json({ error: "Informe um link de produção válido." }, { status: 400 });
@@ -88,6 +90,7 @@ export async function POST(request: Request) {
       implementationFee,
       supportFee,
       billingDay,
+      graceDays,
       startDate,
       renewalDate: null,
       subscriptionStatus,
