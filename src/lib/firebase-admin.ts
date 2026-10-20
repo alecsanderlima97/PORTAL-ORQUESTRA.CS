@@ -1,6 +1,7 @@
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 import { readFileSync } from "node:fs";
 
 function getServiceAccount() {
@@ -32,4 +33,9 @@ export function getFirebaseAdminAuth() {
 
 export function getFirebaseAdminDb() {
   return getFirestore(getAdminApp());
+}
+
+export function getFirebaseAdminStorage() {
+  const bucketName = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+  return getStorage(getAdminApp()).bucket(bucketName || undefined);
 }
