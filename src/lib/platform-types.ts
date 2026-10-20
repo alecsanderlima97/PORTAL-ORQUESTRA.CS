@@ -211,6 +211,7 @@ export type ChargeRecord = {
   id: string;
   tenantId: string;
   serviceId?: string | null;
+  serviceOrderId?: string | null;
   referenceMonth: string;
   amount: number;
   dueDate: string | null;
@@ -220,6 +221,58 @@ export type ChargeRecord = {
   asaasPaymentId?: string | null;
   asaasSubscriptionId?: string | null;
   invoiceUrl?: string | null;
+};
+
+export type ServiceOrderStatus = "rascunho" | "orcamento" | "aprovado" | "em_execucao" | "concluida" | "cancelada";
+export type ServiceOrderPaymentStatus = "pendente" | "parcial" | "recebido" | "isento";
+
+export type ServiceOrderPart = {
+  description: string;
+  partNumber?: string;
+  quantity: number;
+  supplierUrl?: string;
+  unitCost: number;
+  unitPrice: number;
+};
+
+export type ServiceOrderAttachment = {
+  contentType: string;
+  createdAt: string | null;
+  downloadUrl?: string | null;
+  id: string;
+  name: string;
+  size: number;
+  storagePath: string;
+};
+
+export type ServiceOrder = {
+  id: string;
+  number: string;
+  tenantId: string;
+  companyName: string;
+  companyContact: string;
+  status: ServiceOrderStatus;
+  paymentStatus: ServiceOrderPaymentStatus;
+  paymentMethod: string | null;
+  dueDate: string | null;
+  equipmentType: string;
+  equipmentBrand: string;
+  equipmentModel: string;
+  serialNumber: string;
+  reportedIssue: string;
+  diagnosis: string;
+  serviceDescription: string;
+  warrantyTerms: string;
+  technicianName: string;
+  parts: ServiceOrderPart[];
+  visitAmount: number;
+  laborAmount: number;
+  discountAmount: number;
+  totalAmount: number;
+  attachments: ServiceOrderAttachment[];
+  financeChargeId: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
 };
 
 export type AuditRecord = {
