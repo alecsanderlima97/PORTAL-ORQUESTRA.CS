@@ -7,12 +7,14 @@ const sourceCatalogs: Record<string, { name: string; url: string; type: string }
   orquestra_hub: { name: "Orquestra Hub", url: "https://hub.orquestracs.com", type: "sistema_web" },
   orquestra_studio: { name: "Orquestra Studio", url: "https://studio.orquestracs.com", type: "sistema_web" },
   orquestra_auto_detail: { name: "Orquestra Auto Detail", url: "https://autodetail.orquestracs.com", type: "sistema_web" },
-  orquestra_fit: { name: "Orquestra Fit", url: "https://orquestra-fit.vercel.app", type: "sistema_web" },
+  orquestra_fit: { name: "Orquestra Fit", url: "https://fit.orquestracs.com", type: "sistema_web" },
   mad360: { name: "Orquestra Mad360", url: "https://orquestracs.com", type: "sistema_web" },
   orquestracs_face_id: { name: "Orquestra Face ID", url: "https://faceid.orquestracs.com", type: "sistema_web" },
   orquestra_blend: { name: "Orquestra Blend", url: "https://blend.orquestracs.com", type: "sistema_web" },
   orquestra_moda: { name: "Orquestra Moda", url: "https://moda.orquestracs.com", type: "sistema_web" },
 };
+const supportedContractVersions = new Set(["v1"]);
+const maximumSnapshotBytes = 1_000_000;
 const sourceAliases: Record<string, string> = {
   orquestra_mad360: "mad360",
   orquestra_face_id: "orquestracs_face_id",
@@ -448,9 +450,23 @@ export async function POST(request: Request) {
 
   let eventRef: FirebaseFirestore.DocumentReference | null = null;
   try {
-    const body = await request.json() as Record<string, unknown>;
+    const declaredLength = Number(request.headers.get("content-length") || 0);
+    if (Number.isFinite(declaredLength) && declaredLength > maximumSnapshotBytes) {
+      return NextResponse.json({ error: "Resumo do sistema excede o tamanho permitido." }, { status: 413 });
+    }
+
+    const rawBody = await request.text();
+    if (Buffer.byteLength(rawBody, "utf8") > maximumSnapshotBytes) {
+      return NextResponse.json({ error: "Resumo do sistema excede o tamanho permitido." }, { status: 413 });
+    }
+    const body = JSON.parse(rawBody) as Record<string, unknown>;
     const receivedSourceSystem = text(body.sourceSystem, 80);
     const sourceSystem = sourceAliases[receivedSourceSystem] || receivedSourceSystem;
+    const headerSourceRaw = text(request.headers.get("x-orquestra-source-system"), 80);
+    const headerSourceSystem = sourceAliases[headerSourceRaw] || headerSourceRaw;
+    const contractVersion = text(body.contractVersion, 20);
+    const headerContractVersion = text(request.headers.get("x-orquestra-contract-version"), 20);
+    const dataVersion = Number(body.dataVersion);
     const sourceCatalog = sourceCatalogs[sourceSystem];
     const generatedAt = optionalDate(body.generatedAt);
     const receivedAt = new Date().toISOString();
@@ -460,6 +476,15 @@ export async function POST(request: Request) {
         : "");
     if (!sourceCatalog || !snapshotId || !/^[a-zA-Z0-9._:-]+$/.test(snapshotId) || !generatedAt) {
       return NextResponse.json({ error: "Identificação do snapshot inválida." }, { status: 400 });
+    }
+    if (
+      !supportedContractVersions.has(contractVersion)
+      || headerContractVersion !== contractVersion
+      || headerSourceSystem !== sourceSystem
+      || !Number.isInteger(dataVersion)
+      || dataVersion < 1
+    ) {
+      return NextResponse.json({ error: "Contrato do conector inválido ou incompatível." }, { status: 400 });
     }
     if (Math.abs(Date.now() - new Date(generatedAt).getTime()) > 15 * 60 * 1000) {
       return NextResponse.json({ error: "Snapshot fora da janela de sincronização." }, { status: 400 });
@@ -476,7 +501,15 @@ export async function POST(request: Request) {
     if (eventSnapshot.exists && eventSnapshot.data()?.status === "completed") {
       return NextResponse.json({ ok: true, duplicate: true, ...(eventSnapshot.data()?.result ?? {}) });
     }
-    await eventRef.set({ sourceSystem, snapshotId, generatedAt, status: "processing", receivedAt: FieldValue.serverTimestamp() }, { merge: true });
+    await eventRef.set({
+      sourceSystem,
+      snapshotId,
+      contractVersion,
+      dataVersion,
+      generatedAt,
+      status: "processing",
+      receivedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
 
     const servicesSnapshot = await db.collection("managedServices").where("sourceSystem", "==", sourceSystem).limit(250).get();
     const servicesByExternalTenant = new Map<string, Array<{

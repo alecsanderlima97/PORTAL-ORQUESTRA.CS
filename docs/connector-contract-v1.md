@@ -13,10 +13,20 @@ Este contrato padroniza o resumo enviado por cada sistema para o Portal. O siste
 
 ## Snapshot
 
-Enviar `POST` para `/api/connectors/snapshot` com o segredo no cabeçalho `x-orquestra-connector-secret`.
+Enviar `POST` para `/api/connectors/snapshot` com:
+
+- `Authorization: Bearer <segredo compartilhado>` ou `x-orquestra-connector-secret`;
+- `Content-Type: application/json`;
+- `X-Orquestra-Contract-Version: v1`;
+- `X-Orquestra-Source-System` igual ao `sourceSystem` do corpo;
+- corpo JSON de no máximo 1 MB.
+
+O Portal usa `externalCustomerId` como chave estável por sistema. Repetir um snapshot não deve criar outro cliente ou contrato.
 
 ```json
 {
+  "contractVersion": "v1",
+  "dataVersion": 1,
   "sourceSystem": "orquestra_hub",
   "snapshotId": "hub-2026-10-16-0001",
   "generatedAt": "2026-10-16T18:00:00.000Z",
