@@ -575,8 +575,7 @@ export async function POST(request: Request) {
       if (contactEmail === "invalid" || ownerGoogleEmail === "invalid") throw new Error("invalid customer email");
 
       const adminTenant = isPlatformAdminEmail(contactEmail)
-        || isPlatformAdminEmail(ownerGoogleEmail)
-        || (sourceUsers.length > 0 && sourceUsers.every((user) => isPlatformAdminEmail(user.email)));
+        || isPlatformAdminEmail(ownerGoogleEmail);
       const adminMatches = externalTenantKeys(sourceSystem, externalTenantId)
         .flatMap((key) => servicesByExternalTenant.get(key) ?? [])
         .filter((link, index, links) => links.findIndex((candidate) => candidate.id === link.id) === index);
