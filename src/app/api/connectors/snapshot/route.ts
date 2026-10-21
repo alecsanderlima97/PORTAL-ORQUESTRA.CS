@@ -884,7 +884,8 @@ export async function POST(request: Request) {
     const result = { matched, synchronizedUsers, autoLinked, createdContracts, createdCompanies, ignoredAdminTenants, unmatched, ambiguous };
     await eventRef.set({ status: "completed", completedAt: FieldValue.serverTimestamp(), result }, { merge: true });
     return NextResponse.json({ ok: true, ...result });
-  } catch {
+  } catch (error) {
+    console.error("connector_snapshot_processing_failed", error instanceof Error ? error.message : error);
     if (eventRef) await eventRef.set({ status: "failed", failedAt: FieldValue.serverTimestamp() }, { merge: true }).catch(() => undefined);
     return NextResponse.json({ error: "Não foi possível processar o resumo do sistema." }, { status: 400 });
   }
