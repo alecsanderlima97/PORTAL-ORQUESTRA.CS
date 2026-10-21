@@ -576,9 +576,11 @@ export async function POST(request: Request) {
       const ownerGoogleEmail = optionalEmailField(fieldValue(customer, tenant, "ownerGoogleEmail") ?? fieldValue(customer, tenant, "googleEmail"));
       if (contactEmail === "invalid" || ownerGoogleEmail === "invalid") throw new Error("invalid customer email");
 
-      // O Gmail técnico pode aparecer como proprietário/responsável do
-      // tenant real. Só o e-mail comercial identifica uma conta administrativa.
-      const adminTenant = isPlatformAdminEmail(contactEmail);
+      // O Gmail técnico pode aparecer como proprietário/responsável de um
+      // tenant real. A conta administrativa precisa também ser identificada
+      // pelo nome institucional, nunca apenas pelo usuário que está logado.
+      const adminTenant = isPlatformAdminEmail(contactEmail)
+        && /orquestra(?:\.cs|\s?cs)/i.test(companyName);
       const adminMatches = externalTenantKeys(sourceSystem, externalTenantId)
         .flatMap((key) => servicesByExternalTenant.get(key) ?? [])
         .filter((link, index, links) => links.findIndex((candidate) => candidate.id === link.id) === index);
