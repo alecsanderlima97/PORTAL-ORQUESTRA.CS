@@ -352,7 +352,9 @@ function normalizeSnapshotTenants(body: Record<string, unknown>) {
     const address = recordValue(client.address);
     const paidPeriod = recordValue(subscription.paidPeriod);
     const companyName = text(client.tradeName ?? client.name ?? clientEntry.companyName, 160) || "Empresa";
-    const contactEmail = text(responsible.email ?? client.email, 180).toLowerCase();
+    // O responsável pode ser a conta técnica da Orquestra.cs; a identidade
+    // comercial precisa vir do cadastro do cliente para não ocultar o tenant.
+    const contactEmail = text(client.email ?? responsible.email, 180).toLowerCase();
     const monthlyFee = snapshotMoney(subscription.monthlyFee);
     const latestPaymentMethod = text(paidPeriod.method, 30);
     const paymentMethod = text(subscription.paymentMethod ?? subscription.formOfPayment, 30) || latestPaymentMethod || null;
