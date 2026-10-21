@@ -16,6 +16,8 @@ type ConnectorCreditGrant = {
 function commandUrl(sourceSystem: string) {
   const configured = process.env.ORQUESTRA_HUB_CONNECTOR_COMMAND_URL;
   if (sourceSystem === "orquestra_hub") return configured || "https://hub.orquestracs.com/api/connectors/commands";
+  if (sourceSystem === "orquestra_blend") return process.env.ORQUESTRA_BLEND_CONNECTOR_COMMAND_URL || "https://southamerica-east1-orquestra-blend-7091.cloudfunctions.net/receivePortalCommand";
+  if (sourceSystem === "orquestra_fit") return process.env.ORQUESTRA_FIT_CONNECTOR_COMMAND_URL || "https://southamerica-east1-orquestra-fit.cloudfunctions.net/receivePortalCommand";
   return null;
 }
 
