@@ -113,7 +113,12 @@ function optionalDayField(value: unknown) {
   if (value === undefined) return { present: false, value: null, valid: true };
   if (value === null || value === "") return { present: true, value: null, valid: true };
   const parsed = Number(value);
-  const day = Number.isInteger(parsed) ? parsed : null;
+  const date = typeof value === "string" && Number.isNaN(parsed) ? optionalDate(value) : null;
+  const day = Number.isInteger(parsed)
+    ? parsed
+    : date
+      ? new Date(date).getUTCDate()
+      : null;
   return { present: true, value: day, valid: day !== null && day >= 1 && day <= 31 };
 }
 
