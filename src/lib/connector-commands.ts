@@ -18,6 +18,8 @@ function commandUrl(sourceSystem: string) {
   if (sourceSystem === "orquestra_hub") return configured || "https://hub.orquestracs.com/api/connectors/commands";
   if (sourceSystem === "orquestra_blend") return process.env.ORQUESTRA_BLEND_CONNECTOR_COMMAND_URL || "https://southamerica-east1-orquestra-blend-7091.cloudfunctions.net/receivePortalCommand";
   if (sourceSystem === "orquestra_fit") return process.env.ORQUESTRA_FIT_CONNECTOR_COMMAND_URL || "https://southamerica-east1-orquestra-fit.cloudfunctions.net/receivePortalCommand";
+  if (sourceSystem === "orquestracs_face_id") return process.env.ORQUESTRA_FACE_ID_CONNECTOR_COMMAND_URL || "https://us-east1-orquestracs-face-id.cloudfunctions.net/receivePortalCommand";
+  if (sourceSystem === "orquestra_auto_detail") return process.env.ORQUESTRA_AUTO_DETAIL_CONNECTOR_COMMAND_URL || "https://us-central1-alisson-estetica-automotiva.cloudfunctions.net/receivePortalCommand";
   return null;
 }
 
