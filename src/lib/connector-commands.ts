@@ -20,6 +20,7 @@ function commandUrl(sourceSystem: string) {
   if (sourceSystem === "orquestra_fit") return process.env.ORQUESTRA_FIT_CONNECTOR_COMMAND_URL || "https://southamerica-east1-orquestra-fit.cloudfunctions.net/receivePortalCommand";
   if (sourceSystem === "orquestracs_face_id") return process.env.ORQUESTRA_FACE_ID_CONNECTOR_COMMAND_URL || "https://us-east1-orquestracs-face-id.cloudfunctions.net/receivePortalCommand";
   if (sourceSystem === "orquestra_auto_detail") return process.env.ORQUESTRA_AUTO_DETAIL_CONNECTOR_COMMAND_URL || "https://us-central1-alisson-estetica-automotiva.cloudfunctions.net/receivePortalCommand";
+  if (sourceSystem === "orquestra_studio") return process.env.ORQUESTRA_STUDIO_CONNECTOR_COMMAND_URL || "https://studio.orquestracs.com/api/connectors/commands";
   return null;
 }
 
