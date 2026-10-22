@@ -8,6 +8,8 @@ const platformRoles = new Set(["platform_owner", "orquestra_admin"]);
 const serviceTypes = new Set(["sistema_web", "site", "landing_page", "crm", "erp", "saas", "consultoria", "marketing_digital", "trafego_pago", "automacao", "integracao", "suporte_tecnico", "outro"]);
 const availabilityStatuses = new Set(["online", "offline", "erro", "nao_verificado"]);
 const subscriptionStatuses = new Set(["trial", "ativo", "pausado", "vencido", "bloqueado", "cancelado", "revisao_manual"]);
+const billingMethods = new Set(["PIX", "BOLETO", "CREDIT_CARD", "TRANSFERENCIA", "DINHEIRO", "OUTRO", "UNDEFINED"]);
+const billingMethodAliases: Record<string, string> = { pix: "PIX", boleto: "BOLETO", cartao: "CREDIT_CARD", cartao_de_credito: "CREDIT_CARD", credit_card: "CREDIT_CARD", transferencia: "TRANSFERENCIA", transferencia_bancaria: "TRANSFERENCIA", dinheiro: "DINHEIRO", outro: "OUTRO" };
 
 function text(value: unknown, maxLength: number) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
@@ -22,6 +24,14 @@ function optionalMoney(value: unknown) {
   if (value === null || value === undefined || value === "") return null;
   const parsed = typeof value === "number" ? value : Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed * 100) / 100 : undefined;
+}
+
+function optionalBillingMethod(value: unknown) {
+  const raw = optionalText(value, 30);
+  if (!raw) return null;
+  const normalized = raw.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, "_");
+  const canonical = billingMethodAliases[normalized] ?? raw.toUpperCase();
+  return billingMethods.has(canonical) ? canonical : undefined;
 }
 
 export async function POST(request: Request) {
@@ -47,6 +57,8 @@ export async function POST(request: Request) {
     const supportFee = optionalMoney(body.supportFee);
     const billingDay = body.billingDay === null || body.billingDay === "" || body.billingDay === undefined ? null : Number(body.billingDay);
     const graceDays = body.graceDays === null || body.graceDays === "" || body.graceDays === undefined ? 3 : Math.round(Number(body.graceDays));
+    const billingMethod = optionalBillingMethod(body.billingMethod);
+    const notes = optionalText(body.notes, 2000);
     const startDate = optionalText(body.startDate, 20);
     const subscriptionStatus = text(body.subscriptionStatus, 30) || "revisao_manual";
     const vercelProjectName = optionalText(body.vercelProjectName, 120);
@@ -54,6 +66,7 @@ export async function POST(request: Request) {
 
     if (!name || !serviceTypes.has(type) || !availabilityStatuses.has(availabilityStatus)) return NextResponse.json({ error: "Preencha nome, tipo e disponibilidade válidos." }, { status: 400 });
     if (!subscriptionStatuses.has(subscriptionStatus)) return NextResponse.json({ error: "Status da assinatura inválido." }, { status: 400 });
+    if (billingMethod === undefined) return NextResponse.json({ error: "Forma de pagamento inválida." }, { status: 400 });
     if ([monthlyFee, developmentFee, implementationFee, supportFee].some((value) => value === undefined)) return NextResponse.json({ error: "Confira os valores comerciais informados." }, { status: 400 });
     if (billingDay !== null && (!Number.isFinite(billingDay) || billingDay < 1 || billingDay > 31)) return NextResponse.json({ error: "O vencimento deve estar entre os dias 1 e 31." }, { status: 400 });
     if (!Number.isInteger(graceDays) || graceDays < 0 || graceDays > 30) return NextResponse.json({ error: "A tolerância deve estar entre 0 e 30 dias." }, { status: 400 });
@@ -91,6 +104,8 @@ export async function POST(request: Request) {
       supportFee,
       billingDay,
       graceDays,
+      billingMethod,
+      notes,
       startDate,
       renewalDate: null,
       subscriptionStatus,

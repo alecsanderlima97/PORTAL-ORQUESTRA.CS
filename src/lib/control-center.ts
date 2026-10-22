@@ -150,6 +150,7 @@ function mapService(id: string, raw: FirebaseFirestore.DocumentData): ManagedSer
     billingDay: raw.billingDay == null ? null : numberValue(raw.billingDay),
     graceDays: numberValue(raw.graceDays, 3),
     billingMethod: typeof raw.billingMethod === "string" && raw.billingMethod.length > 0 ? raw.billingMethod : null,
+    notes: nullableString(raw.notes),
     nextDueDate: nullableString(raw.nextDueDate),
     startDate: nullableString(raw.startDate),
     renewalDate: nullableString(raw.renewalDate),

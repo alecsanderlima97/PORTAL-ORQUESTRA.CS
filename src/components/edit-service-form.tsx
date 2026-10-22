@@ -17,6 +17,8 @@ type FormValues = {
   supportFee: string;
   billingDay: string;
   graceDays: string;
+  billingMethod: string;
+  notes: string;
   startDate: string;
   renewalDate: string;
   subscriptionStatus: string;
@@ -55,6 +57,8 @@ function initialValues(service: ManagedService): FormValues {
     supportFee: service.supportFee == null ? "" : String(service.supportFee),
     billingDay: service.billingDay == null ? "" : String(service.billingDay),
     graceDays: String(service.graceDays ?? 3),
+    billingMethod: service.billingMethod ?? "",
+    notes: service.notes ?? "",
     startDate: service.startDate ?? "",
     renewalDate: service.renewalDate ?? "",
     subscriptionStatus: service.subscriptionStatus,
@@ -102,6 +106,8 @@ export function EditServiceForm({ service }: { service: ManagedService }) {
           supportFee: values.supportFee ? Number(values.supportFee) : null,
           billingDay: values.billingDay ? Number(values.billingDay) : null,
           graceDays: values.graceDays ? Number(values.graceDays) : 3,
+          billingMethod: values.billingMethod || null,
+          notes: values.notes.trim() || null,
           startDate: values.startDate || null,
           renewalDate: values.renewalDate || null,
           subscriptionStatus: values.subscriptionStatus,
@@ -128,6 +134,8 @@ export function EditServiceForm({ service }: { service: ManagedService }) {
     <div className="mt-6 grid gap-5 md:grid-cols-2"><Field label="Nome do serviço" value={values.name} onChange={(value) => update("name", value)} /><label className="block"><span className="text-xs font-semibold text-[#294052]">Tipo de serviço</span><select value={values.type} onChange={(event) => update("type", event.target.value)} className="mt-2 h-11 w-full rounded-md border border-[#d7e0e7] bg-white px-3 text-sm text-[#10243c] outline-none focus:border-[#3189bc]">{serviceTypes.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label><Field label="Link de produção" value={values.url} onChange={(value) => update("url", value)} type="url" placeholder="https://exemplo.com" /><Field label="Plano comercial" value={values.plan} onChange={(value) => update("plan", value)} /></div>
     <div className="mt-8 border-t border-[#edf1f5] pt-6"><h2 className="text-base font-semibold text-[#173044]">Valores e datas</h2><p className="mt-1 text-sm text-[#718196]">Deixe em branco o que ainda não foi definido. Nenhum valor será inventado.</p></div>
     <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3"><Field label="Mensalidade (R$)" value={values.monthlyFee} onChange={(value) => update("monthlyFee", value)} type="number" placeholder="Ex.: 300" /><Field label="Desenvolvimento / orçamento (R$)" value={values.developmentFee} onChange={(value) => update("developmentFee", value)} type="number" placeholder="Ex.: 2500" /><Field label="Implantação (R$)" value={values.implementationFee} onChange={(value) => update("implementationFee", value)} type="number" /><Field label="Suporte recorrente (R$)" value={values.supportFee} onChange={(value) => update("supportFee", value)} type="number" /><Field label="Dia de vencimento" value={values.billingDay} onChange={(value) => update("billingDay", value)} type="number" placeholder="Ex.: 10" /><Field label="Tolerância após vencimento (dias)" value={values.graceDays} onChange={(value) => update("graceDays", value)} type="number" placeholder="Ex.: 3" /><Field label="Início da assinatura" value={values.startDate} onChange={(value) => update("startDate", value)} type="date" /><Field label="Renovação" value={values.renewalDate} onChange={(value) => update("renewalDate", value)} type="date" /><label className="block"><span className="text-xs font-semibold text-[#294052]">Status da assinatura</span><select value={values.subscriptionStatus} onChange={(event) => update("subscriptionStatus", event.target.value)} className="mt-2 h-11 w-full rounded-md border border-[#d7e0e7] bg-white px-3 text-sm text-[#10243c] outline-none focus:border-[#3189bc]"><option value="trial">Trial</option><option value="ativo">Ativo</option><option value="pausado">Pausado</option><option value="vencido">Vencido</option><option value="bloqueado">Bloqueado</option><option value="cancelado">Cancelado</option><option value="revisao_manual">Revisão manual</option></select></label></div>
+    <div className="mt-5"><label className="block"><span className="text-xs font-semibold text-[#294052]">Forma de pagamento</span><select value={values.billingMethod} onChange={(event) => update("billingMethod", event.target.value)} className="mt-2 h-11 w-full rounded-md border border-[#d7e0e7] bg-white px-3 text-sm text-[#10243c] outline-none focus:border-[#3189bc]"><option value="">Não informada</option><option value="PIX">PIX</option><option value="BOLETO">Boleto</option><option value="CREDIT_CARD">Cartão de crédito</option><option value="TRANSFERENCIA">Transferência</option><option value="DINHEIRO">Dinheiro</option><option value="OUTRO">Outro</option></select></label></div>
+    <div className="mt-5"><label className="block"><span className="text-xs font-semibold text-[#294052]">Observações internas</span><textarea value={values.notes} onChange={(event) => update("notes", event.target.value)} rows={4} maxLength={2000} placeholder="Acordos, condições comerciais e informações internas do contrato" className="mt-2 w-full rounded-md border border-[#d7e0e7] bg-white px-3 py-3 text-sm text-[#10243c] outline-none transition placeholder:text-[#9aa9b5] focus:border-[#3189bc] focus:ring-2 focus:ring-[#dceef8]" /></label></div>
     <div className="mt-8 border-t border-[#edf1f5] pt-6"><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start"><div><h2 className="text-base font-semibold text-[#173044]">Cobrança centralizada</h2><p className="mt-1 text-sm text-[#718196]">A cobrança será criada no Portal e vinculada somente a este produto e cliente.</p></div><BillingSetupButton serviceId={service.id} subscriptionId={service.asaasSubscriptionId} environment={service.billingEnvironment} checkoutUrl={service.billingCheckoutUrl} /></div></div>
     <div className="mt-8 border-t border-[#edf1f5] pt-6"><h2 className="text-base font-semibold text-[#173044]">Versão e atualizações</h2><p className="mt-1 text-sm text-[#718196]">Registre a versão real publicada e a última alteração. Depois podemos automatizar isso por integração.</p></div>
     <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3"><Field label="Versão atual" value={values.currentVersion} onChange={(value) => update("currentVersion", value)} placeholder="Ex.: 2026.10.07" /><Field label="Última atualização" value={values.lastUpdatedAt} onChange={(value) => update("lastUpdatedAt", value)} type="date" /><div className="md:col-span-2 lg:col-span-1"><Field label="Resumo da atualização" value={values.lastUpdateSummary} onChange={(value) => update("lastUpdateSummary", value)} placeholder="Ex.: Novo controle de usuários" /></div></div>

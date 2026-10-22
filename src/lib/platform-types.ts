@@ -112,6 +112,7 @@ export type ManagedService = {
   billingDay: number | null;
   graceDays: number;
   billingMethod: BillingMethod | null;
+  notes: string | null;
   nextDueDate: string | null;
   startDate: string | null;
   renewalDate: string | null;

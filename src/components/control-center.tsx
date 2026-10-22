@@ -264,6 +264,7 @@ function ServiceCommercialSummary({ service }: { service: ControlSnapshot["servi
     <div><span className="block text-[#8593a5]">Próximo vencimento</span><strong className="mt-1 block text-sm text-[#203752]">{formatSnapshotDate(service.nextDueDate)}</strong></div>
     <div><span className="block text-[#8593a5]">Forma de pagamento</span><strong className="mt-1 block text-sm text-[#203752]">{service.billingMethod || "Não informada"}</strong></div>
     <div><span className="block text-[#8593a5]">Situação da cobrança</span><strong className="mt-1 block text-sm text-[#203752]">{service.sourceBillingStatus || "Não informada"}</strong></div>
+    <div className="col-span-2 sm:col-span-4"><span className="block text-[#8593a5]">Observações internas</span><strong className="mt-1 block whitespace-pre-wrap text-sm font-medium text-[#203752]">{service.notes || "Não informadas"}</strong></div>
   </div>;
 }
 
