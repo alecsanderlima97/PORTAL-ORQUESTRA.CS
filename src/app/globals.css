@@ -106,7 +106,7 @@ body {
 }
 
 .portal-shell--video:not(.portal-shell--video-ready) .portal-gateway__image {
-  opacity: 1;
+  opacity: 0;
 }
 
 .portal-shell--video-ready .portal-gateway__video {
@@ -222,6 +222,30 @@ body {
   font-size: 0.7rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.portal-gateway__skip {
+  position: absolute;
+  right: clamp(1rem, 3vw, 2.5rem);
+  bottom: clamp(1rem, 3vw, 2.5rem);
+  z-index: 8;
+  min-height: 42px;
+  border: 1px solid rgba(206, 234, 248, 0.34);
+  border-radius: 6px;
+  padding: 0.65rem 1rem;
+  background: rgba(3, 18, 31, 0.72);
+  color: #eef9ff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+}
+
+.portal-gateway__skip:hover,
+.portal-gateway__skip:focus-visible {
+  border-color: rgba(206, 234, 248, 0.72);
+  background: rgba(7, 35, 57, 0.9);
+  outline: none;
 }
 
 .portal-shell--entering .portal-gateway__image,
@@ -820,6 +844,21 @@ body {
   visibility: visible;
   pointer-events: auto;
   transform: none;
+}
+
+.portal-shell--inside .portal-site::before,
+.portal-shell--inside .portal-site::after {
+  display: none;
+}
+
+.portal-shell--inside .portal-orbit-field__ring,
+.portal-shell--inside .portal-orbit-field__beam,
+.portal-shell--inside .portal-orbit-field__pulse,
+.portal-shell--inside .portal-home__orchestrator-figure,
+.portal-shell--inside .portal-power-pillar,
+.portal-shell--inside .portal-power-pillar__scan,
+.portal-shell--inside .portal-room__data-run {
+  animation: none;
 }
 
 @keyframes room-horizon-breathe {

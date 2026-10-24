@@ -62,7 +62,7 @@ export function PortalLanding() {
   const [entranceVideoReady, setEntranceVideoReady] = useState(false);
   const [activeNavigationId, setActiveNavigationId] = useState<(typeof heroNavigation)[number]["id"]>("solucoes");
   const transitionTimerRef = useRef<number | null>(null);
-  const gatewayRef = useRef<HTMLButtonElement>(null);
+  const gatewayRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const entranceVideoRef = useRef<HTMLVideoElement>(null);
   const veilRef = useRef<HTMLSpanElement>(null);
@@ -123,6 +123,7 @@ export function PortalLanding() {
     if (canPlayVideo && entranceVideo) {
       entranceVideo.muted = false;
       entranceVideo.volume = 0.72;
+      entranceVideo.playbackRate = 1.45;
       void entranceVideo.play().catch(() => {
         entranceVideo.muted = true;
         setEntranceMode("procedural");
@@ -131,6 +132,22 @@ export function PortalLanding() {
 
     setPhase("entering");
   }, [phase]);
+
+  const skipEntrance = useCallback(() => {
+    if (transitionTimerRef.current !== null) window.clearTimeout(transitionTimerRef.current);
+    transitionTimerRef.current = null;
+    entranceVideoRef.current?.pause();
+    gsap.killTweensOf([
+      gatewayRef.current,
+      imageRef.current,
+      veilRef.current,
+      apertureRef.current,
+      transitionLightRef.current,
+      contentRef.current,
+      siteRef.current,
+    ]);
+    setPhase("inside");
+  }, []);
 
   useLayoutEffect(() => {
     if (phase !== "entering") return;
@@ -146,9 +163,9 @@ export function PortalLanding() {
 
     if (entranceMode === "video") {
       const entranceVideo = entranceVideoRef.current;
-      const fallbackDuration = 6200;
+      const fallbackDuration = 4200;
       const remainingDuration = entranceVideo && Number.isFinite(entranceVideo.duration) && entranceVideo.duration > 0
-        ? Math.max(entranceVideo.duration - entranceVideo.currentTime, 0.4)
+        ? Math.max((entranceVideo.duration - entranceVideo.currentTime) / entranceVideo.playbackRate, 0.4)
         : fallbackDuration / 1000;
       const duration = entranceVideo
         ? Math.ceil(remainingDuration * 1000) + 180
@@ -310,11 +327,17 @@ export function PortalLanding() {
 
   return (
     <main className={`portal-shell portal-shell--${phase} portal-shell--${entranceMode} ${entranceVideoReady ? "portal-shell--video-ready" : ""} ${phase === "inside" ? "portal-shell--powering" : ""}`}>
-      <button
+      <div
         ref={gatewayRef}
-        type="button"
         className="portal-gateway"
         onClick={enterPortal}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            enterPortal();
+          }
+        }}
+        role="button"
         aria-label="Entrar no Portal Orquestra.cs"
         aria-hidden={phase === "inside"}
         tabIndex={phase === "inside" ? -1 : 0}
@@ -336,8 +359,7 @@ export function PortalLanding() {
             src={`/portal-entry.mp4?v=${PORTAL_ASSET_VERSION}`}
             playsInline
             muted
-            preload="auto"
-            poster={`/orquestra-portal-altar-clean.png?v=${PORTAL_ASSET_VERSION}`}
+            preload="metadata"
             aria-hidden="true"
             onCanPlay={() => setEntranceVideoReady(true)}
             onError={() => {
@@ -360,7 +382,10 @@ export function PortalLanding() {
           <BrandLogo variant="essential" size={54} showWordmark tone="light" />
           <span className="portal-gateway__hint">Clique para entrar</span>
         </span>
-      </button>
+        <button type="button" className="portal-gateway__skip" onClick={(event) => { event.stopPropagation(); skipEntrance(); }}>
+          Pular entrada
+        </button>
+      </div>
 
       <div ref={siteRef} className="portal-site" tabIndex={-1} inert={phase !== "inside"} aria-hidden={phase !== "inside"}>
         <div ref={roomRef} className="portal-room" aria-hidden="true">
