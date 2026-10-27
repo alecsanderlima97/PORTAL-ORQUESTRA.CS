@@ -2,19 +2,28 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Activity, ArrowRight, LockKeyhole, Mail, MessageCircle, Network, Workflow } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, LockKeyhole, Mail, MessageCircle } from "lucide-react";
 import gsap from "gsap";
 import { deployedProjects, projectCatalogDetails } from "@/lib/portal-data";
 import { BrandLogo } from "@/components/brand-logo";
 import { PortalWarpCanvas } from "@/components/portal-visual-effects";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { CSSProperties, WheelEvent as ReactWheelEvent } from "react";
 
 type GatewayPhase = "arrival" | "entering" | "inside";
 type EntranceMode = "video" | "procedural";
 
-const PORTAL_HOLD_TIME_SECONDS = 0.08;
-const PORTAL_ASSET_VERSION = "20261026";
+const PORTAL_ASSET_VERSION = "20261027";
+
+const heroProjects = deployedProjects.filter((project) => project.status !== "legado" && project.relation !== "site");
+const initialHeroProjectIndex = Math.max(heroProjects.findIndex((project) => project.id === "orquestra-hub"), 0);
+
+function getCircularOffset(index: number, activeIndex: number, total: number) {
+  let offset = (index - activeIndex + total) % total;
+  if (offset > total / 2) offset -= total;
+  return offset;
+}
 
 const solutionGroups = [
   {
@@ -29,54 +38,47 @@ const solutionGroups = [
   },
 ];
 
-const heroNavigation = [
+const serviceCards = [
   {
-    id: "solucoes",
-    label: "Soluções",
-    detail: "Tecnologia sob medida",
-    href: "#solucoes",
-    position: "northwest",
-    icon: Network,
+    number: "01",
+    title: "Consultoria",
+    description: "Entendemos sua operação, identificamos gargalos e desenhamos o caminho mais inteligente.",
+    image: "/orquestra-consultoria-v1.png",
+    imageAlt: "Consultores analisando o planejamento de uma operação",
   },
   {
-    id: "sistemas-publicados",
-    label: "Sistemas publicados",
-    detail: "Produtos reais",
-    href: "#solucoes",
-    position: "northeast",
-    icon: Activity,
+    number: "02",
+    title: "Infraestrutura",
+    description: "Equipamentos, rede e ambiente preparados para a sua empresa trabalhar com segurança.",
+    image: "/orquestra-infraestrutura-v2.png",
+    imageAlt: "Infraestrutura industrial e operação de produção",
   },
   {
-    id: "consultoria",
-    label: "Consultoria",
-    detail: "Estratégia e operação",
-    href: "#servicos",
-    position: "east",
-    icon: MessageCircle,
+    number: "03",
+    title: "Software e automação",
+    description: "Sistemas, sites e fluxos digitais personalizados para reduzir esforço e dar clareza.",
+    image: "/orquestra-software-automacao-v2.png",
+    imageAlt: "Interface de gestão e automação empresarial",
   },
-] as const;
+];
 
 export function PortalLanding() {
   const [phase, setPhase] = useState<GatewayPhase>("arrival");
   const [entranceMode, setEntranceMode] = useState<EntranceMode>("video");
   const [entranceVideoReady, setEntranceVideoReady] = useState(false);
-  const [activeNavigationId, setActiveNavigationId] = useState<(typeof heroNavigation)[number]["id"]>("solucoes");
+  const [carouselIndex, setCarouselIndex] = useState(initialHeroProjectIndex);
   const transitionTimerRef = useRef<number | null>(null);
+  const carouselWheelTimerRef = useRef<number | null>(null);
   const gatewayRef = useRef<HTMLDivElement>(null);
-  const imageRef = useRef<HTMLImageElement>(null);
   const entranceVideoRef = useRef<HTMLVideoElement>(null);
   const veilRef = useRef<HTMLSpanElement>(null);
-  const apertureRef = useRef<HTMLSpanElement>(null);
   const transitionLightRef = useRef<HTMLSpanElement>(null);
   const contentRef = useRef<HTMLSpanElement>(null);
   const siteRef = useRef<HTMLDivElement>(null);
-  const roomRef = useRef<HTMLDivElement>(null);
-  const roomGeometryRef = useRef<HTMLDivElement>(null);
-  const orchestratorRef = useRef<HTMLDivElement>(null);
-  const orchestratorGlowRef = useRef<HTMLSpanElement>(null);
-  const descentRef = useRef<HTMLElement>(null);
-  const descentSceneRef = useRef<HTMLDivElement>(null);
-  const activeNavigation = heroNavigation.find((item) => item.id === activeNavigationId) ?? heroNavigation[0];
+  const commandSceneRef = useRef<HTMLDivElement>(null);
+  const commandSceneImageRef = useRef<HTMLImageElement>(null);
+  const commandSceneGlowRef = useRef<HTMLSpanElement>(null);
+  const commandSceneFloorRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const video = entranceVideoRef.current;
@@ -86,29 +88,23 @@ export function PortalLanding() {
       setEntranceVideoReady(true);
     };
 
-    const preparePortalFrame = () => {
-      video.pause();
+    const startVideoPreview = () => {
       video.muted = true;
-      video.volume = 0.72;
-      if (Number.isFinite(video.duration) && video.duration > 0) {
-        video.currentTime = Math.min(PORTAL_HOLD_TIME_SECONDS, Math.max(video.duration - 0.1, 0));
-      }
+      void video.play().catch(() => undefined);
       if (video.readyState >= 2) markVideoReady();
     };
     const confirmPortalFrame = () => {
       markVideoReady();
     };
-    video.addEventListener("loadedmetadata", preparePortalFrame);
+    video.addEventListener("loadedmetadata", startVideoPreview);
     video.addEventListener("loadeddata", confirmPortalFrame);
     video.addEventListener("canplay", confirmPortalFrame);
-    video.addEventListener("seeked", confirmPortalFrame);
-    if (video.readyState >= 1) preparePortalFrame();
+    if (video.readyState >= 1) startVideoPreview();
 
     return () => {
-      video.removeEventListener("loadedmetadata", preparePortalFrame);
+      video.removeEventListener("loadedmetadata", startVideoPreview);
       video.removeEventListener("loadeddata", confirmPortalFrame);
       video.removeEventListener("canplay", confirmPortalFrame);
-      video.removeEventListener("seeked", confirmPortalFrame);
     };
   }, []);
 
@@ -121,6 +117,7 @@ export function PortalLanding() {
     setEntranceMode(canPlayVideo ? "video" : "procedural");
 
     if (canPlayVideo && entranceVideo) {
+      if (entranceVideo.ended) entranceVideo.currentTime = 0;
       entranceVideo.muted = false;
       entranceVideo.volume = 0.72;
       entranceVideo.playbackRate = 1.45;
@@ -139,9 +136,7 @@ export function PortalLanding() {
     entranceVideoRef.current?.pause();
     gsap.killTweensOf([
       gatewayRef.current,
-      imageRef.current,
       veilRef.current,
-      apertureRef.current,
       transitionLightRef.current,
       contentRef.current,
       siteRef.current,
@@ -149,17 +144,29 @@ export function PortalLanding() {
     setPhase("inside");
   }, []);
 
+  const rotateCarousel = useCallback((direction: number) => {
+    setCarouselIndex((current) => (current + direction + heroProjects.length) % heroProjects.length);
+  }, []);
+
+  const handleCarouselWheel = useCallback((event: ReactWheelEvent<HTMLDivElement>) => {
+    const movement = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+    if (Math.abs(movement) < 8 || carouselWheelTimerRef.current !== null) return;
+    event.preventDefault();
+    rotateCarousel(movement > 0 ? 1 : -1);
+    carouselWheelTimerRef.current = window.setTimeout(() => {
+      carouselWheelTimerRef.current = null;
+    }, 360);
+  }, [rotateCarousel]);
+
   useLayoutEffect(() => {
     if (phase !== "entering") return;
 
     const gateway = gatewayRef.current;
-    const image = imageRef.current;
     const veil = veilRef.current;
-    const aperture = apertureRef.current;
     const transitionLight = transitionLightRef.current;
     const content = contentRef.current;
     const site = siteRef.current;
-    if (!gateway || !image || !veil || !aperture || !transitionLight || !content || !site) return;
+    if (!gateway || !veil || !transitionLight || !content || !site) return;
 
     if (entranceMode === "video") {
       const entranceVideo = entranceVideoRef.current;
@@ -226,30 +233,6 @@ export function PortalLanding() {
       timeline
         .to(content, { autoAlpha: 0, scale: 1.025, duration: 0.32, ease: "power2.out" }, 0)
         .to(veil, { opacity: 0.02, duration: 1.08, ease: "power2.out" }, 0)
-        .to(
-          image,
-          {
-            scale: 1.09,
-            filter: "saturate(0.92) brightness(1.06) contrast(1.01) blur(0px)",
-            duration: 1.04,
-            ease: "power2.inOut",
-          },
-          0,
-        )
-        .to(aperture, { autoAlpha: 0.78, scale: 1.06, duration: 0.7, ease: "power2.out" }, 0.1)
-        .to(aperture, { scale: 1.72, filter: "brightness(1.3)", duration: 1.3, ease: "power3.in" }, 0.72)
-        .to(
-          image,
-          {
-            autoAlpha: 0.08,
-            scale: 1.9,
-            filter: "saturate(0.95) brightness(1.32) contrast(0.94) blur(5px)",
-            duration: 2.2,
-            ease: "power4.in",
-          },
-          0.92,
-        )
-        .to(aperture, { autoAlpha: 0, scale: 4.7, duration: 1.72, ease: "power4.in" }, 1.05)
         .fromTo(
           transitionLight,
           { autoAlpha: 0, scale: 0.2 },
@@ -270,30 +253,28 @@ export function PortalLanding() {
   }, [phase]);
 
   useEffect(() => {
-    const room = roomRef.current;
-    const geometry = roomGeometryRef.current;
-    const character = orchestratorRef.current;
-    const glow = orchestratorGlowRef.current;
-    if (phase !== "inside" || !room || !geometry || !character || !glow || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const scene = commandSceneRef.current;
+    const image = commandSceneImageRef.current;
+    const glow = commandSceneGlowRef.current;
+    const floor = commandSceneFloorRef.current;
+    if (phase !== "inside" || !scene || !image || !glow || !floor || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     let removePointerListener: (() => void) | undefined;
     const context = gsap.context(() => {
-      gsap.fromTo(room, { autoAlpha: 0, scale: 1.015 }, { autoAlpha: 1, scale: 1, duration: 2.2, ease: "power2.out" });
-      gsap.from(character, { autoAlpha: 0, xPercent: 8, scale: 0.97, duration: 1.35, ease: "power3.out" });
-      gsap.fromTo(glow, { opacity: 0.28, scale: 0.92 }, { opacity: 0.62, scale: 1.08, duration: 1.7, ease: "sine.inOut" });
+      gsap.fromTo(scene, { autoAlpha: 0, scale: 1.025 }, { autoAlpha: 1, scale: 1, duration: 1.8, ease: "power2.out" });
 
-      if (window.matchMedia("(pointer: fine)").matches) {
-        const roomX = gsap.quickTo(geometry, "rotationY", { duration: 1.7, ease: "power2.out" });
-        const roomY = gsap.quickTo(geometry, "rotationX", { duration: 1.7, ease: "power2.out" });
-        const moveX = gsap.quickTo(character, "x", { duration: 1.1, ease: "power2.out" });
-        const moveY = gsap.quickTo(character, "y", { duration: 1.1, ease: "power2.out" });
+      if (window.matchMedia("(pointer: fine) and (min-width: 901px)").matches) {
+        const imageX = gsap.quickTo(image, "x", { duration: 1.4, ease: "power2.out" });
+        const imageY = gsap.quickTo(image, "y", { duration: 1.4, ease: "power2.out" });
+        const glowX = gsap.quickTo(glow, "x", { duration: 1.1, ease: "power2.out" });
+        const floorX = gsap.quickTo(floor, "x", { duration: 1.8, ease: "power2.out" });
         const handlePointerMove = (event: PointerEvent) => {
           const normalizedX = event.clientX / window.innerWidth - 0.5;
           const normalizedY = event.clientY / window.innerHeight - 0.5;
-          roomX(normalizedX * 0.85);
-          roomY(normalizedY * -0.65);
-          moveX(normalizedX * 8);
-          moveY(normalizedY * 5);
+          imageX(normalizedX * -22);
+          imageY(normalizedY * -13);
+          glowX(normalizedX * 34);
+          floorX(normalizedX * 18);
         };
         window.addEventListener("pointermove", handlePointerMove, { passive: true });
         removePointerListener = () => window.removeEventListener("pointermove", handlePointerMove);
@@ -309,6 +290,7 @@ export function PortalLanding() {
   useEffect(
     () => () => {
       if (transitionTimerRef.current !== null) window.clearTimeout(transitionTimerRef.current);
+      if (carouselWheelTimerRef.current !== null) window.clearTimeout(carouselWheelTimerRef.current);
     },
     [],
   );
@@ -343,23 +325,14 @@ export function PortalLanding() {
         tabIndex={phase === "inside" ? -1 : 0}
       >
         <span className="portal-gateway__scene" aria-hidden="true">
-          <Image
-            ref={imageRef}
-            src={`/orquestra-gateway-v5.webp?v=${PORTAL_ASSET_VERSION}`}
-            alt=""
-            fill
-            priority
-            unoptimized
-            sizes="100vw"
-            className="portal-gateway__image"
-          />
           <video
             ref={entranceVideoRef}
             className="portal-gateway__video"
-            src={`/portal-entry.mp4?v=${PORTAL_ASSET_VERSION}`}
+            src={`/portal-entry-room.mp4?v=${PORTAL_ASSET_VERSION}`}
             playsInline
+            autoPlay
             muted
-            preload="metadata"
+            preload="auto"
             aria-hidden="true"
             onCanPlay={() => setEntranceVideoReady(true)}
             onError={() => {
@@ -370,10 +343,6 @@ export function PortalLanding() {
           <span ref={veilRef} className="portal-gateway__veil" />
           <span className="portal-gateway__focus" />
           <span className="portal-gateway__light-sweep" />
-          <span ref={apertureRef} className="portal-gateway__aperture">
-            <span className="portal-gateway__aperture-halo" />
-            <span className="portal-gateway__aperture-core" />
-          </span>
           <span className="portal-gateway__depth" />
           {phase === "entering" && entranceMode === "procedural" && <PortalWarpCanvas active />}
           <span ref={transitionLightRef} className="portal-gateway__transition-light" />
@@ -388,44 +357,21 @@ export function PortalLanding() {
       </div>
 
       <div ref={siteRef} className="portal-site" tabIndex={-1} inert={phase !== "inside"} aria-hidden={phase !== "inside"}>
-        <div ref={roomRef} className="portal-room" aria-hidden="true">
-          <div ref={roomGeometryRef} className="portal-room__geometry">
-            <span className="portal-room__back-wall" />
-            <span className="portal-room__ceiling" />
-            <span className="portal-room__wall portal-room__wall--left" />
-            <span className="portal-room__wall portal-room__wall--right" />
-            <span className="portal-room__floor" />
-            <span className="portal-room__vanishing-light" />
-            <span className="portal-room__rib portal-room__rib--one" />
-            <span className="portal-room__rib portal-room__rib--two" />
-            <span className="portal-room__rib portal-room__rib--three" />
-            <span className="portal-room__wall-panel portal-room__wall-panel--left" />
-            <span className="portal-room__wall-panel portal-room__wall-panel--right" />
-            <span className="portal-room__data-run portal-room__data-run--one" />
-            <span className="portal-room__data-run portal-room__data-run--two" />
-          </div>
-        </div>
         <div className="portal-site__hero">
-          <div className="portal-power-system" aria-hidden="true">
-            <span className="portal-power-system__lamp portal-power-system__lamp--one" />
-            <span className="portal-power-system__lamp portal-power-system__lamp--two" />
-            <span className="portal-power-system__lamp portal-power-system__lamp--three" />
-            <span className="portal-power-system__lamp portal-power-system__lamp--four" />
-            <span className="portal-room__energy-beam portal-room__energy-beam--left" />
-            <span className="portal-room__energy-beam portal-room__energy-beam--right" />
-            <span className="portal-power-pillar">
-              <span className="portal-power-pillar__halo" />
-              <span className="portal-power-pillar__beam portal-power-pillar__beam--top" />
-              <span className="portal-power-pillar__beam portal-power-pillar__beam--bottom" />
-              <span className="portal-power-pillar__body">
-                <span className="portal-power-pillar__core" />
-                <span className="portal-power-pillar__scan portal-power-pillar__scan--one" />
-                <span className="portal-power-pillar__scan portal-power-pillar__scan--two" />
-                <span className="portal-power-pillar__window portal-power-pillar__window--one" />
-                <span className="portal-power-pillar__window portal-power-pillar__window--two" />
-              </span>
-              <span className="portal-power-pillar__base" />
-            </span>
+          <div ref={commandSceneRef} className="portal-command-scene" aria-hidden="true">
+            <Image
+              ref={commandSceneImageRef}
+              src={`/orquestra-command-room-reference-v1.png?v=${PORTAL_ASSET_VERSION}`}
+              alt=""
+              fill
+              priority
+              unoptimized
+              sizes="100vw"
+              className="portal-command-scene__image"
+            />
+            <span ref={commandSceneGlowRef} className="portal-command-scene__ceiling-glow" />
+            <span ref={commandSceneFloorRef} className="portal-command-scene__floor" />
+            <span className="portal-command-scene__vignette" />
           </div>
           <header className="portal-header">
             <Link href="/" className="portal-header__brand" aria-label="Orquestra.cs - início">
@@ -439,105 +385,80 @@ export function PortalLanding() {
               <a href="#sobre">Quem somos</a>
             </nav>
             <Link href="/login" className="portal-header__login">
-              Entrar
+              Área do cliente
             </Link>
           </header>
 
-          <section className="portal-home" id="empresa">
-          <div className="portal-home__copy">
-            <p className="portal-eyebrow">Tecnologia para fazer sua operação avançar</p>
-            <h1>A chave para uma operação que funciona.</h1>
-            <p className="portal-home__intro">
-              Da escolha dos equipamentos ao desenvolvimento do software, site ou automação: uma
-              direção tecnológica para resolver o que trava o seu negócio.
-            </p>
-            <div className="portal-home__actions">
-              <a href="#orcamento" className="portal-action portal-action--primary">
-                Fazer um orçamento <ArrowRight className="size-4" />
-              </a>
-              <Link href="/portal" className="portal-action portal-action--quiet">Área do cliente</Link>
-            </div>
-          </div>
-
-          <div
-            className="portal-home__orchestrator"
-            aria-label="Orquestrador digital da Orquestra.cs"
-            data-active-navigation={activeNavigation.id}
-          >
-            <span ref={orchestratorGlowRef} className="portal-home__orchestrator-glow" aria-hidden="true" />
-            <span className="portal-orbit-field" aria-hidden="true">
-              <span className="portal-orbit-field__ring portal-orbit-field__ring--outer" />
-              <span className="portal-orbit-field__ring portal-orbit-field__ring--inner" />
-              <span className="portal-orbit-field__beam portal-orbit-field__beam--one" />
-              <span className="portal-orbit-field__beam portal-orbit-field__beam--two" />
-              <span className="portal-orbit-field__pulse" />
-            </span>
-
-            {heroNavigation.map((item) => {
-              const Icon = item.icon;
-              const isActive = item.id === activeNavigation.id;
-
-              return (
-                <a
-                  key={item.id}
-                  href={item.href}
-                  className={`portal-orbit-node portal-orbit-node--${item.position}`}
-                  data-active={isActive}
-                  onPointerEnter={() => setActiveNavigationId(item.id)}
-                  onFocus={() => setActiveNavigationId(item.id)}
-                  aria-label={`Ir para ${item.label}: ${item.detail}`}
-                >
-                  <span className="portal-orbit-node__icon"><Icon className="size-3.5" /></span>
-                  <span className="portal-orbit-node__content">
-                    <strong>{item.label}</strong>
-                    <small>{item.detail}</small>
-                  </span>
-                </a>
-              );
-            })}
-
-            <div ref={orchestratorRef} className="portal-home__orchestrator-figure">
-              <Image
-                src="/orquestra-motion-conductor.png"
-                alt="Orquestrador, personagem que representa os sistemas trabalhando em conjunto"
-                fill
-                priority
-                sizes="(max-width: 720px) 60vw, 420px"
-                className="portal-home__orchestrator-image"
-              />
-            </div>
-            <div className="portal-orchestrator-panel">
-              <div className="portal-orchestrator-panel__status"><span /> Navegação ativa</div>
-              <div className="portal-orchestrator-panel__message">
-                <Network className="size-4" />
-                <span>{activeNavigation.label}: {activeNavigation.detail}</span>
-              </div>
-              <div className="portal-orchestrator-panel__signals">
-                <span><Workflow className="size-3.5" /> Portal integrado</span>
-                <span><Activity className="size-3.5" /> Em sintonia</span>
+          <section className="portal-command-deck" id="empresa">
+            <div className="portal-command-deck__copy">
+              <p className="portal-eyebrow">Sistemas que impulsionam o seu negócio</p>
+              <h1>Tudo em um <span>só lugar.</span></h1>
+              <p className="portal-home__intro">Soluções simples e completas para organizar, automatizar e fazer sua empresa evoluir.</p>
+              <div className="portal-home__actions">
+                <a href="#orcamento" className="portal-action portal-action--primary">Fazer um orçamento <ArrowRight className="size-4" /></a>
               </div>
             </div>
-          </div>
+
+            <p className="portal-command-deck__side-note">Tecnologia<br />para resultados<br />reais</p>
+
+            <div className="portal-command-deck__systems" aria-label="Sistemas publicados">
+              <div className="portal-command-deck__systems-head">
+                <button type="button" onClick={() => rotateCarousel(-1)} aria-label="Sistema anterior"><ChevronLeft className="size-4" /></button>
+                <span>{heroProjects[carouselIndex]?.name}</span>
+                <small>{carouselIndex + 1} / {heroProjects.length}</small>
+                <button type="button" onClick={() => rotateCarousel(1)} aria-label="Próximo sistema"><ChevronRight className="size-4" /></button>
+              </div>
+              <div
+                className="portal-command-deck__carousel"
+                tabIndex={0}
+                role="region"
+                aria-label="Carrossel circular de sistemas"
+                onWheel={handleCarouselWheel}
+                onKeyDown={(event) => {
+                  if (event.key === "ArrowLeft") { event.preventDefault(); rotateCarousel(-1); }
+                  if (event.key === "ArrowRight") { event.preventDefault(); rotateCarousel(1); }
+                }}
+              >
+                {heroProjects.map((project, projectIndex) => {
+                  const Icon = project.icon;
+                  const details = projectCatalogDetails[project.id];
+                  const offset = getCircularOffset(projectIndex, carouselIndex, heroProjects.length);
+                  const distance = Math.abs(offset);
+                  const visible = distance <= 3;
+                  const arcY = distance === 0 ? 0 : -Math.min(48, distance * 18);
+                  const depth = distance * 92;
+                  const cardStyle = {
+                    opacity: visible ? Math.max(0.72, 1 - distance * 0.1) : 0,
+                    pointerEvents: visible ? "auto" : "none",
+                    zIndex: 20 - distance,
+                    transform: `translateX(calc(-50% + ${offset * 14.2}vw)) translateY(${arcY}px) translateZ(${-depth}px) rotateY(${offset * -10}deg) scale(${1 - distance * 0.055})`,
+                  } as CSSProperties;
+                  return (
+                    <a
+                      key={project.id}
+                      href={project.url || "#solucoes"}
+                      target={project.url ? "_blank" : undefined}
+                      rel={project.url ? "noopener noreferrer" : undefined}
+                      className={`portal-command-card portal-command-card--${project.accent}`}
+                      data-active={offset === 0}
+                      data-visible={visible}
+                      style={cardStyle}
+                      tabIndex={visible ? 0 : -1}
+                      aria-label={`${project.name}: ${project.description}`}
+                    >
+                      {details?.previewImage ? <span className="portal-command-card__backdrop" style={{ backgroundImage: `url("${details.previewImage}")` }} aria-hidden="true" /> : null}
+                      <span className="portal-command-card__icon"><Icon className="size-5" /></span>
+                      <span className="portal-command-card__name">{project.name}</span>
+                      <span className="portal-command-card__description">{details?.audience || project.description}</span>
+                      <span className="portal-command-card__open"><ArrowRight className="size-4" /></span>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+            <a className="portal-command-deck__scroll" href="#solucoes"><span /> Clique para explorar</a>
           </section>
         </div>
-
-        <section ref={descentRef} className="portal-descent" aria-label="Transição para o núcleo de sistemas">
-          <div ref={descentSceneRef} className="portal-descent__scene" aria-hidden="true">
-            <span className="portal-descent__rail portal-descent__rail--left" />
-            <span className="portal-descent__rail portal-descent__rail--right" />
-            <span className="portal-descent__light portal-descent__light--one" />
-            <span className="portal-descent__light portal-descent__light--two" />
-            <span className="portal-descent__light portal-descent__light--three" />
-            <span className="portal-descent__light portal-descent__light--four" />
-            <span className="portal-descent__light portal-descent__light--five" />
-            <span className="portal-descent__light portal-descent__light--six" />
-            <div className="portal-descent__core">
-              <span>Nível 01</span>
-              <strong>Núcleo de sistemas</strong>
-              <i />
-            </div>
-          </div>
-        </section>
 
         <section className="portal-solutions portal-room-section portal-room-section--systems" id="solucoes">
           <div className="portal-solutions__heading">
@@ -595,9 +516,13 @@ export function PortalLanding() {
             <h2>Do problema à solução em uma única direção.</h2>
           </div>
           <div className="portal-services__list">
-            <article><span>01</span><h3>Consultoria</h3><p>Entendemos sua operação, identificamos gargalos e desenhamos o caminho mais inteligente.</p></article>
-            <article><span>02</span><h3>Infraestrutura</h3><p>Equipamentos, rede e ambiente preparados para a sua empresa trabalhar com segurança.</p></article>
-            <article><span>03</span><h3>Software e automação</h3><p>Sistemas, sites e fluxos digitais personalizados para reduzir esforço e dar clareza.</p></article>
+            {serviceCards.map((service) => (
+              <article key={service.number} aria-label={service.imageAlt} style={{ "--service-image": `url("${service.image}")` } as CSSProperties}>
+                <span>{service.number}</span>
+                <h3>{service.title}</h3>
+                <p>{service.description}</p>
+              </article>
+            ))}
           </div>
         </section>
 
@@ -614,6 +539,11 @@ export function PortalLanding() {
         </section>
 
         <section className="portal-about portal-room-section portal-room-section--about" id="sobre">
+          <div className="portal-about__video" aria-hidden="true">
+            <video autoPlay muted loop playsInline preload="metadata">
+              <source src="/portal-entry-room.mp4" type="video/mp4" />
+            </video>
+          </div>
           <div>
             <p className="portal-eyebrow">Quem somos</p>
             <h2>A Orquestra.cs resolve problemas através de tecnologia.</h2>

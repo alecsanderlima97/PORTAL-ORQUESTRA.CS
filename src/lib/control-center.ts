@@ -79,6 +79,21 @@ function mapServiceUser(id: string, raw: FirebaseFirestore.DocumentData): Manage
   };
 }
 
+function latestUserDate(user: ManagedServiceUser) {
+  return user.updatedAt || user.lastSeenAt || user.lastActivityAt || user.lastLoginAt || "";
+}
+
+function deduplicateServiceUsers(users: ManagedServiceUser[]) {
+  const uniqueUsers = new Map<string, ManagedServiceUser>();
+  for (const user of users) {
+    const identity = user.email.trim().toLowerCase() || user.externalUserId || user.id;
+    const key = `${user.serviceId}:${identity}`;
+    const current = uniqueUsers.get(key);
+    if (!current || latestUserDate(user) > latestUserDate(current)) uniqueUsers.set(key, user);
+  }
+  return [...uniqueUsers.values()];
+}
+
 function mapCompany(id: string, raw: FirebaseFirestore.DocumentData): CompanyRecord {
   return {
     id,
@@ -220,9 +235,9 @@ export async function getControlSnapshot(): Promise<ControlSnapshot> {
       .filter((doc) => doc.data().isArchived !== true)
       .map((doc) => mapCompany(doc.id, doc.data())),
     services: activeServiceDocs.map((doc) => mapService(doc.id, doc.data())),
-    serviceUsers: serviceUsersSnapshot.docs
+    serviceUsers: deduplicateServiceUsers(serviceUsersSnapshot.docs
       .filter((doc) => activeServiceIds.has(stringValue(doc.data().serviceId)))
-      .map((doc) => mapServiceUser(doc.id, doc.data())),
+      .map((doc) => mapServiceUser(doc.id, doc.data()))),
     charges: chargesSnapshot.docs.map((doc) => mapCharge(doc.id, doc.data())),
     opportunities: opportunitiesSnapshot.docs.map((doc) => {
       const raw = doc.data();

@@ -57,7 +57,7 @@ export const deployedProjects: DeployedProject[] = [
     id: "orquestra-fit",
     name: "Orquestra Fit",
     vercelName: "orquestra-fit",
-    url: "https://orquestra-fit.vercel.app",
+    url: "https://fit.orquestracs.com",
     category: "Academia e operação",
     description: "Gestão de academia, alunos, treinos e acompanhamento operacional.",
     icon: Dumbbell,

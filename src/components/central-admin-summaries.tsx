@@ -1,0 +1,23 @@
+import Link from "next/link";
+import { ExternalLink, Pencil } from "lucide-react";
+import { formatMoney, formatSnapshotDate } from "@/lib/control-center";
+import type { CompanyRecord, ControlSnapshot } from "@/lib/platform-types";
+
+function Field({ label, value }: { label: string; value: string | null | undefined }) {
+  return <div><p className="text-xs text-[#8593a5]">{label}</p><p className="mt-1 break-words text-sm font-medium text-[#203752]">{value?.trim() || "Não informado"}</p></div>;
+}
+
+export function ClientRecordOverview({ company }: { company: CompanyRecord }) {
+  const address = company.googleAddress || company.address || [company.street, company.number, company.complement, company.neighborhood, company.city, company.state, company.cep].filter(Boolean).join(", ");
+  return <div className="mt-6 space-y-5 border-t border-[#edf1f5] pt-5">
+    <section><h3 className="text-sm font-semibold text-[#173044]">Cadastro e contato</h3><div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><Field label="E-mail comercial" value={company.contactEmail} /><Field label="Telefone / WhatsApp" value={company.contactPhone} /><Field label="Documento" value={company.cnpj || company.cpf || company.document} /><Field label="Tipo de documento" value={company.documentType} /><Field label="Razão social" value={company.legalName} /><Field label="Nome fantasia" value={company.tradeName} /></div></section>
+    <section className="border-t border-[#edf1f5] pt-5"><h3 className="text-sm font-semibold text-[#173044]">Contrato central</h3><div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><Field label="Plano" value={company.plan} /><Field label="Situação" value={company.contractStatus.replaceAll("_", " ")} /><Field label="Mensalidade" value={formatMoney(company.monthlyFee)} /><Field label="Vencimento" value={company.billingDay ? `Dia ${company.billingDay}` : null} /><Field label="Tolerância" value={`${company.graceDays} dias`} /><Field label="Forma de pagamento" value={company.billingMethod} /><Field label="Próximo vencimento" value={formatSnapshotDate(company.nextDueDate)} /><Field label="Última sincronização" value={formatSnapshotDate(company.lastSyncAt)} /></div></section>
+    <section className="border-t border-[#edf1f5] pt-5"><h3 className="text-sm font-semibold text-[#173044]">Endereço comercial</h3><p className="mt-2 text-sm leading-6 text-[#526b80]">{address || "Endereço ainda não informado"}</p></section>
+  </div>;
+}
+
+export function ServiceContractsOverview({ snapshot }: { snapshot: ControlSnapshot }) {
+  const services = snapshot.services.filter((service) => service.tenantId);
+  if (!services.length) return null;
+  return <div className="mt-4 overflow-hidden rounded-lg border border-[#dfe6ee] bg-white"><div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left text-sm"><thead className="bg-[#f8fafc] text-xs text-[#77879a]"><tr><th className="px-4 py-3">Cliente / produto</th><th className="px-4 py-3">Plano</th><th className="px-4 py-3">Mensalidade</th><th className="px-4 py-3">Vencimento</th><th className="px-4 py-3">Sincronização</th><th className="px-4 py-3">Ações</th></tr></thead><tbody className="divide-y divide-[#edf1f5]">{services.map((service) => { const company = snapshot.companies.find((item) => item.id === service.tenantId); return <tr key={service.id}><td className="px-4 py-3"><Link href={company ? `/central-admin/clientes/${company.id}` : "/central-admin/clientes"} className="font-semibold text-[#163f69] hover:underline">{company?.tradeName || company?.legalName || "Cliente não vinculado"}</Link><span className="mt-1 block text-xs text-[#708198]">{service.name}</span></td><td className="px-4 py-3 text-[#526b80]">{service.plan}</td><td className="px-4 py-3 font-medium">{service.monthlyFee == null ? "Não informada" : formatMoney(service.monthlyFee)}</td><td className="px-4 py-3 text-[#526b80]">{service.billingDay ? `Dia ${service.billingDay}` : "Não informado"}</td><td className="px-4 py-3 text-xs text-[#526b80]">{formatSnapshotDate(service.lastSyncAt)}</td><td className="px-4 py-3"><div className="flex gap-2"><Link href={`/central-admin/servicos/${service.id}/editar`} className="inline-flex items-center gap-1 rounded-md border border-[#cbd7e4] px-2.5 py-1.5 text-xs font-semibold text-[#294052]"><Pencil className="size-3.5" /> Editar</Link>{company ? <Link href={`/central-admin/clientes/${company.id}`} className="inline-flex items-center gap-1 rounded-md border border-[#cbd7e4] px-2.5 py-1.5 text-xs font-semibold text-[#294052]"><ExternalLink className="size-3.5" /> Cliente</Link> : null}</div></td></tr>; })}</tbody></table></div></div>;
+}
