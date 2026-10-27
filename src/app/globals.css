@@ -113,6 +113,14 @@ body {
   opacity: 1;
 }
 
+.portal-shell--arrival .portal-gateway__image {
+  opacity: 1;
+}
+
+.portal-shell--arrival .portal-gateway__video {
+  opacity: 0;
+}
+
 .portal-gateway__veil {
   background:
     linear-gradient(180deg, rgba(1, 9, 18, 0.24), rgba(1, 9, 18, 0.02) 44%, rgba(1, 9, 18, 0.56)),
@@ -1572,15 +1580,94 @@ body {
 .portal-site {
   background-color: #071c30;
   background-image:
-    radial-gradient(ellipse at 78% 16%, rgba(72, 149, 192, .13), transparent 34%),
-    radial-gradient(ellipse at 16% 76%, rgba(31, 112, 179, .1), transparent 32%),
-    linear-gradient(180deg, rgba(7, 28, 47, .2), rgba(3, 18, 32, .42)),
-    url('/orquestra-portal-room-3d-v4.png?v=20261015');
+    radial-gradient(ellipse at 78% 16%, rgba(72, 149, 192, .08), transparent 34%),
+    linear-gradient(90deg, rgba(1, 9, 18, .78) 0%, rgba(1, 9, 18, .48) 32%, rgba(1, 9, 18, .08) 62%, rgba(1, 9, 18, .32) 100%),
+    linear-gradient(180deg, rgba(2, 13, 24, .06), rgba(2, 13, 24, .34)),
+    url('/orquestra-command-room-v5.webp?v=20261026');
   background-size: 100% 100%, 100% 100%, 100% 100%, cover;
-  background-position: 50% 50%, 50% 50%, 50% 50%, center center;
+  background-position: 50% 50%, 50% 50%, 50% 50%, center top;
   background-attachment: scroll, scroll, scroll, fixed;
   background-repeat: no-repeat;
   animation: none;
+}
+
+.portal-room__geometry,
+.portal-power-system,
+.portal-home__orchestrator-figure,
+.portal-orbit-field {
+  display: none;
+}
+
+.portal-home__orchestrator {
+  height: min(54svh, 460px);
+  min-height: 360px;
+}
+
+.portal-home__orchestrator-glow {
+  inset: 10% -20%;
+  background: radial-gradient(ellipse, rgba(102, 181, 216, 0.13), transparent 68%);
+  opacity: 0.34;
+}
+
+.portal-orbit-node {
+  right: 0;
+  left: auto;
+  width: min(100%, 218px);
+  min-height: 58px;
+  padding: 0.72rem 0.8rem;
+  border-color: rgba(190, 225, 242, 0.24);
+  background: linear-gradient(145deg, rgba(8, 27, 43, 0.88), rgba(3, 15, 26, 0.72));
+}
+
+.portal-orbit-node::after {
+  display: none;
+}
+
+.portal-orbit-node__content small {
+  display: block;
+  margin-top: 0.18rem;
+  color: rgba(213, 233, 243, 0.5);
+  font-size: 0.62rem;
+}
+
+.portal-orbit-node--northwest { top: 18%; right: 0; left: auto; }
+.portal-orbit-node--northeast { top: 40%; right: 0; }
+.portal-orbit-node--east { top: 62%; right: 0; }
+
+@media (max-width: 900px) {
+  .portal-site {
+    background-position: center top, center top, center top, 58% top;
+    background-attachment: scroll;
+  }
+
+  .portal-home {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+
+  .portal-home__orchestrator {
+    display: grid;
+    height: auto;
+    min-height: 0;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .portal-orbit-node,
+  .portal-orbit-node--northwest,
+  .portal-orbit-node--northeast,
+  .portal-orbit-node--east {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 620px) {
+  .portal-home__orchestrator {
+    grid-template-columns: 1fr;
+  }
 }
 
 .portal-site__hero {

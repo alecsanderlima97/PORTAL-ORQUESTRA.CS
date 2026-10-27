@@ -14,7 +14,7 @@ type GatewayPhase = "arrival" | "entering" | "inside";
 type EntranceMode = "video" | "procedural";
 
 const PORTAL_HOLD_TIME_SECONDS = 0.08;
-const PORTAL_ASSET_VERSION = "20261015";
+const PORTAL_ASSET_VERSION = "20261026";
 
 const solutionGroups = [
   {
@@ -345,7 +345,7 @@ export function PortalLanding() {
         <span className="portal-gateway__scene" aria-hidden="true">
           <Image
             ref={imageRef}
-            src={`/orquestra-portal-altar-clean.png?v=${PORTAL_ASSET_VERSION}`}
+            src={`/orquestra-gateway-v5.webp?v=${PORTAL_ASSET_VERSION}`}
             alt=""
             fill
             priority
