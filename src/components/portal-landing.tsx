@@ -2,14 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ChevronLeft, ChevronRight, LockKeyhole, Mail, MessageCircle } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, LockKeyhole, Mail, MessageCircle } from "lucide-react";
 import gsap from "gsap";
 import { deployedProjects, projectCatalogDetails } from "@/lib/portal-data";
 import { BrandLogo } from "@/components/brand-logo";
 import { PortalWarpCanvas } from "@/components/portal-visual-effects";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { CSSProperties, WheelEvent as ReactWheelEvent } from "react";
+import type { CSSProperties, MouseEvent as ReactMouseEvent, WheelEvent as ReactWheelEvent } from "react";
 
 type GatewayPhase = "arrival" | "entering" | "inside";
 type EntranceMode = "video" | "procedural";
@@ -66,6 +66,7 @@ export function PortalLanding() {
   const [phase, setPhase] = useState<GatewayPhase>("arrival");
   const [entranceMode, setEntranceMode] = useState<EntranceMode>("video");
   const [entranceVideoReady, setEntranceVideoReady] = useState(false);
+  const [scrollUnlocked, setScrollUnlocked] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(initialHeroProjectIndex);
   const transitionTimerRef = useRef<number | null>(null);
   const carouselWheelTimerRef = useRef<number | null>(null);
@@ -157,6 +158,38 @@ export function PortalLanding() {
       carouselWheelTimerRef.current = null;
     }, 360);
   }, [rotateCarousel]);
+
+  const handleExploreClick = useCallback((event: ReactMouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    setScrollUnlocked(true);
+    const target = document.getElementById("solucoes");
+    if (!target) return;
+
+    const start = window.scrollY;
+    const targetTop = target.getBoundingClientRect().top + window.scrollY - 12;
+    const distance = targetTop - start;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (reducedMotion || Math.abs(distance) < 4) {
+      window.scrollTo(0, targetTop);
+      return;
+    }
+
+    const startedAt = performance.now();
+    const duration = 560;
+    const ease = (progress: number) => 1 - Math.pow(1 - progress, 3);
+    const moveElevator = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / duration);
+      window.scrollTo(0, start + distance * ease(progress));
+      if (progress < 1) window.requestAnimationFrame(moveElevator);
+    };
+
+    window.requestAnimationFrame(moveElevator);
+  }, []);
+
+  const unlockPageNavigation = useCallback(() => {
+    setScrollUnlocked(true);
+  }, []);
 
   useLayoutEffect(() => {
     if (phase !== "entering") return;
@@ -308,7 +341,7 @@ export function PortalLanding() {
   }, [enterPortal, phase]);
 
   return (
-    <main className={`portal-shell portal-shell--${phase} portal-shell--${entranceMode} ${entranceVideoReady ? "portal-shell--video-ready" : ""} ${phase === "inside" ? "portal-shell--powering" : ""}`}>
+    <main className={`portal-shell portal-shell--${phase} portal-shell--${entranceMode} ${entranceVideoReady ? "portal-shell--video-ready" : ""} ${phase === "inside" ? "portal-shell--powering" : ""} ${scrollUnlocked ? "portal-shell--scroll-unlocked" : ""}`}>
       <div
         ref={gatewayRef}
         className="portal-gateway"
@@ -378,11 +411,11 @@ export function PortalLanding() {
               <BrandLogo variant="essential" size={34} showWordmark tone="light" />
             </Link>
             <nav className="portal-header__nav" aria-label="Navegação principal">
-              <a href="#solucoes">Soluções</a>
-              <a href="#solucoes">Sistemas publicados</a>
-              <a href="#servicos">Consultoria</a>
-              <a href="#planos">Planos</a>
-              <a href="#sobre">Quem somos</a>
+              <a href="#solucoes" onClick={unlockPageNavigation}>Soluções</a>
+              <a href="#solucoes" onClick={unlockPageNavigation}>Sistemas publicados</a>
+              <a href="#servicos" onClick={unlockPageNavigation}>Consultoria</a>
+              <a href="#planos" onClick={unlockPageNavigation}>Planos</a>
+              <a href="#sobre" onClick={unlockPageNavigation}>Quem somos</a>
             </nav>
             <Link href="/login" className="portal-header__login">
               Área do cliente
@@ -395,7 +428,7 @@ export function PortalLanding() {
               <h1>Tudo em um <span>só lugar.</span></h1>
               <p className="portal-home__intro">Soluções simples e completas para organizar, automatizar e fazer sua empresa evoluir.</p>
               <div className="portal-home__actions">
-                <a href="#orcamento" className="portal-action portal-action--primary">Fazer um orçamento <ArrowRight className="size-4" /></a>
+                <a href="#orcamento" onClick={unlockPageNavigation} className="portal-action portal-action--primary">Fazer um orçamento <ArrowRight className="size-4" /></a>
               </div>
             </div>
 
@@ -428,7 +461,7 @@ export function PortalLanding() {
                   const arcY = distance === 0 ? 0 : -Math.min(48, distance * 18);
                   const depth = distance * 92;
                   const cardStyle = {
-                    opacity: visible ? Math.max(0.72, 1 - distance * 0.1) : 0,
+                    opacity: visible ? Math.max(0.84, 1 - distance * 0.08) : 0,
                     pointerEvents: visible ? "auto" : "none",
                     zIndex: 20 - distance,
                     transform: `translateX(calc(-50% + ${offset * 14.2}vw)) translateY(${arcY}px) translateZ(${-depth}px) rotateY(${offset * -10}deg) scale(${1 - distance * 0.055})`,
@@ -456,7 +489,10 @@ export function PortalLanding() {
                 })}
               </div>
             </div>
-            <a className="portal-command-deck__scroll" href="#solucoes"><span /> Clique para explorar</a>
+            <a className="portal-command-deck__scroll" href="#solucoes" onClick={handleExploreClick} aria-label="Descer rapidamente para os sistemas publicados">
+              <span className="portal-command-deck__scroll-arrow" aria-hidden="true"><ChevronDown className="size-4" /></span>
+              <span>Clique para explorar</span>
+            </a>
           </section>
         </div>
 

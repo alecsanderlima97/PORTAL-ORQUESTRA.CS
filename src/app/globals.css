@@ -4323,3 +4323,388 @@ body {
   background: linear-gradient(100deg, rgba(3, 18, 31, 0.78), rgba(16, 42, 65, 0.68), rgba(3, 18, 31, 0.78));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 12px 28px rgba(0, 5, 12, 0.24);
 }
+
+/* Refinamentos finais: uma sala contínua, moldura colorida e textos legíveis. */
+.portal-site {
+  background:
+    linear-gradient(90deg, rgba(0, 8, 17, 0.48), rgba(0, 8, 17, 0.08) 38%, rgba(0, 8, 17, 0.16) 72%, rgba(0, 8, 17, 0.52)),
+    linear-gradient(180deg, rgba(0, 8, 17, 0.08), rgba(0, 8, 17, 0.18) 48%, rgba(0, 7, 15, 0.62)),
+    url('/orquestra-lower-command-room-v1.png') center top / cover fixed no-repeat;
+}
+
+.portal-site__frame {
+  position: absolute;
+  inset: 0.72rem;
+  z-index: 80;
+  pointer-events: none;
+  border: 2px solid rgba(126, 232, 255, 0.68);
+  border-radius: 22px;
+  background: transparent;
+  border-image: linear-gradient(105deg, #7ee8ff 0%, #b59cff 24%, #ff9dcc 48%, #ffd27d 72%, #83f5ce 100%) 1;
+  box-shadow:
+    0 0 10px rgba(126, 232, 255, 0.28),
+    0 0 28px rgba(181, 156, 255, 0.12),
+    inset 0 0 12px rgba(255, 255, 255, 0.06);
+}
+
+.portal-room-section::before {
+  background:
+    linear-gradient(180deg, rgba(3, 18, 31, 0.54), rgba(3, 18, 31, 0.2) 42%, rgba(3, 18, 31, 0.68));
+  opacity: 1;
+  transform: translateX(-50%);
+}
+
+.portal-room-section--contact::before {
+  background:
+    linear-gradient(90deg, rgba(2, 12, 22, 0.78), rgba(2, 12, 22, 0.26) 48%, rgba(2, 12, 22, 0.74)),
+    linear-gradient(180deg, rgba(3, 18, 31, 0.2), rgba(3, 18, 31, 0.7));
+  opacity: 1;
+}
+
+.portal-command-deck__carousel .portal-command-card {
+  width: max(164px, 11.7vw);
+  min-height: 208px;
+}
+
+.portal-command-card__name {
+  display: -webkit-box;
+  width: 100%;
+  min-height: 3.2em;
+  margin-top: 0.82rem;
+  overflow: hidden;
+  font-size: clamp(0.78rem, 0.95vw, 0.98rem);
+  line-height: 1.06;
+  text-overflow: clip;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.portal-command-deck__scroll {
+  bottom: 0.1rem;
+  gap: 0.48rem;
+  padding: 0.42rem 0.75rem;
+  border: 1px solid rgba(126, 232, 255, 0.34);
+  border-radius: 999px;
+  background: rgba(3, 18, 31, 0.68);
+  box-shadow: 0 8px 24px rgba(0, 5, 12, 0.24);
+  color: rgba(235, 249, 255, 0.9);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.portal-command-deck__scroll:hover,
+.portal-command-deck__scroll:focus-visible {
+  border-color: rgba(255, 210, 125, 0.84);
+  background: rgba(24, 52, 73, 0.84);
+  outline: none;
+  transform: translateX(-50%) translateY(-2px);
+}
+
+.portal-command-deck__scroll-arrow {
+  display: grid;
+  width: 1.55rem;
+  height: 1.55rem;
+  border: 1px solid rgba(126, 232, 255, 0.66);
+  border-radius: 50%;
+  place-items: center;
+  color: #b9f2ff;
+  box-shadow: 0 0 14px rgba(126, 232, 255, 0.25);
+}
+
+.portal-command-deck__scroll-arrow svg {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+@media (max-width: 900px) {
+  .portal-site {
+    background-attachment: scroll;
+  }
+
+  .portal-command-deck__carousel .portal-command-card {
+    width: 154px;
+  }
+}
+
+@media (max-width: 560px) {
+  .portal-site__frame {
+    inset: 0.42rem;
+    border-radius: 16px;
+    border-width: 1px;
+  }
+
+  .portal-command-deck__carousel .portal-command-card {
+    width: 142px;
+    min-height: 202px;
+  }
+}
+
+/* Ajuste final da primeira tela: sem moldura externa, mais leve e totalmente legível. */
+.portal-site__frame {
+  display: none;
+}
+
+.portal-shell--arrival,
+.portal-shell--entering,
+.portal-shell--inside:not(.portal-shell--scroll-unlocked) {
+  height: 100svh;
+  overflow: hidden;
+}
+
+.portal-shell--inside.portal-shell--scroll-unlocked {
+  min-height: 100svh;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.portal-site {
+  border: 0;
+  box-shadow: none;
+}
+
+.portal-site__hero {
+  height: 100svh;
+  min-height: 100svh;
+  overflow: hidden;
+}
+
+.portal-command-deck {
+  min-height: calc(100svh - 70px);
+  padding-top: clamp(1rem, 4vh, 2.2rem);
+  padding-bottom: 7.5rem;
+}
+
+.portal-command-deck__copy {
+  margin-top: clamp(0.15rem, 2vh, 1rem);
+}
+
+.portal-command-deck__systems {
+  bottom: 2.45rem;
+  height: 190px;
+}
+
+.portal-command-deck__carousel .portal-command-card {
+  width: max(148px, 10.5vw);
+  min-height: 187px;
+  background: linear-gradient(155deg, rgba(var(--card-accent-rgb), 0.38), rgba(2, 14, 25, 0.96) 76%);
+  backdrop-filter: none;
+}
+
+.portal-command-deck__carousel .portal-command-card[data-active="true"] {
+  background: linear-gradient(155deg, rgba(var(--card-accent-rgb), 0.52), rgba(2, 14, 25, 0.98) 76%);
+}
+
+.portal-command-card__backdrop {
+  opacity: 0.62;
+  filter: saturate(1.16) contrast(1.08) brightness(1.08);
+}
+
+.portal-command-card:hover .portal-command-card__backdrop,
+.portal-command-card:focus-visible .portal-command-card__backdrop,
+.portal-command-card[data-active="true"] .portal-command-card__backdrop {
+  opacity: 0.82;
+}
+
+.portal-command-card__name,
+.portal-command-deck__systems-head span {
+  font-family: "Segoe UI", Arial, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.015em;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+}
+
+.portal-command-card__name {
+  font-size: clamp(0.76rem, 0.88vw, 0.92rem);
+  line-height: 1.12;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.78), 0 0 10px rgba(var(--card-accent-rgb), 0.2);
+}
+
+.portal-command-deck__systems-head span {
+  letter-spacing: 0.14em;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.82);
+}
+
+.portal-command-deck__scroll {
+  display: flex;
+  bottom: 1rem;
+  z-index: 70;
+  border-color: rgba(126, 232, 255, 0.58);
+  background: rgba(3, 18, 31, 0.9);
+  box-shadow: 0 8px 22px rgba(0, 5, 12, 0.38), 0 0 18px rgba(126, 232, 255, 0.14);
+}
+
+.portal-command-deck__scroll > span:last-child {
+  display: block;
+  width: auto;
+  height: auto;
+  background: none;
+}
+
+.portal-command-deck__scroll:hover,
+.portal-command-deck__scroll:focus-visible {
+  border-color: rgba(255, 210, 125, 0.94);
+  background: rgba(20, 58, 82, 0.96);
+}
+
+.portal-command-deck__copy .portal-action--primary {
+  border-color: rgba(197, 241, 255, 0.92);
+  background: linear-gradient(135deg, #f7fdff 0%, #b9efff 48%, #8edcff 100%);
+  box-shadow: 0 10px 24px rgba(0, 117, 180, 0.34), 0 0 22px rgba(126, 232, 255, 0.2);
+  color: #03233a;
+  font-weight: 800;
+}
+
+.portal-command-deck__copy .portal-action--primary:hover,
+.portal-command-deck__copy .portal-action--primary:focus-visible {
+  background: linear-gradient(135deg, #ffffff 0%, #d6f7ff 48%, #a4eaff 100%);
+  box-shadow: 0 14px 30px rgba(0, 117, 180, 0.42), 0 0 28px rgba(126, 232, 255, 0.34);
+}
+
+@media (max-width: 900px) {
+  .portal-command-deck__systems {
+    bottom: 2.25rem;
+    height: 184px;
+  }
+
+  .portal-command-deck__carousel .portal-command-card {
+    width: 148px;
+    min-height: 180px;
+  }
+}
+
+@media (max-width: 560px) {
+  .portal-command-deck {
+    padding-bottom: 7rem;
+  }
+
+  .portal-command-deck__systems {
+    bottom: 2.1rem;
+    height: 174px;
+  }
+
+  .portal-command-deck__carousel .portal-command-card {
+    width: 138px;
+    min-height: 166px;
+  }
+
+  .portal-command-deck__scroll {
+    display: flex;
+    bottom: 0.82rem;
+  }
+}
+
+/* Compactação final do carrossel: mais espaço para o CTA e leitura completa. */
+.portal-command-deck__systems {
+  bottom: 3.45rem;
+  height: 164px;
+}
+
+.portal-command-deck__carousel {
+  perspective: 1200px;
+  perspective-origin: 50% 42%;
+}
+
+.portal-command-deck__carousel .portal-command-card {
+  width: max(120px, 9vw);
+  min-height: 156px;
+  border-width: 2px;
+  border-style: solid;
+  border-radius: 13px;
+  padding: 0.7rem 0.7rem 0.62rem;
+  transform-style: preserve-3d;
+  box-shadow:
+    0 16px 26px rgba(0, 7, 16, 0.5),
+    0 0 0 1px rgba(var(--card-accent-rgb), 0.16),
+    0 0 24px rgba(var(--card-accent-rgb), 0.26),
+    inset 0 1px 0 rgba(239, 252, 255, 0.2);
+}
+
+.portal-command-deck__carousel .portal-command-card[data-active="true"],
+.portal-command-deck__carousel .portal-command-card:hover,
+.portal-command-deck__carousel .portal-command-card:focus-visible {
+  box-shadow:
+    0 24px 38px rgba(0, 7, 16, 0.58),
+    0 0 0 1px rgba(var(--card-accent-rgb), 0.28),
+    0 0 34px rgba(var(--card-accent-rgb), 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.portal-command-card::before {
+  opacity: 0.72;
+  filter: blur(3px);
+  transform: scale(1.08) translateZ(-1px);
+}
+
+.portal-command-card__icon {
+  width: 2rem;
+  height: 2rem;
+  margin-bottom: 0.1rem;
+  border-radius: 8px;
+}
+
+.portal-command-card__icon svg {
+  width: 1.12rem;
+  height: 1.12rem;
+}
+
+.portal-command-card__name {
+  min-height: 2.28em;
+  margin-top: 0.45rem;
+  font-size: clamp(0.68rem, 0.78vw, 0.8rem);
+  line-height: 1.14;
+  -webkit-line-clamp: 2;
+}
+
+.portal-command-card__description {
+  margin-top: 0.22rem;
+  min-height: 3.54em;
+  font-size: 0.52rem;
+  line-height: 1.18;
+  -webkit-line-clamp: 3;
+}
+
+.portal-command-card__open {
+  width: 1.62rem;
+  height: 1.62rem;
+  margin-top: 0.26rem;
+}
+
+.portal-command-card__open svg {
+  width: 0.82rem;
+  height: 0.82rem;
+}
+
+.portal-command-deck__scroll {
+  bottom: 1.1rem;
+}
+
+@media (max-width: 900px) {
+  .portal-command-deck__systems {
+    bottom: 4.1rem;
+    height: 158px;
+  }
+
+  .portal-command-deck__carousel .portal-command-card {
+    width: 124px;
+    min-height: 150px;
+  }
+}
+
+@media (max-width: 560px) {
+  .portal-command-deck__systems {
+    bottom: 3.9rem;
+    height: 150px;
+  }
+
+  .portal-command-deck__carousel .portal-command-card {
+    width: 118px;
+    min-height: 142px;
+  }
+
+  .portal-command-deck__scroll {
+    bottom: 0.8rem;
+  }
+}
