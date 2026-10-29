@@ -4447,13 +4447,12 @@ body {
 }
 
 .portal-shell--arrival,
-.portal-shell--entering,
-.portal-shell--inside:not(.portal-shell--scroll-unlocked) {
+.portal-shell--entering {
   height: 100svh;
   overflow: hidden;
 }
 
-.portal-shell--inside.portal-shell--scroll-unlocked {
+.portal-shell--inside {
   min-height: 100svh;
   overflow-x: hidden;
   overflow-y: auto;
@@ -4702,9 +4701,5 @@ body {
   .portal-command-deck__carousel .portal-command-card {
     width: 118px;
     min-height: 142px;
-  }
-
-  .portal-command-deck__scroll {
-    bottom: 0.8rem;
   }
 }
