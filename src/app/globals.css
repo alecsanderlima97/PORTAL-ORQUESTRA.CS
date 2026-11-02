@@ -4934,6 +4934,10 @@ body,
 }
 
 /* Hero final: CTA alinhado ao texto lateral e enquadramento sem cortes. */
+.portal-command-deck {
+  min-height: max(calc(100svh - 70px), 620px);
+}
+
 .portal-command-deck__side-note {
   right: clamp(0.75rem, 1.8vw, 1.5rem);
   width: min(170px, 16vw);
@@ -5000,15 +5004,19 @@ body,
 }
 
 @media (max-width: 900px) {
+  .portal-command-deck {
+    min-height: max(calc(100svh - 70px), 580px);
+  }
+
   .portal-command-deck__systems {
     bottom: 2.5rem;
   }
 
   .portal-command-deck__side-actions {
     top: auto;
-    right: auto;
-    bottom: 14.5rem;
-    left: 0;
+    right: 0;
+    bottom: 16rem;
+    left: auto;
   }
 
   .portal-command-scene__image {
@@ -5022,7 +5030,7 @@ body,
   }
 
   .portal-command-deck__side-actions {
-    bottom: 14.8rem;
+    bottom: 16rem;
   }
 
   .portal-command-deck__side-actions .portal-action--primary {
