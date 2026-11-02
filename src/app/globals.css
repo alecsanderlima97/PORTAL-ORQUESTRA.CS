@@ -4972,7 +4972,31 @@ body,
 
 .portal-command-scene__image {
   object-position: 50% 45%;
-  transform: scale(1.01);
+  filter: none;
+  transform: none;
+}
+
+/* The room image already includes its lighting and floor. Avoid extra
+   fullscreen composites and filters while keeping the carousel interactive. */
+.portal-command-scene {
+  perspective: none;
+}
+
+.portal-command-scene::before,
+.portal-command-scene::after {
+  content: none;
+}
+
+.portal-command-deck__carousel .portal-command-card {
+  backdrop-filter: none;
+  transform-style: flat;
+}
+
+.portal-command-deck__carousel .portal-command-card__backdrop,
+.portal-command-deck__carousel .portal-command-card:hover .portal-command-card__backdrop,
+.portal-command-deck__carousel .portal-command-card:focus-visible .portal-command-card__backdrop,
+.portal-command-deck__carousel .portal-command-card[data-active="true"] .portal-command-card__backdrop {
+  filter: none;
 }
 
 @media (max-width: 900px) {

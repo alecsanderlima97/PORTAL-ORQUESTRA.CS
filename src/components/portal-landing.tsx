@@ -335,9 +335,6 @@ export function PortalLanding() {
               sizes="100vw"
               className="portal-command-scene__image"
             />
-            <span className="portal-command-scene__ceiling-glow" />
-            <span className="portal-command-scene__floor" />
-            <span className="portal-command-scene__vignette" />
           </div>
           <header className="portal-header">
             <Link href="/" className="portal-header__brand" aria-label="Orquestra.cs - início">
