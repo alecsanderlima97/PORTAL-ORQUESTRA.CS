@@ -44,21 +44,21 @@ const serviceCards = [
     title: "Consultoria",
     description: "Entendemos sua operação, identificamos gargalos e desenhamos o caminho mais inteligente.",
     image: "/orquestra-consultoria-v1.png",
-    imageAlt: "Consultores analisando o planejamento de uma operação",
+    imageAlt: "Ilustração conceitual de consultores analisando o planejamento de uma operação",
   },
   {
     number: "02",
     title: "Infraestrutura",
     description: "Equipamentos, rede e ambiente preparados para a sua empresa trabalhar com segurança.",
     image: "/orquestra-infraestrutura-v2.png",
-    imageAlt: "Infraestrutura industrial e operação de produção",
+    imageAlt: "Ilustração conceitual de infraestrutura industrial e operação de produção",
   },
   {
     number: "03",
     title: "Software e automação",
     description: "Sistemas, sites e fluxos digitais personalizados para reduzir esforço e dar clareza.",
     image: "/orquestra-software-automacao-v2.png",
-    imageAlt: "Interface de gestão e automação empresarial",
+    imageAlt: "Ilustração conceitual de interface de gestão e automação empresarial",
   },
 ];
 
@@ -76,9 +76,6 @@ export function PortalLanding() {
   const contentRef = useRef<HTMLSpanElement>(null);
   const siteRef = useRef<HTMLDivElement>(null);
   const commandSceneRef = useRef<HTMLDivElement>(null);
-  const commandSceneImageRef = useRef<HTMLImageElement>(null);
-  const commandSceneGlowRef = useRef<HTMLSpanElement>(null);
-  const commandSceneFloorRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const video = entranceVideoRef.current;
@@ -247,35 +244,13 @@ export function PortalLanding() {
 
   useEffect(() => {
     const scene = commandSceneRef.current;
-    const image = commandSceneImageRef.current;
-    const glow = commandSceneGlowRef.current;
-    const floor = commandSceneFloorRef.current;
-    if (phase !== "inside" || !scene || !image || !glow || !floor || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (phase !== "inside" || !scene || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    let removePointerListener: (() => void) | undefined;
     const context = gsap.context(() => {
-      gsap.fromTo(scene, { autoAlpha: 0, scale: 1.025 }, { autoAlpha: 1, scale: 1, duration: 1.8, ease: "power2.out" });
-
-      if (window.matchMedia("(pointer: fine) and (min-width: 901px)").matches) {
-        const imageX = gsap.quickTo(image, "x", { duration: 1.4, ease: "power2.out" });
-        const imageY = gsap.quickTo(image, "y", { duration: 1.4, ease: "power2.out" });
-        const glowX = gsap.quickTo(glow, "x", { duration: 1.1, ease: "power2.out" });
-        const floorX = gsap.quickTo(floor, "x", { duration: 1.8, ease: "power2.out" });
-        const handlePointerMove = (event: PointerEvent) => {
-          const normalizedX = event.clientX / window.innerWidth - 0.5;
-          const normalizedY = event.clientY / window.innerHeight - 0.5;
-          imageX(normalizedX * -22);
-          imageY(normalizedY * -13);
-          glowX(normalizedX * 34);
-          floorX(normalizedX * 18);
-        };
-        window.addEventListener("pointermove", handlePointerMove, { passive: true });
-        removePointerListener = () => window.removeEventListener("pointermove", handlePointerMove);
-      }
+      gsap.fromTo(scene, { autoAlpha: 0, scale: 1.012 }, { autoAlpha: 1, scale: 1, duration: 0.9, ease: "power2.out" });
     }, siteRef);
 
     return () => {
-      removePointerListener?.();
       context.revert();
     };
   }, [phase]);
@@ -352,7 +327,6 @@ export function PortalLanding() {
         <div className="portal-site__hero">
           <div ref={commandSceneRef} className="portal-command-scene" aria-hidden="true">
             <Image
-              ref={commandSceneImageRef}
               src={`/orquestra-command-room-reference-v1.png?v=${PORTAL_ASSET_VERSION}`}
               alt=""
               fill
@@ -361,8 +335,8 @@ export function PortalLanding() {
               sizes="100vw"
               className="portal-command-scene__image"
             />
-            <span ref={commandSceneGlowRef} className="portal-command-scene__ceiling-glow" />
-            <span ref={commandSceneFloorRef} className="portal-command-scene__floor" />
+            <span className="portal-command-scene__ceiling-glow" />
+            <span className="portal-command-scene__floor" />
             <span className="portal-command-scene__vignette" />
           </div>
           <header className="portal-header">
@@ -386,12 +360,13 @@ export function PortalLanding() {
               <p className="portal-eyebrow">Sistemas que impulsionam o seu negócio</p>
               <h1>Tudo em um <span>só lugar.</span></h1>
               <p className="portal-home__intro">Soluções simples e completas para organizar, automatizar e fazer sua empresa evoluir.</p>
-              <div className="portal-home__actions">
-                <a href="#orcamento" className="portal-action portal-action--primary">Fazer um orçamento <ArrowRight className="size-4" /></a>
-              </div>
             </div>
 
             <p className="portal-command-deck__side-note">Tecnologia<br />para resultados<br />reais</p>
+
+            <div className="portal-command-deck__side-actions">
+              <a href="#orcamento" className="portal-action portal-action--primary">Fazer um orçamento <ArrowRight className="size-4" /></a>
+            </div>
 
             <div className="portal-command-deck__systems" aria-label="Sistemas publicados">
               <div className="portal-command-deck__systems-head">

@@ -2245,6 +2245,63 @@ body {
   }
 }
 
+/* Mobile final: o hero nunca deve manter largura de desktop nem cortar o texto. */
+.portal-command-deck,
+.portal-command-deck__copy,
+.portal-command-deck__copy h1,
+.portal-command-deck__copy .portal-home__intro {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+@media (max-width: 720px) {
+  .portal-command-deck {
+    width: calc(100% - 1.25rem);
+    overflow-x: clip;
+  }
+
+  .portal-command-deck__copy {
+    width: 100%;
+    max-width: min(100%, 380px);
+    padding-right: 0;
+  }
+
+  .portal-command-deck__copy h1 {
+    width: 100%;
+    max-width: 100%;
+    font-size: clamp(2.35rem, 11vw, 3.65rem);
+    line-height: 0.98;
+    overflow-wrap: normal;
+  }
+
+  .portal-eyebrow {
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .portal-command-deck__copy .portal-home__intro {
+    width: 100%;
+    max-width: 100%;
+    font-size: 0.88rem;
+    line-height: 1.42;
+  }
+}
+
+@media (max-width: 420px) {
+  .portal-command-deck {
+    width: calc(100% - 1rem);
+    padding-top: 0.8rem;
+  }
+
+  .portal-command-deck__copy h1 {
+    font-size: clamp(2.15rem, 10.7vw, 3rem);
+  }
+
+  .portal-command-deck__copy .portal-home__intro {
+    font-size: 0.82rem;
+  }
+}
+
 @media (max-width: 620px) {
   .portal-home__orchestrator {
     grid-template-columns: 1fr;
@@ -3589,30 +3646,6 @@ body {
   to { opacity: 0.9; transform: scale(1.04); }
 }
 
-@media (min-aspect-ratio: 2/1) {
-  .portal-command-scene__image {
-    object-fit: contain;
-    object-position: center;
-    transform: scale(1.01);
-  }
-
-  .portal-command-scene::before,
-  .portal-command-scene::after {
-    position: absolute;
-    inset: 0 auto 0 0;
-    z-index: 0;
-    width: 18vw;
-    background: linear-gradient(90deg, #020a12, rgba(2, 10, 18, 0));
-    content: "";
-  }
-
-  .portal-command-scene::after {
-    right: 0;
-    left: auto;
-    background: linear-gradient(270deg, #020a12, rgba(2, 10, 18, 0));
-  }
-}
-
 @media (max-width: 720px) {
   .portal-header,
   .portal-command-deck {
@@ -4597,8 +4630,8 @@ body {
 
 /* Compactação final do carrossel: mais espaço para o CTA e leitura completa. */
 .portal-command-deck__systems {
-  bottom: 3.45rem;
-  height: 164px;
+  bottom: 4.3rem;
+  height: 180px;
 }
 
 .portal-command-deck__carousel {
@@ -4607,6 +4640,7 @@ body {
 }
 
 .portal-command-deck__carousel .portal-command-card {
+  top: 0.55rem;
   width: max(120px, 9vw);
   min-height: 156px;
   border-width: 2px;
@@ -4682,11 +4716,12 @@ body {
 
 @media (max-width: 900px) {
   .portal-command-deck__systems {
-    bottom: 4.1rem;
-    height: 158px;
+    bottom: 4.2rem;
+    height: 172px;
   }
 
   .portal-command-deck__carousel .portal-command-card {
+    top: 0.45rem;
     width: 124px;
     min-height: 150px;
   }
@@ -4694,12 +4729,361 @@ body {
 
 @media (max-width: 560px) {
   .portal-command-deck__systems {
-    bottom: 3.9rem;
-    height: 150px;
+    bottom: 4rem;
+    height: 162px;
   }
 
   .portal-command-deck__carousel .portal-command-card {
+    top: 0.35rem;
     width: 118px;
     min-height: 142px;
+  }
+}
+
+/* Legibilidade final: mantém o cenário e o carrossel, mas separa melhor texto,
+   fotografia e superfície para evitar letras pequenas e suavizadas. */
+:root {
+  --portal-text-strong: #f7fbff;
+  --portal-text-muted: #deeff7;
+}
+
+body,
+.portal-site {
+  font-family: Inter, "Segoe UI", Arial, Helvetica, sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+.portal-command-deck__systems {
+  bottom: 4.05rem;
+  height: 208px;
+}
+
+.portal-command-deck__carousel .portal-command-card {
+  top: 0.45rem;
+  width: max(148px, 10.8vw);
+  min-height: 196px;
+  padding: 0.72rem 0.78rem 0.68rem;
+  border-width: 2px;
+  background: linear-gradient(155deg, rgba(var(--card-accent-rgb), 0.42), rgba(2, 14, 25, 0.97) 76%);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+.portal-command-deck__carousel .portal-command-card[data-active="true"] {
+  background: linear-gradient(155deg, rgba(var(--card-accent-rgb), 0.56), rgba(2, 14, 25, 0.99) 78%);
+}
+
+.portal-command-card__backdrop {
+  opacity: 0.28;
+  filter: saturate(1.04) contrast(1.06) brightness(0.82);
+}
+
+.portal-command-card__backdrop::after {
+  background: linear-gradient(180deg, rgba(2, 12, 22, 0.18), rgba(2, 12, 22, 0.66) 58%, rgba(2, 12, 22, 0.96) 100%);
+}
+
+.portal-command-card:hover .portal-command-card__backdrop,
+.portal-command-card:focus-visible .portal-command-card__backdrop,
+.portal-command-card[data-active="true"] .portal-command-card__backdrop {
+  opacity: 0.38;
+  filter: saturate(1.12) contrast(1.08) brightness(0.9);
+}
+
+.portal-command-card__icon {
+  width: 2.35rem;
+  height: 2.35rem;
+  margin-bottom: auto;
+  border-width: 2px;
+  color: #f4fcff;
+  background: rgba(var(--card-accent-rgb), 0.74);
+  box-shadow: 0 0 20px rgba(var(--card-accent-rgb), 0.44), inset 0 1px 0 rgba(255, 255, 255, 0.38);
+}
+
+.portal-command-card__icon svg {
+  width: 1.32rem;
+  height: 1.32rem;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.78));
+}
+
+.portal-command-card__name {
+  width: 100%;
+  min-height: 2.34em;
+  margin-top: 0.62rem;
+  color: var(--portal-text-strong);
+  font-family: Inter, "Segoe UI", Arial, Helvetica, sans-serif;
+  font-size: clamp(0.94rem, 1.08vw, 1.06rem);
+  font-weight: 700;
+  line-height: 1.17;
+  letter-spacing: 0.005em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.92);
+  white-space: normal;
+  -webkit-line-clamp: 2;
+}
+
+.portal-command-card__description {
+  min-height: 2.84em;
+  margin-top: 0.34rem;
+  color: var(--portal-text-muted);
+  font-size: clamp(0.75rem, 0.86vw, 0.86rem);
+  font-weight: 500;
+  line-height: 1.42;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.84);
+  -webkit-line-clamp: 2;
+}
+
+.portal-command-card__open {
+  width: 1.9rem;
+  height: 1.9rem;
+  margin-top: 0.44rem;
+  background: rgba(var(--card-accent-rgb), 0.28);
+  box-shadow: 0 0 12px rgba(var(--card-accent-rgb), 0.22);
+}
+
+.portal-command-card__open svg {
+  width: 0.92rem;
+  height: 0.92rem;
+}
+
+.portal-command-deck__systems-head span,
+.portal-command-deck__systems-head small,
+.portal-command-deck__side-note,
+.portal-command-deck__copy h1,
+.portal-command-deck__copy .portal-home__intro,
+.portal-header__nav a,
+.portal-header__login,
+.portal-command-deck__copy .portal-action--primary {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+.portal-command-deck__systems-head span {
+  color: var(--portal-text-strong);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.86);
+}
+
+.portal-command-deck__copy h1,
+.portal-command-deck__copy h1 span {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.76);
+}
+
+.portal-command-deck__copy .portal-home__intro {
+  color: var(--portal-text-muted);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.portal-header__nav a,
+.portal-header__login {
+  color: var(--portal-text-strong);
+  font-weight: 650;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.86);
+}
+
+.portal-command-deck__side-note {
+  color: var(--portal-text-muted);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.82);
+}
+
+@media (max-width: 900px) {
+  .portal-command-deck__systems {
+    bottom: 4rem;
+    height: 198px;
+  }
+
+  .portal-command-deck__carousel .portal-command-card {
+    top: 0.4rem;
+    width: 148px;
+    min-height: 184px;
+  }
+
+  .portal-command-card__name {
+    font-size: 0.92rem;
+  }
+
+  .portal-command-card__description {
+    font-size: 0.74rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .portal-command-deck__systems {
+    bottom: 3.85rem;
+    height: 190px;
+  }
+
+  .portal-command-deck__carousel .portal-command-card {
+    top: 0.32rem;
+    width: 136px;
+    min-height: 176px;
+    padding: 0.64rem 0.66rem 0.58rem;
+  }
+
+  .portal-command-card__icon {
+    width: 2.1rem;
+    height: 2.1rem;
+  }
+
+  .portal-command-card__name {
+    font-size: 0.84rem;
+  }
+
+  .portal-command-card__description {
+    font-size: 0.7rem;
+  }
+}
+
+/* Hero final: CTA alinhado ao texto lateral e enquadramento sem cortes. */
+.portal-command-deck__side-note {
+  right: clamp(0.75rem, 1.8vw, 1.5rem);
+  width: min(170px, 16vw);
+  max-width: 170px;
+  overflow-wrap: normal;
+  word-break: keep-all;
+  letter-spacing: 0.18em;
+  line-height: 1.65;
+}
+
+.portal-command-deck__side-actions {
+  position: absolute;
+  top: clamp(14rem, 30vh, 18rem);
+  right: clamp(0.75rem, 1.8vw, 1.5rem);
+  z-index: 6;
+  display: flex;
+  align-items: center;
+}
+
+.portal-command-deck__side-actions .portal-action--primary {
+  min-height: 48px;
+  border: 1px solid rgba(197, 241, 255, 0.92);
+  background: linear-gradient(135deg, #f7fdff 0%, #b9efff 48%, #8edcff 100%);
+  box-shadow: 0 10px 24px rgba(0, 117, 180, 0.34), 0 0 22px rgba(126, 232, 255, 0.2);
+  color: #03233a;
+  font-size: 0.86rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.portal-command-deck__side-actions .portal-action--primary:hover,
+.portal-command-deck__side-actions .portal-action--primary:focus-visible {
+  background: linear-gradient(135deg, #ffffff 0%, #d6f7ff 48%, #a4eaff 100%);
+  box-shadow: 0 14px 30px rgba(0, 117, 180, 0.42), 0 0 28px rgba(126, 232, 255, 0.34);
+}
+
+.portal-command-scene__image {
+  object-position: 50% 45%;
+  transform: scale(1.01);
+}
+
+@media (max-width: 900px) {
+  .portal-command-deck__systems {
+    bottom: 2.5rem;
+  }
+
+  .portal-command-deck__side-actions {
+    top: auto;
+    right: auto;
+    bottom: 14.5rem;
+    left: 0;
+  }
+
+  .portal-command-scene__image {
+    object-position: 50% 43%;
+  }
+}
+
+@media (max-width: 560px) {
+  .portal-command-deck__systems {
+    bottom: 2.2rem;
+  }
+
+  .portal-command-deck__side-actions {
+    bottom: 14.8rem;
+  }
+
+  .portal-command-deck__side-actions .portal-action--primary {
+    min-height: 44px;
+    padding: 0.66rem 0.9rem;
+    font-size: 0.78rem;
+  }
+}
+
+/* Hero final: manter o texto dentro da área real também no desktop.
+   Algumas regras antigas aplicavam min-width de 350px e deixavam o título
+   maior que o painel quando o navegador tinha uma viewport reduzida. */
+.portal-command-deck {
+  overflow-x: clip;
+}
+
+.portal-command-deck__copy {
+  box-sizing: border-box;
+  width: min(34vw, 430px);
+  min-width: 0;
+  max-width: 430px;
+}
+
+.portal-command-deck__copy h1 {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  font-size: clamp(2.75rem, 5vw, 5rem);
+  letter-spacing: -0.02em;
+  overflow-wrap: normal;
+}
+
+.portal-command-deck__copy .portal-home__intro {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+}
+
+@media (min-width: 721px) and (max-width: 1200px) {
+  .portal-command-deck__copy {
+    width: min(38vw, 420px);
+  }
+
+  .portal-command-deck__copy h1 {
+    font-size: clamp(2.55rem, 5vw, 4.25rem);
+  }
+
+  .portal-command-deck__copy .portal-home__intro {
+    font-size: 0.92rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .portal-command-deck {
+    width: calc(100% - 1.25rem);
+  }
+
+  .portal-command-deck__copy {
+    width: 100%;
+    max-width: min(100%, 380px);
+    padding-right: 0;
+  }
+
+  .portal-command-deck__copy h1 {
+    font-size: clamp(2.35rem, 11vw, 3.65rem);
+    line-height: 0.98;
+  }
+
+  .portal-command-deck__copy .portal-home__intro {
+    font-size: 0.88rem;
+    line-height: 1.42;
+  }
+}
+
+@media (max-width: 420px) {
+  .portal-command-deck {
+    width: calc(100% - 1rem);
+    padding-top: 0.8rem;
+  }
+
+  .portal-command-deck__copy h1 {
+    font-size: clamp(2.15rem, 10.7vw, 3rem);
+  }
+
+  .portal-command-deck__copy .portal-home__intro {
+    font-size: 0.82rem;
   }
 }
