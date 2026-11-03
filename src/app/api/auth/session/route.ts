@@ -3,11 +3,17 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getFirebaseAdminAuth } from "@/lib/firebase-admin";
 import { getFirebaseAdminDb } from "@/lib/firebase-admin";
 import { SESSION_COOKIE } from "@/lib/session";
+import { clientIp, consumeRateLimit } from "@/lib/rate-limit";
 import { cookies } from "next/headers";
 
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 5;
 
 export async function POST(request: Request) {
+  const limit = await consumeRateLimit({ scope: "auth-session", ip: clientIp(request), limit: 20, windowMs: 15 * 60 * 1000 });
+  if (!limit.allowed) {
+    return NextResponse.json({ error: "Muitas tentativas de acesso. Aguarde alguns minutos." }, { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } });
+  }
+
   try {
     const { idToken, csrfToken } = await request.json();
 
