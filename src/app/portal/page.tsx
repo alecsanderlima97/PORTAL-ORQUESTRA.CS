@@ -197,7 +197,7 @@ function PortalOverview({ snapshot, userName, userEmail }: { snapshot: TenantSna
               <div className="rounded-md bg-zinc-50 p-4"><p className="text-sm text-zinc-500">Plano</p><p className="mt-2 text-lg font-semibold">{company.plan}</p></div>
               <div className="rounded-md bg-zinc-50 p-4"><p className="text-sm text-zinc-500">Mensalidade</p><p className="mt-2 text-lg font-semibold">{formatMoney(company.monthlyFee)}</p></div>
               <div className="rounded-md bg-zinc-50 p-4"><p className="text-sm text-zinc-500">Vencimento</p><p className="mt-2 text-lg font-semibold">Dia {company.billingDay || "não informado"}</p></div>
-              <div className="rounded-md bg-zinc-50 p-4"><p className="text-sm text-zinc-500">Usuários monitorados</p><p className="mt-2 text-lg font-semibold">{snapshot.totalUsers || "Não informado"}</p></div>
+              <div className="rounded-md bg-zinc-50 p-4"><p className="text-sm text-zinc-500">Usuários monitorados</p><p className="mt-2 text-lg font-semibold">{snapshot.lastActivityAt ? snapshot.totalUsers : "Não informado"}</p></div>
             </div>
           </div>
 
