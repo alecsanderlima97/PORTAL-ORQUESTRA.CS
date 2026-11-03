@@ -454,7 +454,7 @@ export function PortalLanding() {
                             <span className="portal-solution__category">{project.category}</span>
                           </div>
                           <span className={`portal-solution__status portal-solution__status--${project.availability}`}>
-                            {project.availability === "online" ? "Online" : project.availability === "offline" ? "Offline" : "A verificar"}
+                            {project.availability === "online" ? "Online" : project.availability === "offline" ? "Offline" : "Em breve"}
                           </span>
                         </div>
                         <p className="portal-solution__description">{project.description}</p>
@@ -530,7 +530,6 @@ export function PortalLanding() {
           <span>Orquestra.cs</span>
           <span className="portal-footer__secure"><LockKeyhole className="size-3.5" /> Acesso seguro por empresa</span>
           <Link href="/portal">Área do cliente</Link>
-          <Link href="/central-admin">Central Admin</Link>
         </footer>
       </div>
     </main>
