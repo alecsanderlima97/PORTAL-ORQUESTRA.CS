@@ -274,6 +274,31 @@ export function PortalLanding() {
     return () => observer.disconnect();
   }, []);
 
+  // Revelação suave das seções ao entrar na tela. Só ativa com JavaScript e sem prefers-reduced-motion,
+  // para que o conteúdo nunca fique oculto se a animação não puder rodar.
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) return;
+    const sections = document.querySelectorAll<HTMLElement>(".portal-room-section");
+    if (!sections.length) return;
+
+    sections.forEach((section) => section.setAttribute("data-reveal", "pending"));
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          (entry.target as HTMLElement).setAttribute("data-reveal", "in");
+          observer.unobserve(entry.target);
+        });
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -6% 0px" },
+    );
+    sections.forEach((section) => observer.observe(section));
+    return () => {
+      observer.disconnect();
+      sections.forEach((section) => section.removeAttribute("data-reveal"));
+    };
+  }, []);
+
   useEffect(
     () => () => {
       if (transitionTimerRef.current !== null) window.clearTimeout(transitionTimerRef.current);
