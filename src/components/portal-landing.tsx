@@ -43,21 +43,21 @@ const serviceCards = [
     number: "01",
     title: "Consultoria",
     description: "Entendemos sua operação, identificamos gargalos e desenhamos o caminho mais inteligente.",
-    image: "/orquestra-consultoria-v1.png",
+    image: "/orquestra-consultoria-v1.webp",
     imageAlt: "Ilustração conceitual de consultores analisando o planejamento de uma operação",
   },
   {
     number: "02",
     title: "Infraestrutura",
     description: "Equipamentos, rede e ambiente preparados para a sua empresa trabalhar com segurança.",
-    image: "/orquestra-infraestrutura-v2.png",
+    image: "/orquestra-infraestrutura-v2.webp",
     imageAlt: "Ilustração conceitual de infraestrutura industrial e operação de produção",
   },
   {
     number: "03",
     title: "Software e automação",
     description: "Sistemas, sites e fluxos digitais personalizados para reduzir esforço e dar clareza.",
-    image: "/orquestra-software-automacao-v2.png",
+    image: "/orquestra-software-automacao-v2.webp",
     imageAlt: "Ilustração conceitual de interface de gestão e automação empresarial",
   },
 ];
@@ -71,6 +71,8 @@ export function PortalLanding() {
   const carouselWheelTimerRef = useRef<number | null>(null);
   const gatewayRef = useRef<HTMLDivElement>(null);
   const entranceVideoRef = useRef<HTMLVideoElement>(null);
+  const aboutVideoRef = useRef<HTMLVideoElement>(null);
+  const aboutSectionRef = useRef<HTMLElement>(null);
   const veilRef = useRef<HTMLSpanElement>(null);
   const transitionLightRef = useRef<HTMLSpanElement>(null);
   const contentRef = useRef<HTMLSpanElement>(null);
@@ -255,6 +257,23 @@ export function PortalLanding() {
     };
   }, [phase]);
 
+  // Fundo em loop da seção "Quem somos": toca só enquanto a seção está visível e não baixa nada sem necessidade.
+  useEffect(() => {
+    const video = aboutVideoRef.current;
+    const section = aboutSectionRef.current;
+    if (!video || !section || window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) void video.play().catch(() => undefined);
+        else video.pause();
+      },
+      { threshold: 0.15 },
+    );
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(
     () => () => {
       if (transitionTimerRef.current !== null) window.clearTimeout(transitionTimerRef.current);
@@ -296,7 +315,7 @@ export function PortalLanding() {
           <video
             ref={entranceVideoRef}
             className="portal-gateway__video"
-            src={`/portal-entry-room.mp4?v=${PORTAL_ASSET_VERSION}`}
+            src={`/portal-entry-room-web.mp4?v=${PORTAL_ASSET_VERSION}`}
             playsInline
             muted
             preload="metadata"
@@ -327,7 +346,7 @@ export function PortalLanding() {
         <div className="portal-site__hero">
           <div ref={commandSceneRef} className="portal-command-scene" aria-hidden="true">
             <Image
-              src={`/orquestra-command-room-reference-v1.png?v=${PORTAL_ASSET_VERSION}`}
+              src={`/orquestra-command-room-reference-v1.webp?v=${PORTAL_ASSET_VERSION}`}
               alt=""
               fill
               priority
@@ -395,7 +414,7 @@ export function PortalLanding() {
                     opacity: visible ? Math.max(0.84, 1 - distance * 0.08) : 0,
                     pointerEvents: visible ? "auto" : "none",
                     zIndex: 20 - distance,
-                    transform: `translateX(calc(-50% + ${offset * 14.2}vw)) translateY(${arcY}px) translateZ(${-depth}px) rotateY(${offset * -10}deg) scale(${1 - distance * 0.055})`,
+                    transform: `translateX(calc(-50% + ${offset} * var(--carousel-step, 14.2vw))) translateY(${arcY}px) translateZ(${-depth}px) rotateY(${offset * -10}deg) scale(${1 - distance * 0.055})`,
                   } as CSSProperties;
                   return (
                     <a
@@ -406,6 +425,7 @@ export function PortalLanding() {
                       className={`portal-command-card portal-command-card--${project.accent}`}
                       data-active={offset === 0}
                       data-visible={visible}
+                      data-distance={distance}
                       style={cardStyle}
                       tabIndex={visible ? 0 : -1}
                       aria-label={`${project.name}: ${project.description}`}
@@ -501,10 +521,10 @@ export function PortalLanding() {
           </div>
         </section>
 
-        <section className="portal-about portal-room-section portal-room-section--about" id="sobre">
+        <section ref={aboutSectionRef} className="portal-about portal-room-section portal-room-section--about" id="sobre">
           <div className="portal-about__video" aria-hidden="true">
-            <video muted loop playsInline preload="metadata">
-              <source src="/portal-entry-room.mp4" type="video/mp4" />
+            <video ref={aboutVideoRef} muted loop playsInline preload="none">
+              <source src="/portal-entry-room-web.mp4" type="video/mp4" />
             </video>
           </div>
           <div>

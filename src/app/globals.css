@@ -1608,7 +1608,7 @@ body {
   background-image:
     linear-gradient(90deg, rgba(0, 7, 14, 0.34) 0%, rgba(0, 7, 14, 0.04) 38%, rgba(0, 7, 14, 0.02) 64%, rgba(0, 7, 14, 0.3) 100%),
     linear-gradient(180deg, rgba(0, 7, 14, 0.04), rgba(0, 7, 14, 0.1) 58%, rgba(0, 7, 14, 0.48) 100%),
-    url('/orquestra-command-room-reference-v1.png?v=20261027');
+    url('/orquestra-command-room-reference-v1.webp?v=20261027');
   background-size: 100% 100%, 100% 100%, cover;
   background-position: center top;
   background-repeat: no-repeat;
@@ -1772,6 +1772,10 @@ body {
   .portal-command-deck__side-note { display: none; }
   .portal-command-deck__reactor { top: 22%; left: 64%; opacity: 0.55; }
 
+  .portal-command-deck__carousel {
+    --carousel-step: 50vw;
+  }
+
   .portal-command-deck__carousel .portal-command-card {
     width: 166px;
     min-height: 184px;
@@ -1797,6 +1801,13 @@ body {
   .portal-command-deck__copy .portal-action { min-height: 40px; padding: 0.62rem 0.86rem; }
   .portal-command-deck__systems { height: 207px; }
   .portal-command-deck__systems-head { top: -1.3rem; width: min(92%, 310px); }
+
+  /* No celular, só o card ativo e os vizinhos imediatos aparecem; os demais ficariam sobrepostos ao texto. */
+  .portal-command-deck__carousel .portal-command-card[data-distance="2"],
+  .portal-command-deck__carousel .portal-command-card[data-distance="3"] {
+    opacity: 0 !important;
+    pointer-events: none;
+  }
   .portal-command-deck__systems-head small { display: none; }
   .portal-command-deck__systems-head { grid-template-columns: 34px 1fr 34px; }
   .portal-command-deck__systems-head button:last-child { grid-column: 3; }
@@ -2164,7 +2175,7 @@ body {
     radial-gradient(ellipse at 78% 16%, rgba(72, 149, 192, .08), transparent 34%),
     linear-gradient(90deg, rgba(1, 9, 18, .78) 0%, rgba(1, 9, 18, .48) 32%, rgba(1, 9, 18, .08) 62%, rgba(1, 9, 18, .32) 100%),
     linear-gradient(180deg, rgba(2, 13, 24, .06), rgba(2, 13, 24, .34)),
-    url('/orquestra-command-room-reference-v1.png?v=20261027');
+    url('/orquestra-command-room-reference-v1.webp?v=20261027');
   background-size: 100% 100%, 100% 100%, 100% 100%, cover;
   background-position: 50% 50%, 50% 50%, 50% 50%, center top;
   background-attachment: scroll, scroll, scroll, fixed;
@@ -2512,8 +2523,8 @@ body {
 }
 
 .portal-room-section--systems { --room-image: url('/orquestra-portal-room-3d-v3.webp'); }
-.portal-room-section--services { --room-image: url('/orquestra-infraestrutura-v2.png'); }
-.portal-room-section--plans { --room-image: url('/orquestra-software-automacao-v2.png'); }
+.portal-room-section--services { --room-image: url('/orquestra-infraestrutura-v2.webp'); }
+.portal-room-section--plans { --room-image: url('/orquestra-software-automacao-v2.webp'); }
 .portal-room-section--about { --room-image: url('/orquestra-portal-dimension-v2.webp'); }
 .portal-room-section--contact {
   --room-image: none;
@@ -3432,7 +3443,7 @@ body {
   background-image:
     linear-gradient(90deg, rgba(0, 7, 14, 0.34) 0%, rgba(0, 7, 14, 0.04) 38%, rgba(0, 7, 14, 0.02) 64%, rgba(0, 7, 14, 0.3) 100%),
     linear-gradient(180deg, rgba(0, 7, 14, 0.04), rgba(0, 7, 14, 0.1) 58%, rgba(0, 7, 14, 0.48) 100%),
-    url('/orquestra-command-room-reference-v1.png?v=20261027');
+    url('/orquestra-command-room-reference-v1.webp?v=20261027');
   background-size: 100% 100%, 100% 100%, cover;
   background-position: center top;
   background-repeat: no-repeat;
@@ -3882,7 +3893,7 @@ body {
   background:
     linear-gradient(180deg, rgba(1, 11, 22, 0.16), rgba(1, 12, 24, 0.54)),
     linear-gradient(90deg, rgba(1, 12, 24, 0.76), rgba(5, 31, 52, 0.28) 50%, rgba(1, 12, 24, 0.76)),
-    url("/orquestra-command-room-reference-v1.png") center 58% / cover no-repeat;
+    url("/orquestra-command-room-reference-v1.webp") center 58% / cover no-repeat;
 }
 
 .portal-descent__scene::before {
@@ -3931,7 +3942,7 @@ body {
 .portal-room-section--services,
 .portal-room-section--plans,
 .portal-room-section--about {
-  --room-image: url('/orquestra-lower-command-room-v1.png');
+  --room-image: url('/orquestra-lower-command-room-v1.webp');
 }
 
 .portal-room-section::before {
@@ -4362,7 +4373,7 @@ body {
   background:
     linear-gradient(90deg, rgba(0, 8, 17, 0.48), rgba(0, 8, 17, 0.08) 38%, rgba(0, 8, 17, 0.16) 72%, rgba(0, 8, 17, 0.52)),
     linear-gradient(180deg, rgba(0, 8, 17, 0.08), rgba(0, 8, 17, 0.18) 48%, rgba(0, 7, 15, 0.62)),
-    url('/orquestra-lower-command-room-v1.png') center top / cover fixed no-repeat;
+    url('/orquestra-lower-command-room-v1.webp') center top / cover fixed no-repeat;
 }
 
 .portal-site__frame {
