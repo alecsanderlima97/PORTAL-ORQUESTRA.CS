@@ -166,6 +166,19 @@ export async function createAsaasPayment(input: {
   });
 }
 
+/**
+ * Procura uma cobrança já criada no Asaas para uma referência externa.
+ * Usado antes de criar uma cobrança em uma nova tentativa, para evitar duplicidade.
+ * Lança erro se a consulta falhar: nesse caso o chamador não deve criar outra cobrança.
+ */
+export async function findAsaasPaymentByExternalReference(externalReference: string) {
+  const result = await asaasRequest<AsaasListResponse<AsaasPayment>>(
+    `/payments?externalReference=${encodeURIComponent(externalReference)}&limit=10`,
+  );
+  const payments = Array.isArray(result.data) ? result.data : [];
+  return payments.find((payment) => !/DELETED|CANCEL|REFUND/i.test(payment.status ?? "")) ?? null;
+}
+
 export async function listAsaasSubscriptionPayments(subscriptionId: string) {
   const result = await asaasRequest<AsaasListResponse<AsaasPayment>>(
     `/subscriptions/${encodeURIComponent(subscriptionId)}/payments`,
