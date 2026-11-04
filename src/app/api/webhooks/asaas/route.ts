@@ -1,11 +1,15 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import { FieldValue } from "firebase-admin/firestore";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
 import { mapAsaasPaymentStatus } from "@/lib/asaas";
 import { getFirebaseAdminDb } from "@/lib/firebase-admin";
 import { sendConnectorCommand } from "@/lib/connector-commands";
 
 const MAX_BODY_BYTES = 128 * 1024;
+// Trava de processamento: um evento "em processamento" há menos que isto bloqueia novas entregas (Asaas tenta de novo).
+const EVENT_LOCK_MS = 2 * 60 * 1000;
+// Trava de liberação de créditos: impede dois envios simultâneos ao conector para o mesmo pedido.
+const GRANT_LOCK_MS = 2 * 60 * 1000;
 
 type AsaasWebhookPayload = {
   id?: string;
@@ -61,10 +65,19 @@ export async function POST(request: Request) {
     if (!event || !paymentId) return NextResponse.json({ error: "Evento sem identificação suficiente." }, { status: 400 });
 
     const db = getFirebaseAdminDb();
-    eventRef = db.collection("asaasWebhookEvents").doc(eventKey(eventId));
-    const existingEvent = await eventRef.get();
-    if (existingEvent.exists && existingEvent.data()?.processedAt) return NextResponse.json({ ok: true, duplicate: true });
-    await eventRef.set({ eventId, event, paymentId, receivedAt: FieldValue.serverTimestamp(), processingAt: FieldValue.serverTimestamp() }, { merge: true });
+    const currentEventRef = db.collection("asaasWebhookEvents").doc(eventKey(eventId));
+    eventRef = currentEventRef;
+    const eventClaim = await db.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(currentEventRef);
+      const data = snapshot.data() ?? {};
+      if (data.processedAt) return "duplicate" as const;
+      const processingMs = data.processingAt instanceof Timestamp ? data.processingAt.toMillis() : 0;
+      if (processingMs && Date.now() - processingMs < EVENT_LOCK_MS) return "in_progress" as const;
+      transaction.set(currentEventRef, { eventId, event, paymentId, receivedAt: FieldValue.serverTimestamp(), processingAt: Timestamp.now() }, { merge: true });
+      return "claimed" as const;
+    });
+    if (eventClaim === "duplicate") return NextResponse.json({ ok: true, duplicate: true });
+    if (eventClaim === "in_progress") return NextResponse.json({ error: "Evento em processamento." }, { status: 409 });
 
     const paymentQuery = await db.collection("billingCharges").where("asaasPaymentId", "==", paymentId).limit(1).get();
     let chargeRef = paymentQuery.docs[0]?.ref ?? null;
@@ -191,29 +204,50 @@ export async function POST(request: Request) {
       const packageId = safeText(creditOrderData.packageId, 80);
       if (!Number.isInteger(creditAmount) || creditAmount <= 0 || !packageId || !serviceData) throw new Error("credit-order-invalid");
 
-      const connector = await sendConnectorCommand(serviceData, {
-        commandId: creditOrderRef.id,
-        commandType: "ai_credits.granted",
-        creditGrant: {
-          amount,
-          credits: creditAmount,
-          packageId,
-          paymentId,
-          purchaseId: creditOrderRef.id,
-        },
+      // Eventos diferentes do mesmo pagamento (ex.: RECEIVED e CONFIRMED) chegam com IDs distintos.
+      // A trava no pedido garante que os créditos sejam liberados uma única vez.
+      const orderRef = creditOrderRef;
+      const grant = await db.runTransaction(async (transaction) => {
+        const snapshot = await transaction.get(orderRef);
+        const data = snapshot.data() ?? {};
+        if (data.grantStatus === "applied") return "applied" as const;
+        const grantingMs = data.grantingAt instanceof Timestamp ? data.grantingAt.toMillis() : 0;
+        if (data.grantStatus === "granting" && Date.now() - grantingMs < GRANT_LOCK_MS) return "in_progress" as const;
+        transaction.set(orderRef, { grantStatus: "granting", grantingAt: Timestamp.now(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+        return "claimed" as const;
       });
-      if (!connector.sent) {
-        await creditOrderRef.set({ grantStatus: "pending", grantError: connector.skipped ? "connector_not_configured" : `http_${connector.status}`, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-        throw new Error("credit-grant-pending");
+
+      if (grant === "in_progress") throw new Error("credit-grant-in-progress");
+      if (grant === "claimed") {
+        const connector = await sendConnectorCommand(serviceData, {
+          commandId: orderRef.id,
+          commandType: "ai_credits.granted",
+          creditGrant: {
+            amount,
+            credits: creditAmount,
+            packageId,
+            paymentId,
+            purchaseId: orderRef.id,
+          },
+        });
+        if (!connector.sent) {
+          await orderRef.set({ grantStatus: "pending", grantError: connector.skipped ? "connector_not_configured" : `http_${connector.status}`, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+          throw new Error("credit-grant-pending");
+        }
+        await orderRef.set({ grantStatus: "applied", grantedAt: FieldValue.serverTimestamp(), status: "paga", paidAt, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      } else {
+        await orderRef.set({ status: "paga", paidAt, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       }
-      await creditOrderRef.set({ grantStatus: "applied", grantedAt: FieldValue.serverTimestamp(), status: "paga", paidAt, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     }
 
     await eventRef.set({ processedAt: FieldValue.serverTimestamp(), status: "completed" }, { merge: true });
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    if (eventRef) await eventRef.set({ status: "error", lastError: error instanceof Error ? error.message : "unknown-error", updatedAt: FieldValue.serverTimestamp() }, { merge: true }).catch(() => undefined);
+    const message = error instanceof Error ? error.message : "unknown-error";
+    // Liberação já em andamento em outra entrega: não é erro do evento; o Asaas tenta de novo depois.
+    if (message === "credit-grant-in-progress") return NextResponse.json({ error: "Liberação em andamento." }, { status: 409 });
+    if (eventRef) await eventRef.set({ status: "error", lastError: message, updatedAt: FieldValue.serverTimestamp() }, { merge: true }).catch(() => undefined);
     return NextResponse.json({ error: "Não foi possível processar o evento." }, { status: 500 });
   }
 }
