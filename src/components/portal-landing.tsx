@@ -15,7 +15,7 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent, WheelEvent as Re
 type GatewayPhase = "arrival" | "entering" | "inside";
 type EntranceMode = "video" | "procedural";
 
-const PORTAL_ASSET_VERSION = "20261027";
+const PORTAL_ASSET_VERSION = "20261104";
 
 const heroProjects = deployedProjects.filter((project) => project.status !== "legado" && project.relation !== "site");
 const initialHeroProjectIndex = Math.max(heroProjects.findIndex((project) => project.id === "orquestra-hub"), 0);
