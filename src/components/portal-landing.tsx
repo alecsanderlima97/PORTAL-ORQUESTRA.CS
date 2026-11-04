@@ -2,14 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ChevronLeft, ChevronRight, LockKeyhole, Mail, MessageCircle } from "lucide-react";
+import { ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight, LockKeyhole, Mail, Menu, MessageCircle, X } from "lucide-react";
 import gsap from "gsap";
 import { deployedProjects, projectCatalogDetails } from "@/lib/portal-data";
 import { BrandLogo } from "@/components/brand-logo";
 import { PortalWarpCanvas } from "@/components/portal-visual-effects";
+import "./portal-landing.css";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { CSSProperties, WheelEvent as ReactWheelEvent } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
 
 type GatewayPhase = "arrival" | "entering" | "inside";
 type EntranceMode = "video" | "procedural";
@@ -62,17 +63,24 @@ const serviceCards = [
   },
 ];
 
+const plans = [
+  { name: "Essencial", title: "Uma solução para organizar a rotina.", description: "Ideal para começar com um sistema objetivo e suporte próximo.", featured: false },
+  { name: "Profissional", title: "Mais controle para uma operação em crescimento.", description: "Módulos, usuários e acompanhamento para ganhar escala.", featured: true },
+  { name: "Sob medida", title: "A tecnologia desenhada para o seu cenário.", description: "Consultoria, infraestrutura e desenvolvimento integrado.", featured: false },
+];
+
 export function PortalLanding() {
   const [phase, setPhase] = useState<GatewayPhase>("arrival");
   const [entranceMode, setEntranceMode] = useState<EntranceMode>("video");
   const [entranceVideoReady, setEntranceVideoReady] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(initialHeroProjectIndex);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const swipedRef = useRef(false);
   const transitionTimerRef = useRef<number | null>(null);
   const carouselWheelTimerRef = useRef<number | null>(null);
   const gatewayRef = useRef<HTMLDivElement>(null);
   const entranceVideoRef = useRef<HTMLVideoElement>(null);
-  const aboutVideoRef = useRef<HTMLVideoElement>(null);
-  const aboutSectionRef = useRef<HTMLElement>(null);
   const veilRef = useRef<HTMLSpanElement>(null);
   const transitionLightRef = useRef<HTMLSpanElement>(null);
   const contentRef = useRef<HTMLSpanElement>(null);
@@ -140,15 +148,49 @@ export function PortalLanding() {
     setCarouselIndex((current) => (current + direction + heroProjects.length) % heroProjects.length);
   }, []);
 
+  // Só gestos horizontais (trackpad) giram o carrossel; a rolagem vertical da página nunca é capturada.
   const handleCarouselWheel = useCallback((event: ReactWheelEvent<HTMLDivElement>) => {
-    const movement = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
-    if (Math.abs(movement) < 8 || carouselWheelTimerRef.current !== null) return;
-    event.preventDefault();
-    rotateCarousel(movement > 0 ? 1 : -1);
+    if (Math.abs(event.deltaX) <= Math.abs(event.deltaY) || Math.abs(event.deltaX) < 12 || carouselWheelTimerRef.current !== null) return;
+    rotateCarousel(event.deltaX > 0 ? 1 : -1);
     carouselWheelTimerRef.current = window.setTimeout(() => {
       carouselWheelTimerRef.current = null;
-    }, 360);
+    }, 420);
   }, [rotateCarousel]);
+
+  const handleSwipeStart = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    swipeStartRef.current = { x: event.clientX, y: event.clientY };
+    swipedRef.current = false;
+  }, []);
+
+  const handleSwipeEnd = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start) return;
+    const dx = event.clientX - start.x;
+    if (Math.abs(dx) > 42 && Math.abs(dx) > Math.abs(event.clientY - start.y)) {
+      swipedRef.current = true;
+      rotateCarousel(dx < 0 ? 1 : -1);
+    }
+  }, [rotateCarousel]);
+
+  // Inclinação 3D do card ativo acompanhando o ponteiro (só transform, sem re-render).
+  const handleCardTilt = useCallback((event: ReactPointerEvent<HTMLAnchorElement>) => {
+    if (event.pointerType !== "mouse") return;
+    const card = event.currentTarget;
+    const rect = card.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width - 0.5;
+    const y = (event.clientY - rect.top) / rect.height - 0.5;
+    card.style.setProperty("--tilt-x", `${(-y * 10).toFixed(2)}deg`);
+    card.style.setProperty("--tilt-y", `${(x * 12).toFixed(2)}deg`);
+    card.style.setProperty("--glare-x", `${((x + 0.5) * 100).toFixed(1)}%`);
+    card.style.setProperty("--glare-y", `${((y + 0.5) * 100).toFixed(1)}%`);
+  }, []);
+
+  const resetCardTilt = useCallback((event: ReactPointerEvent<HTMLAnchorElement>) => {
+    const card = event.currentTarget;
+    card.style.removeProperty("--tilt-x");
+    card.style.removeProperty("--tilt-y");
+  }, []);
 
   useLayoutEffect(() => {
     if (phase !== "entering") return;
@@ -257,28 +299,11 @@ export function PortalLanding() {
     };
   }, [phase]);
 
-  // Fundo em loop da seção "Quem somos": toca só enquanto a seção está visível e não baixa nada sem necessidade.
-  useEffect(() => {
-    const video = aboutVideoRef.current;
-    const section = aboutSectionRef.current;
-    if (!video || !section || window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) void video.play().catch(() => undefined);
-        else video.pause();
-      },
-      { threshold: 0.15 },
-    );
-    observer.observe(section);
-    return () => observer.disconnect();
-  }, []);
-
   // Revelação suave das seções ao entrar na tela. Só ativa com JavaScript e sem prefers-reduced-motion,
   // para que o conteúdo nunca fique oculto se a animação não puder rodar.
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) return;
-    const sections = document.querySelectorAll<HTMLElement>(".portal-room-section");
+    const sections = document.querySelectorAll<HTMLElement>(".lp-reveal");
     if (!sections.length) return;
 
     sections.forEach((section) => section.setAttribute("data-reveal", "pending"));
@@ -290,7 +315,7 @@ export function PortalLanding() {
           observer.unobserve(entry.target);
         });
       },
-      { threshold: 0.12, rootMargin: "0px 0px -6% 0px" },
+      { threshold: 0.06, rootMargin: "0px 0px -4% 0px" },
     );
     sections.forEach((section) => observer.observe(section));
     return () => {
@@ -319,8 +344,26 @@ export function PortalLanding() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [enterPortal, phase]);
 
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [menuOpen]);
+
+  const navLinks = [
+    { href: "#solucoes", label: "Sistemas" },
+    { href: "#servicos", label: "Consultoria" },
+    { href: "#planos", label: "Planos" },
+    { href: "#sobre", label: "Quem somos" },
+    { href: "#orcamento", label: "Contato" },
+  ];
+
   return (
-    <main className={`portal-shell portal-shell--${phase} portal-shell--${entranceMode} ${entranceVideoReady ? "portal-shell--video-ready" : ""} ${phase === "inside" ? "portal-shell--powering" : ""}`}>
+    <main className={`portal-shell portal-shell--${phase} portal-shell--${entranceMode} ${entranceVideoReady ? "portal-shell--video-ready" : ""}`}>
       <div
         ref={gatewayRef}
         className="portal-gateway"
@@ -358,18 +401,47 @@ export function PortalLanding() {
           {phase === "entering" && entranceMode === "procedural" && <PortalWarpCanvas active />}
           <span ref={transitionLightRef} className="portal-gateway__transition-light" />
         </span>
-        <span ref={contentRef} className="portal-gateway__content">
-          <BrandLogo variant="essential" size={54} showWordmark tone="light" />
-          <span className="portal-gateway__hint">Clique para entrar</span>
+        <span ref={contentRef} className="portal-gateway__content lp-gate">
+          <span className="lp-gate__hint">Clique ou toque para entrar</span>
         </span>
-        <button type="button" className="portal-gateway__skip" onClick={(event) => { event.stopPropagation(); skipEntrance(); }}>
+        <button type="button" className="portal-gateway__skip lp-gate__skip" onClick={(event) => { event.stopPropagation(); skipEntrance(); }}>
           Pular entrada
         </button>
       </div>
 
-      <div ref={siteRef} className="portal-site" tabIndex={-1} inert={phase !== "inside"} aria-hidden={phase !== "inside"}>
-        <div className="portal-site__hero">
-          <div ref={commandSceneRef} className="portal-command-scene" aria-hidden="true">
+      <div ref={siteRef} className="lp" tabIndex={-1} inert={phase !== "inside"} aria-hidden={phase !== "inside"}>
+        <header className="lp-header" data-open={menuOpen}>
+          <div className="lp-header__bar">
+            <Link href="/" className="lp-header__brand" aria-label="Orquestra.cs - início">
+              <BrandLogo variant="essential" size={32} showWordmark tone="light" />
+            </Link>
+            <nav className="lp-header__nav" aria-label="Navegação principal">
+              {navLinks.map((link) => <a key={link.href} href={link.href}>{link.label}</a>)}
+            </nav>
+            <div className="lp-header__actions">
+              <Link href="/login" className="lp-btn lp-btn--ghost lp-btn--sm">
+                <LockKeyhole className="size-3.5" aria-hidden="true" /> Área do cliente
+              </Link>
+              <button
+                type="button"
+                className="lp-header__menu"
+                aria-expanded={menuOpen}
+                aria-controls="lp-mobile-nav"
+                aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
+                onClick={() => setMenuOpen((open) => !open)}
+              >
+                {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+              </button>
+            </div>
+          </div>
+          <nav id="lp-mobile-nav" className="lp-header__mobile" aria-label="Navegação" hidden={!menuOpen}>
+            {navLinks.map((link) => <a key={link.href} href={link.href} onClick={() => setMenuOpen(false)}>{link.label}</a>)}
+            <Link href="/login" className="lp-header__mobile-login">Área do cliente</Link>
+          </nav>
+        </header>
+
+        <section className="lp-hero" id="empresa">
+          <div ref={commandSceneRef} className="lp-hero__scene" aria-hidden="true">
             <Image
               src={`/orquestra-command-room-reference-v1.webp?v=${PORTAL_ASSET_VERSION}`}
               alt=""
@@ -377,204 +449,228 @@ export function PortalLanding() {
               priority
               unoptimized
               sizes="100vw"
-              className="portal-command-scene__image"
+              className="lp-hero__image"
             />
           </div>
-          <header className="portal-header">
-            <Link href="/" className="portal-header__brand" aria-label="Orquestra.cs - início">
-              <BrandLogo variant="essential" size={34} showWordmark tone="light" />
-            </Link>
-            <nav className="portal-header__nav" aria-label="Navegação principal">
-              <a href="#solucoes">Soluções</a>
-              <a href="#solucoes">Sistemas publicados</a>
-              <a href="#servicos">Consultoria</a>
-              <a href="#planos">Planos</a>
-              <a href="#sobre">Quem somos</a>
-            </nav>
-            <Link href="/login" className="portal-header__login">
-              Área do cliente
-            </Link>
-          </header>
 
-          <section className="portal-command-deck" id="empresa">
-            <div className="portal-command-deck__copy">
-              <p className="portal-eyebrow">Sistemas que impulsionam o seu negócio</p>
-              <h1>Tudo em um <span>só lugar.</span></h1>
-              <p className="portal-home__intro">Soluções simples e completas para organizar, automatizar e fazer sua empresa evoluir.</p>
-            </div>
-
-            <p className="portal-command-deck__side-note">Tecnologia<br />para resultados<br />reais</p>
-
-            <div className="portal-command-deck__side-actions">
-              <a href="#orcamento" className="portal-action portal-action--primary">Fazer um orçamento <ArrowRight className="size-4" /></a>
-            </div>
-
-            <div className="portal-command-deck__systems" aria-label="Sistemas publicados">
-              <div className="portal-command-deck__systems-head">
-                <button type="button" onClick={() => rotateCarousel(-1)} aria-label="Sistema anterior"><ChevronLeft className="size-4" /></button>
-                <span>{heroProjects[carouselIndex]?.name}</span>
-                <small>{carouselIndex + 1} / {heroProjects.length}</small>
-                <button type="button" onClick={() => rotateCarousel(1)} aria-label="Próximo sistema"><ChevronRight className="size-4" /></button>
-              </div>
-              <div
-                className="portal-command-deck__carousel"
-                tabIndex={0}
-                role="region"
-                aria-label="Carrossel circular de sistemas"
-                onWheel={handleCarouselWheel}
-                onKeyDown={(event) => {
-                  if (event.key === "ArrowLeft") { event.preventDefault(); rotateCarousel(-1); }
-                  if (event.key === "ArrowRight") { event.preventDefault(); rotateCarousel(1); }
-                }}
-              >
-                {heroProjects.map((project, projectIndex) => {
-                  const Icon = project.icon;
-                  const details = projectCatalogDetails[project.id];
-                  const offset = getCircularOffset(projectIndex, carouselIndex, heroProjects.length);
-                  const distance = Math.abs(offset);
-                  const visible = distance <= 3;
-                  const arcY = distance === 0 ? 0 : -Math.min(48, distance * 18);
-                  const depth = distance * 92;
-                  const cardStyle = {
-                    opacity: visible ? Math.max(0.84, 1 - distance * 0.08) : 0,
-                    pointerEvents: visible ? "auto" : "none",
-                    zIndex: 20 - distance,
-                    transform: `translateX(calc(-50% + ${offset} * var(--carousel-step, 14.2vw))) translateY(${arcY}px) translateZ(${-depth}px) rotateY(${offset * -10}deg) scale(${1 - distance * 0.055})`,
-                  } as CSSProperties;
-                  return (
-                    <a
-                      key={project.id}
-                      href={project.url || "#solucoes"}
-                      target={project.url ? "_blank" : undefined}
-                      rel={project.url ? "noopener noreferrer" : undefined}
-                      className={`portal-command-card portal-command-card--${project.accent}`}
-                      data-active={offset === 0}
-                      data-visible={visible}
-                      data-distance={distance}
-                      style={cardStyle}
-                      tabIndex={visible ? 0 : -1}
-                      aria-label={`${project.name}: ${project.description}`}
-                    >
-                      {details?.previewImage ? <span className="portal-command-card__backdrop" style={{ backgroundImage: `url("${details.previewImage}")` }} aria-hidden="true" /> : null}
-                      <span className="portal-command-card__icon"><Icon className="size-5" /></span>
-                      <span className="portal-command-card__name">{project.name}</span>
-                      <span className="portal-command-card__description">{details?.audience || project.description}</span>
-                      <span className="portal-command-card__open"><ArrowRight className="size-4" /></span>
-                    </a>
-                  );
-                })}
+          <div className="lp-container lp-hero__content">
+            <div className="lp-hero__copy">
+              <p className="lp-eyebrow">Sistemas que impulsionam o seu negócio</p>
+              <h1 className="lp-hero__title">Tudo em um <span>só lugar.</span></h1>
+              <p className="lp-hero__lead">Soluções simples e completas para organizar, automatizar e fazer sua empresa evoluir.</p>
+              <div className="lp-hero__actions">
+                <a href="#orcamento" className="lp-btn lp-btn--primary">Fazer um orçamento <ArrowRight className="size-4" aria-hidden="true" /></a>
+                <a href="#solucoes" className="lp-btn lp-btn--ghost">Ver sistemas</a>
               </div>
             </div>
-          </section>
-        </div>
-
-        <section className="portal-solutions portal-room-section portal-room-section--systems" id="solucoes">
-          <div className="portal-solutions__heading">
-            <p className="portal-eyebrow">Sistemas publicados</p>
-            <h2>Produtos reais da Orquestra.cs.</h2>
-            <p className="portal-section-intro">Cada sistema nasce para resolver uma rotina específica e pode evoluir com a operação.</p>
           </div>
-          <div className="portal-solutions__list">
+
+          <div className="lp-showcase" aria-label="Sistemas publicados">
+            <div className="lp-showcase__head">
+              <button type="button" className="lp-round-btn" onClick={() => rotateCarousel(-1)} aria-label="Sistema anterior"><ChevronLeft className="size-4" /></button>
+              <p className="lp-showcase__label" aria-live="polite">
+                <span>{heroProjects[carouselIndex]?.name}</span>
+                <small>{String(carouselIndex + 1).padStart(2, "0")} / {String(heroProjects.length).padStart(2, "0")}</small>
+              </p>
+              <button type="button" className="lp-round-btn" onClick={() => rotateCarousel(1)} aria-label="Próximo sistema"><ChevronRight className="size-4" /></button>
+            </div>
+            <div
+              className="lp-carousel"
+              tabIndex={0}
+              role="region"
+              aria-roledescription="carrossel"
+              aria-label="Carrossel de sistemas. Use as setas do teclado para navegar."
+              onWheel={handleCarouselWheel}
+              onPointerDown={handleSwipeStart}
+              onPointerUp={handleSwipeEnd}
+              onPointerCancel={() => { swipeStartRef.current = null; }}
+              onKeyDown={(event) => {
+                if (event.key === "ArrowLeft") { event.preventDefault(); rotateCarousel(-1); }
+                if (event.key === "ArrowRight") { event.preventDefault(); rotateCarousel(1); }
+              }}
+            >
+              {heroProjects.map((project, projectIndex) => {
+                const Icon = project.icon;
+                const details = projectCatalogDetails[project.id];
+                const offset = getCircularOffset(projectIndex, carouselIndex, heroProjects.length);
+                const distance = Math.abs(offset);
+                const active = offset === 0;
+                const visible = distance <= 3;
+                return (
+                  <a
+                    key={project.id}
+                    href={project.url || "#solucoes"}
+                    target={project.url ? "_blank" : undefined}
+                    rel={project.url ? "noopener noreferrer" : undefined}
+                    className={`lp-card3d lp-accent--${project.accent}`}
+                    data-active={active}
+                    data-distance={distance}
+                    style={{ "--o": offset, "--d": distance, zIndex: 20 - distance } as CSSProperties}
+                    tabIndex={visible ? 0 : -1}
+                    aria-hidden={!visible}
+                    aria-label={`${project.name}: ${details?.audience || project.description}`}
+                    onClick={(event) => {
+                      // Primeiro toque/clique em um card lateral só o traz para o centro.
+                      if (swipedRef.current || !active) {
+                        event.preventDefault();
+                        swipedRef.current = false;
+                        if (!active) setCarouselIndex(projectIndex);
+                      }
+                    }}
+                    onPointerMove={active ? handleCardTilt : undefined}
+                    onPointerLeave={active ? resetCardTilt : undefined}
+                    draggable={false}
+                  >
+                    <span className="lp-card3d__inner">
+                      {details?.previewImage ? <span className="lp-card3d__media" style={{ backgroundImage: `url("${details.previewImage}")` }} aria-hidden="true" /> : null}
+                      <span className="lp-card3d__glare" aria-hidden="true" />
+                      <span className="lp-card3d__icon"><Icon className="size-5" aria-hidden="true" /></span>
+                      <span className="lp-card3d__body">
+                        <span className="lp-card3d__name">{project.name}</span>
+                        <span className="lp-card3d__desc">{details?.audience || project.description}</span>
+                        <span className="lp-card3d__cta">{project.url ? "Acessar" : "Conhecer"} <ArrowUpRight className="size-3.5" aria-hidden="true" /></span>
+                      </span>
+                    </span>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section className="lp-section lp-reveal" id="solucoes">
+          <div className="lp-container">
+            <div className="lp-section__head">
+              <p className="lp-eyebrow">Sistemas publicados</p>
+              <h2>Produtos reais da Orquestra.cs.</h2>
+              <p>Cada sistema nasce para resolver uma rotina específica e pode evoluir com a operação.</p>
+            </div>
             {solutionGroups.map((group) => (
-              <div className="portal-solution-group" key={group.title}>
-                <div className="portal-solution-group__heading">
+              <div className="lp-group" key={group.title}>
+                <div className="lp-group__head">
                   <h3>{group.title}</h3>
                   <p>{group.description}</p>
                 </div>
-                {group.ids.map((id) => {
-                  const project = deployedProjects.find((item) => item.id === id);
-                  if (!project) return null;
-                  const Icon = project.icon;
-                  const details = projectCatalogDetails[project.id];
-                  const solutionContent = (
-                    <>
-                      <div className="portal-solution__media">
-                        {details?.previewImage ? <Image src={details.previewImage} alt={details.previewAlt || project.name} fill sizes="(max-width: 720px) 100vw, 220px" /> : <span className="portal-solution__media-empty"><Icon className="size-8" /><small>Prévia visual em preparação</small></span>}
-                      </div>
-                      <div className="portal-solution__details">
-                        <div className="portal-solution__topline">
-                          <span className={`portal-solution__icon portal-solution__icon--${project.accent}`}><Icon className="size-4" /></span>
-                          <div className="min-w-0">
-                            <span className="portal-solution__name">{project.name}</span>
-                            <span className="portal-solution__category">{project.category}</span>
-                          </div>
-                          <span className={`portal-solution__status portal-solution__status--${project.availability}`}>
-                            {project.availability === "online" ? "Online" : project.availability === "offline" ? "Offline" : "Em breve"}
+                <div className="lp-grid lp-grid--systems">
+                  {group.ids.map((id) => {
+                    const project = deployedProjects.find((item) => item.id === id);
+                    if (!project) return null;
+                    const Icon = project.icon;
+                    const details = projectCatalogDetails[project.id];
+                    const statusLabel = project.availability === "online" ? "Online" : project.availability === "offline" ? "Offline" : "Em breve";
+                    const content = (
+                      <>
+                        <span className="lp-system__media">
+                          {details?.previewImage
+                            ? <Image src={details.previewImage} alt={details.previewAlt || project.name} fill sizes="(max-width: 640px) 100vw, (max-width: 1100px) 50vw, 300px" />
+                            : <span className="lp-system__media-empty"><Icon className="size-8" aria-hidden="true" /></span>}
+                          <span className={`lp-status lp-status--${project.availability}`}>{statusLabel}</span>
+                        </span>
+                        <span className="lp-system__body">
+                          <span className="lp-system__title">
+                            <span className="lp-system__icon"><Icon className="size-4" aria-hidden="true" /></span>
+                            <span>
+                              <strong>{project.name}</strong>
+                              <small>{project.category}</small>
+                            </span>
                           </span>
-                        </div>
-                        <p className="portal-solution__description">{project.description}</p>
-                        {details ? <>
-                          <p className="portal-solution__audience"><strong>Indicado para:</strong> {details.audience}</p>
-                          <ul className="portal-solution__highlights">{details.highlights.map((highlight) => <li key={highlight}>{highlight}</li>)}</ul>
-                        </> : null}
-                      </div>
-                      <ArrowRight className="portal-solution__arrow size-4" />
-                    </>
-                  );
-                  return project.url ? <a href={project.url} target="_blank" rel="noreferrer" className={`portal-solution portal-solution--${project.accent}`} key={project.id}>{solutionContent}</a> : <div className={`portal-solution portal-solution--${project.accent} portal-solution--disabled`} key={project.id}>{solutionContent}</div>;
-                })}
+                          <span className="lp-system__desc">{project.description}</span>
+                          {details ? (
+                            <span className="lp-system__tags">
+                              {details.highlights.slice(0, 3).map((highlight) => <span key={highlight}>{highlight}</span>)}
+                            </span>
+                          ) : null}
+                          <span className="lp-system__cta">{project.url ? <>Acessar sistema <ArrowUpRight className="size-4" aria-hidden="true" /></> : "Disponível em breve"}</span>
+                        </span>
+                      </>
+                    );
+                    return project.url
+                      ? <a key={project.id} href={project.url} target="_blank" rel="noopener noreferrer" className={`lp-system lp-accent--${project.accent}`}>{content}</a>
+                      : <div key={project.id} className={`lp-system lp-system--disabled lp-accent--${project.accent}`}>{content}</div>;
+                  })}
+                </div>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="portal-services portal-room-section portal-room-section--services" id="servicos">
-          <div className="portal-services__heading">
-            <p className="portal-eyebrow">Como ajudamos</p>
-            <h2>Do problema à solução em uma única direção.</h2>
-          </div>
-          <div className="portal-services__list">
-            {serviceCards.map((service) => (
-              <article key={service.number} aria-label={service.imageAlt} style={{ "--service-image": `url("${service.image}")` } as CSSProperties}>
-                <span>{service.number}</span>
-                <h3>{service.title}</h3>
-                <p>{service.description}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="portal-plans portal-room-section portal-room-section--plans" id="planos">
-          <div>
-            <p className="portal-eyebrow">Planos e projetos</p>
-            <h2>Comece pelo que sua operação precisa hoje.</h2>
-          </div>
-          <div className="portal-plans__items">
-            <div><span>Essencial</span><strong>Uma solução para organizar a rotina.</strong><p>Ideal para começar com um sistema objetivo e suporte próximo.</p></div>
-            <div><span>Profissional</span><strong>Mais controle para uma operação em crescimento.</strong><p>Módulos, usuários e acompanhamento para ganhar escala.</p></div>
-            <div><span>Sob medida</span><strong>A tecnologia desenhada para o seu cenário.</strong><p>Consultoria, infraestrutura e desenvolvimento integrado.</p></div>
+        <section className="lp-section lp-section--alt lp-reveal" id="servicos">
+          <div className="lp-container">
+            <div className="lp-section__head">
+              <p className="lp-eyebrow">Como ajudamos</p>
+              <h2>Do problema à solução em uma única direção.</h2>
+            </div>
+            <div className="lp-grid lp-grid--3">
+              {serviceCards.map((service) => (
+                <article key={service.number} className="lp-service">
+                  <span className="lp-service__media">
+                    <Image src={service.image} alt={service.imageAlt} fill sizes="(max-width: 900px) 100vw, 380px" />
+                  </span>
+                  <span className="lp-service__body">
+                    <span className="lp-service__number">{service.number}</span>
+                    <h3>{service.title}</h3>
+                    <p>{service.description}</p>
+                  </span>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
 
-        <section ref={aboutSectionRef} className="portal-about portal-room-section portal-room-section--about" id="sobre">
-          <div className="portal-about__video" aria-hidden="true">
-            <video ref={aboutVideoRef} muted loop playsInline preload="none">
-              <source src="/portal-entry-room-web.mp4" type="video/mp4" />
-            </video>
-          </div>
-          <div>
-            <p className="portal-eyebrow">Quem somos</p>
-            <h2>A Orquestra.cs resolve problemas através de tecnologia.</h2>
-          </div>
-          <p>Somos uma empresa de consultoria, infraestrutura comercial, corporativa e industrial. Unimos visão de negócio, equipamentos, software e automação para transformar complexidade em uma operação mais clara, segura e eficiente.</p>
-        </section>
-
-        <section className="portal-contact portal-room-section portal-room-section--contact" id="orcamento">
-          <div className="portal-contact__copy">
-            <p className="portal-eyebrow">Vamos tirar seu projeto do papel</p>
-            <h2>Uma operação mais clara começa com uma boa conversa.</h2>
-            <p>Conte o que sua empresa precisa. A Orquestra.cs ajuda você a encontrar o sistema, site ou automação certa para avançar.</p>
-          </div>
-          <div className="portal-contact__actions">
-            <a href="https://wa.me/5515998478705?text=Ol%C3%A1%2C%20quero%20conversar%20sobre%20um%20or%C3%A7amento%20com%20a%20Orquestra.cs." target="_blank" rel="noreferrer" className="portal-action portal-action--primary"><MessageCircle className="size-4" /> Falar sobre meu projeto</a>
-            <a href="mailto:orquestracs@gmail.com?subject=Suporte Orquestra.cs" className="portal-action portal-action--quiet"><Mail className="size-4" /> Enviar e-mail ao suporte</a>
+        <section className="lp-section lp-reveal" id="planos">
+          <div className="lp-container">
+            <div className="lp-section__head">
+              <p className="lp-eyebrow">Planos e projetos</p>
+              <h2>Comece pelo que sua operação precisa hoje.</h2>
+            </div>
+            <div className="lp-grid lp-grid--3">
+              {plans.map((plan) => (
+                <article key={plan.name} className="lp-plan" data-featured={plan.featured || undefined}>
+                  <span className="lp-plan__name">{plan.name}</span>
+                  <h3>{plan.title}</h3>
+                  <p>{plan.description}</p>
+                  <a href="#orcamento" className={`lp-btn ${plan.featured ? "lp-btn--primary" : "lp-btn--ghost"} lp-btn--block`}>Solicitar proposta</a>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
 
-        <footer className="portal-footer">
-          <span>Orquestra.cs</span>
-          <span className="portal-footer__secure"><LockKeyhole className="size-3.5" /> Acesso seguro por empresa</span>
-          <Link href="/portal">Área do cliente</Link>
+        <section className="lp-section lp-section--alt lp-reveal" id="sobre">
+          <div className="lp-container lp-about">
+            <div className="lp-about__media">
+              <Image src="/orquestra-command-room-v5.webp" alt="Sala de comando conceitual da Orquestra.cs" fill sizes="(max-width: 900px) 100vw, 560px" />
+            </div>
+            <div className="lp-about__copy">
+              <p className="lp-eyebrow">Quem somos</p>
+              <h2>A Orquestra.cs resolve problemas através de tecnologia.</h2>
+              <p>Somos uma empresa de consultoria, infraestrutura comercial, corporativa e industrial. Unimos visão de negócio, equipamentos, software e automação para transformar complexidade em uma operação mais clara, segura e eficiente.</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="lp-section lp-reveal" id="orcamento">
+          <div className="lp-container">
+            <div className="lp-cta">
+              <div>
+                <p className="lp-eyebrow">Vamos tirar seu projeto do papel</p>
+                <h2>Uma operação mais clara começa com uma boa conversa.</h2>
+                <p>Conte o que sua empresa precisa. A Orquestra.cs ajuda você a encontrar o sistema, site ou automação certa para avançar.</p>
+              </div>
+              <div className="lp-cta__actions">
+                <a href="https://wa.me/5515998478705?text=Ol%C3%A1%2C%20quero%20conversar%20sobre%20um%20or%C3%A7amento%20com%20a%20Orquestra.cs." target="_blank" rel="noopener noreferrer" className="lp-btn lp-btn--primary"><MessageCircle className="size-4" aria-hidden="true" /> Falar sobre meu projeto</a>
+                <a href="mailto:orquestracs@gmail.com?subject=Suporte Orquestra.cs" className="lp-btn lp-btn--ghost"><Mail className="size-4" aria-hidden="true" /> Enviar e-mail ao suporte</a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <footer className="lp-footer">
+          <div className="lp-container lp-footer__inner">
+            <BrandLogo variant="essential" size={24} showWordmark tone="light" />
+            <span className="lp-footer__secure"><LockKeyhole className="size-3.5" aria-hidden="true" /> Acesso seguro por empresa</span>
+            <Link href="/portal">Área do cliente</Link>
+          </div>
         </footer>
       </div>
     </main>
