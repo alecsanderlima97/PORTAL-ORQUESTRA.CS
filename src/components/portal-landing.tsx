@@ -63,6 +63,17 @@ const serviceCards = [
   },
 ];
 
+// Partículas do hero: posições fixas (sem Math.random) para não divergir entre servidor e cliente.
+const heroParticles = Array.from({ length: 18 }, (_, i) => ({
+  left: (i * 37 + 11) % 100,
+  size: 2 + (i % 3),
+  duration: 9 + ((i * 7) % 8),
+  delay: -((i * 13) % 17),
+  drift: ((i % 5) - 2) * 14,
+}));
+
+const DECODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&/<>*+";
+
 const plans = [
   { name: "Essencial", title: "Uma solução para organizar a rotina.", description: "Ideal para começar com um sistema objetivo e suporte próximo.", featured: false },
   { name: "Profissional", title: "Mais controle para uma operação em crescimento.", description: "Módulos, usuários e acompanhamento para ganhar escala.", featured: true },
@@ -345,6 +356,62 @@ export function PortalLanding() {
   }, [enterPortal, phase]);
 
 
+  // Títulos se "decodificam" (caracteres aleatórios até o texto final) ao entrar na tela, uma vez só.
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) return;
+    const headings = Array.from(document.querySelectorAll<HTMLElement>(".lp [data-decode]"));
+    const frames = new Map<HTMLElement, number>();
+
+    const decode = (element: HTMLElement) => {
+      const finalText = element.dataset.text || element.textContent || "";
+      element.dataset.text = finalText;
+      element.setAttribute("aria-label", finalText);
+      element.style.minHeight = `${element.offsetHeight}px`;
+      const duration = 900;
+      const start = performance.now();
+      const step = (now: number) => {
+        const progress = Math.min((now - start) / duration, 1);
+        const revealed = Math.floor(progress * finalText.length);
+        let output = finalText.slice(0, revealed);
+        for (let i = revealed; i < finalText.length; i++) {
+          const char = finalText[i];
+          output += char === " " || char === "." ? char : DECODE_CHARS[(Math.random() * DECODE_CHARS.length) | 0];
+        }
+        element.textContent = output;
+        if (progress < 1) {
+          frames.set(element, requestAnimationFrame(step));
+        } else {
+          element.textContent = finalText;
+          element.style.minHeight = "";
+          element.removeAttribute("aria-label");
+          frames.delete(element);
+        }
+      };
+      frames.set(element, requestAnimationFrame(step));
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          observer.unobserve(entry.target);
+          decode(entry.target as HTMLElement);
+        });
+      },
+      { threshold: 0.6 },
+    );
+    headings.forEach((heading) => observer.observe(heading));
+    return () => {
+      observer.disconnect();
+      frames.forEach((frame, element) => {
+        cancelAnimationFrame(frame);
+        if (element.dataset.text) element.textContent = element.dataset.text;
+        element.style.minHeight = "";
+        element.removeAttribute("aria-label");
+      });
+    };
+  }, []);
+
   useEffect(() => {
     if (!menuOpen) return;
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -410,8 +477,13 @@ export function PortalLanding() {
       </div>
 
       <div ref={siteRef} className="lp" tabIndex={-1} inert={phase !== "inside"} aria-hidden={phase !== "inside"}>
+        <div className="lp-backdrop" aria-hidden="true">
+          <span className="lp-backdrop__glow" />
+          <span className="lp-backdrop__grid" />
+        </div>
         <header className="lp-header" data-open={menuOpen}>
           <div className="lp-header__bar">
+            <span className="lp-progress" aria-hidden="true" />
             <Link href="/" className="lp-header__brand" aria-label="Orquestra.cs - início">
               <BrandLogo variant="essential" size={32} showWordmark tone="light" />
             </Link>
@@ -451,6 +523,22 @@ export function PortalLanding() {
               sizes="100vw"
               className="lp-hero__image"
             />
+            <span className="lp-hero__scan" />
+            <span className="lp-particles">
+              {heroParticles.map((particle, index) => (
+                <span
+                  key={index}
+                  style={{
+                    left: `${particle.left}%`,
+                    width: particle.size,
+                    height: particle.size,
+                    animationDuration: `${particle.duration}s`,
+                    animationDelay: `${particle.delay}s`,
+                    "--drift": `${particle.drift}px`,
+                  } as CSSProperties}
+                />
+              ))}
+            </span>
           </div>
 
           <div className="lp-container lp-hero__content">
@@ -542,7 +630,7 @@ export function PortalLanding() {
           <div className="lp-container">
             <div className="lp-section__head">
               <p className="lp-eyebrow">Sistemas publicados</p>
-              <h2>Produtos reais da Orquestra.cs.</h2>
+              <h2 data-decode>Produtos reais da Orquestra.cs.</h2>
               <p>Cada sistema nasce para resolver uma rotina específica e pode evoluir com a operação.</p>
             </div>
             {solutionGroups.map((group) => (
@@ -598,7 +686,7 @@ export function PortalLanding() {
           <div className="lp-container">
             <div className="lp-section__head">
               <p className="lp-eyebrow">Como ajudamos</p>
-              <h2>Do problema à solução em uma única direção.</h2>
+              <h2 data-decode>Do problema à solução em uma única direção.</h2>
             </div>
             <div className="lp-grid lp-grid--3">
               {serviceCards.map((service) => (
@@ -621,7 +709,7 @@ export function PortalLanding() {
           <div className="lp-container">
             <div className="lp-section__head">
               <p className="lp-eyebrow">Planos e projetos</p>
-              <h2>Comece pelo que sua operação precisa hoje.</h2>
+              <h2 data-decode>Comece pelo que sua operação precisa hoje.</h2>
             </div>
             <div className="lp-grid lp-grid--3">
               {plans.map((plan) => (
@@ -643,7 +731,7 @@ export function PortalLanding() {
             </div>
             <div className="lp-about__copy">
               <p className="lp-eyebrow">Quem somos</p>
-              <h2>A Orquestra.cs resolve problemas através de tecnologia.</h2>
+              <h2 data-decode>A Orquestra.cs resolve problemas através de tecnologia.</h2>
               <p>Somos uma empresa de consultoria, infraestrutura comercial, corporativa e industrial. Unimos visão de negócio, equipamentos, software e automação para transformar complexidade em uma operação mais clara, segura e eficiente.</p>
             </div>
           </div>
@@ -654,7 +742,7 @@ export function PortalLanding() {
             <div className="lp-cta">
               <div>
                 <p className="lp-eyebrow">Vamos tirar seu projeto do papel</p>
-                <h2>Uma operação mais clara começa com uma boa conversa.</h2>
+                <h2 data-decode>Uma operação mais clara começa com uma boa conversa.</h2>
                 <p>Conte o que sua empresa precisa. A Orquestra.cs ajuda você a encontrar o sistema, site ou automação certa para avançar.</p>
               </div>
               <div className="lp-cta__actions">
