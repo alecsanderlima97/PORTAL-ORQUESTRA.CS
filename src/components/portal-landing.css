@@ -1852,50 +1852,150 @@ a.lp-system:hover,
   100% { transform: translate3d(var(--drift, 0px), -55vh, 0); opacity: 0; }
 }
 
-/* Desliga o feixe antigo (pseudo-elemento) em favor do novo com poeira. */
-.lp-hero__scan::before { content: none; }
 
-.lp-beam {
+/* ==========================================================================
+   Hero: palco alinhado à foto, cabos de energia no chão e o "O" balançando.
+   ========================================================================== */
+
+/* O palco reproduz o object-fit: cover da imagem com container queries,
+   para que o SVG dos cabos e o recorte do anel fiquem exatamente sobre a foto. */
+.lp-hero__scene { container-type: size; }
+
+.lp-stage {
+  --px: 0.62;
+  --py: 0.3;
+  --w: max(100cqw, 177.6833cqh);
+  --h: max(100cqh, 56.2799cqw);
+  position: absolute;
+  z-index: 0;
+  width: var(--w);
+  height: var(--h);
+  left: calc((100cqw - var(--w)) * var(--px));
+  top: calc((100cqh - var(--h)) * var(--py));
+  transform-origin: 50% 40%;
+}
+
+.lp-stage .lp-hero__image { object-fit: cover; object-position: 50% 50%; animation: none; }
+
+@media (max-width: 640px) {
+  .lp-stage { --px: 0.5; }
+}
+
+/* ---------- Cabos ---------- */
+
+.lp-cables {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.lp-cable {
+  fill: none;
+  stroke: #02060c;
+  stroke-width: 9;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+
+.lp-cable__core {
+  fill: none;
+  stroke: #1e3a60;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+
+.lp-cable__core[data-live="true"] { stroke: #4fb2ff; stroke-width: 3; opacity: 0.55; }
+
+.lp-stage { container-type: size; }
+
+/* Pulsos de eletricidade: pontos de luz que percorrem os cabos (translate + opacity). */
+.lp-pulse {
   position: absolute;
   left: 0;
-  right: 0;
   top: 0;
-  height: 30%;
-  overflow: hidden;
-  background: linear-gradient(180deg, transparent 0%, rgba(90, 184, 255, 0.04) 55%, rgba(160, 220, 255, 0.16) 96%, rgba(220, 245, 255, 0.35) 99%, transparent 100%);
-  translate: 0 -100%;
-  animation: lp-beam-move 16s cubic-bezier(0.45, 0, 0.55, 1) 2s infinite;
-  will-change: translate;
+  width: 1.5cqw;
+  height: 1.5cqw;
+  margin: -0.75cqw 0 0 -0.75cqw;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 0%, #c8f0ff 22%, rgba(90, 184, 255, 0.55) 45%, rgba(90, 184, 255, 0) 70%);
+  opacity: 0;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: translate, opacity;
+  pointer-events: none;
 }
 
-.lp-beam__dust {
+.lp-pulse[data-tail="1"] { width: 1.1cqw; height: 1.1cqw; margin: -0.55cqw 0 0 -0.55cqw; filter: none; }
+.lp-pulse[data-tail="2"] { width: 0.8cqw; height: 0.8cqw; margin: -0.4cqw 0 0 -0.4cqw; }
+
+/* Flash quando a energia chega: borda do pedestal e base do anel. */
+.lp-flash {
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 333.34%;
-  /* Poeira: textura com pontos aleatórios (tamanho, brilho e cor variados), repetida sem emenda. */
-  background: url("/orquestra-dust.png") 0 0 / 384px 384px repeat;
-  opacity: 0.8;
-  translate: 0 30%;
-  animation: lp-beam-dust 16s cubic-bezier(0.45, 0, 0.55, 1) 2s infinite;
-  will-change: translate;
+  border-radius: 50%;
+  opacity: 0.05;
+  pointer-events: none;
+  animation: lp-rim-flash 2.625s ease-out infinite;
+  will-change: opacity;
 }
 
-@keyframes lp-beam-move {
-  0% { translate: 0 -100%; opacity: 0; }
-  4% { opacity: 1; }
-  32% { opacity: 1; }
-  38%, 100% { translate: 0 360%; opacity: 0; }
+.lp-flash--rim {
+  left: 38.5%;
+  top: 63.2%;
+  width: 23%;
+  height: 4.6%;
+  background: radial-gradient(ellipse at center, rgba(120, 200, 255, 0.9), rgba(90, 184, 255, 0.25) 45%, transparent 70%);
+  animation-delay: 1.85s;
 }
 
-/* Movimento oposto ao feixe: mantém a poeira parada em relação à tela. */
-@keyframes lp-beam-dust {
-  0% { translate: 0 30%; }
-  38%, 100% { translate: 0 -108%; }
+.lp-flash--base {
+  left: 45.7%;
+  top: 51.3%;
+  width: 8.4%;
+  height: 3.2%;
+  background: radial-gradient(ellipse at center, rgba(220, 245, 255, 0.95), rgba(120, 200, 255, 0.3) 50%, transparent 72%);
+  animation-delay: 2.05s;
 }
+
+/* ---------- Anel "O": balança devagar + brilho percorrendo o aro ---------- */
+
+.lp-ring {
+  position: absolute;
+  left: 40.9091%;
+  top: 22.3167%;
+  width: 17.9426%;
+  height: 31.881%;
+  background: url("/orquestra-ring-o.webp") center / 100% 100% no-repeat;
+  transform-origin: 50% 50%;
+  animation: lp-ring-sway 9s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes lp-ring-sway {
+  from { transform: rotate(-4deg); }
+  to { transform: rotate(4deg); }
+}
+
+/* O feixe de varredura foi substituído pelos cabos. */
+.lp-hero__scan { display: none; }
+
+/* Sem zoom ao rolar no palco: combinado com o anel animado, custava ~10 FPS. */
 
 @media (prefers-reduced-motion: reduce) {
-  .lp-beam,
-  .lp-beam__dust { animation: none; opacity: 0; }
+  .lp-ring,
+  .lp-flash { animation: none; }
+  .lp-pulse { display: none; }
 }
+
+/* Camada de efeitos acima do escurecimento do hero (o ::after da cena tem z-index 0). */
+.lp-stage--fx { z-index: 1; pointer-events: none; }
+
+.lp-cable { stroke: #01040a; stroke-width: 10; opacity: 0.7; }
+.lp-cable__core { stroke: #24476f; stroke-width: 2.6; opacity: 0.75; }
+.lp-cable__core[data-live="true"] { stroke: #5cbcff; stroke-width: 3.2; opacity: 0.7; }
+
+.lp-pulse { width: 1.9cqw; height: 1.9cqw; margin: -0.95cqw 0 0 -0.95cqw; }
+.lp-pulse[data-tail="1"] { width: 1.3cqw; height: 1.3cqw; margin: -0.65cqw 0 0 -0.65cqw; }
+.lp-pulse[data-tail="2"] { width: 0.9cqw; height: 0.9cqw; margin: -0.45cqw 0 0 -0.45cqw; }

@@ -72,6 +72,65 @@ const heroParticles = Array.from({ length: 10 }, (_, i) => ({
   drift: ((i % 5) - 2) * 10,
 }));
 
+// Cabos de energia no chão da sala (coordenadas da imagem 1672x941). Saem das laterais,
+// contornam a borda do pedestal e chegam à frente, embaixo do anel.
+type Point = readonly [number, number];
+type Curve = readonly [number, number, number, number, number, number];
+type FloorCable = { start: Point; curves: readonly Curve[]; pulse: number | null };
+
+const STAGE_W = 1672;
+const STAGE_H = 941;
+const CABLE_CYCLE = 10.5;
+const RIM_FRONT: Curve = [520, 614, 700, 620, 834, 620];
+const RIM_FRONT_RIGHT: Curve = [1148, 614, 968, 620, 834, 620];
+
+const floorCables: readonly FloorCable[] = [
+  { start: [0, 548], curves: [[150, 545, 280, 552, 362, 574], RIM_FRONT], pulse: 0 },
+  { start: [1672, 548], curves: [[1522, 545, 1392, 552, 1310, 574], RIM_FRONT_RIGHT], pulse: 2.6 },
+  { start: [0, 690], curves: [[150, 660, 270, 615, 372, 590], RIM_FRONT], pulse: 5.2 },
+  { start: [1672, 690], curves: [[1522, 660, 1402, 615, 1300, 590], RIM_FRONT_RIGHT], pulse: 7.8 },
+  { start: [60, 941], curves: [[170, 820, 290, 680, 388, 600]], pulse: null },
+  { start: [1612, 941], curves: [[1502, 820, 1382, 680, 1284, 600]], pulse: null },
+];
+
+function cablePath(cable: FloorCable) {
+  return `M${cable.start[0]} ${cable.start[1]} ${cable.curves.map((c) => `C${c.join(" ")}`).join(" ")}`;
+}
+
+function cablePoints(cable: FloorCable, perCurve = 8): Point[] {
+  const points: Point[] = [cable.start];
+  let [x0, y0] = cable.start;
+  for (const [x1, y1, x2, y2, x3, y3] of cable.curves) {
+    for (let i = 1; i <= perCurve; i++) {
+      const t = i / perCurve;
+      const u = 1 - t;
+      points.push([
+        u * u * u * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x3,
+        u * u * u * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y3,
+      ]);
+    }
+    [x0, y0] = [x3, y3];
+  }
+  return points;
+}
+
+// Keyframes dos pulsos: só translate (em unidades do palco, cqw/cqh) e opacity, que rodam no compositor.
+const cablePulseKeyframes = floorCables
+  .map((cable, index) => {
+    if (cable.pulse === null) return "";
+    const points = cablePoints(cable);
+    const travel = 18; // % do ciclo gasto percorrendo o cabo
+    const frames = points.map(([x, y], i) => {
+      const at = ((i / (points.length - 1)) * travel).toFixed(2);
+      const opacity = i === 0 ? 0 : 1;
+      return `${at}%{translate:${((x / STAGE_W) * 100).toFixed(3)}cqw ${((y / STAGE_H) * 100).toFixed(3)}cqh;opacity:${opacity}}`;
+    });
+    const [ex, ey] = points[points.length - 1];
+    const end = `${((ex / STAGE_W) * 100).toFixed(3)}cqw ${((ey / STAGE_H) * 100).toFixed(3)}cqh`;
+    return `@keyframes lp-pulse-${index}{${frames.join("")}${(travel + 1.5).toFixed(2)}%,100%{translate:${end};opacity:0}}`;
+  })
+  .join("");
+
 const DECODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&/<>*+";
 
 const plans = [
@@ -532,20 +591,45 @@ export function PortalLanding() {
 
         <section className="lp-hero" id="empresa">
           <div ref={commandSceneRef} className="lp-hero__scene" aria-hidden="true">
-            <Image
-              src={`/orquestra-command-room-reference-v1.webp?v=${PORTAL_ASSET_VERSION}`}
-              alt=""
-              fill
-              priority
-              unoptimized
-              sizes="100vw"
-              className="lp-hero__image"
-            />
-            <span className="lp-hero__scan">
-              <span className="lp-beam">
-                <span className="lp-beam__dust" />
-              </span>
-            </span>
+            {/* Palco com a mesma proporção da imagem: cabos e anel ficam alinhados à foto em qualquer tela. */}
+            <div className="lp-stage">
+              <Image
+                src={`/orquestra-command-room-reference-v1.webp?v=${PORTAL_ASSET_VERSION}`}
+                alt=""
+                fill
+                priority
+                unoptimized
+                sizes="100vw"
+                className="lp-hero__image"
+              />
+              <span className="lp-ring" />
+            </div>
+            {/* Segunda camada com a mesma geometria, acima do escurecimento: cabos e energia ficam visíveis. */}
+            <div className="lp-stage lp-stage--fx">
+              <svg className="lp-cables" viewBox={`0 0 ${STAGE_W} ${STAGE_H}`} preserveAspectRatio="none" focusable="false">
+                {floorCables.map((cable, index) => (
+                  <g key={index}>
+                    <path d={cablePath(cable)} className="lp-cable" />
+                    <path d={cablePath(cable)} className="lp-cable__core" data-live={cable.pulse !== null} />
+                  </g>
+                ))}
+              </svg>
+              <style>{cablePulseKeyframes}</style>
+              {floorCables.map((cable, index) =>
+                cable.pulse === null
+                  ? null
+                  : [0, 0.06, 0.12].map((lag, tail) => (
+                      <span
+                        key={`${index}-${tail}`}
+                        className="lp-pulse"
+                        data-tail={tail}
+                        style={{ animationName: `lp-pulse-${index}`, animationDelay: `${(cable.pulse ?? 0) + lag}s`, animationDuration: `${CABLE_CYCLE}s` }}
+                      />
+                    )),
+              )}
+              <span className="lp-flash lp-flash--rim" />
+              <span className="lp-flash lp-flash--base" />
+            </div>
             <span className="lp-particles">
               {heroParticles.map((particle, index) => (
                 <span
