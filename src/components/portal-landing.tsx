@@ -80,15 +80,17 @@ type FloorCable = { start: Point; curves: readonly Curve[]; pulse: number | null
 
 const STAGE_W = 1672;
 const STAGE_H = 941;
-const CABLE_CYCLE = 10.5;
+// Um pulso por minuto, alternando os lados: energia discreta, não um efeito constante.
+const CABLE_CYCLE = 120;
+const CABLE_TRAVEL_SECONDS = 2.6;
 const RIM_FRONT: Curve = [520, 614, 700, 620, 834, 620];
 const RIM_FRONT_RIGHT: Curve = [1148, 614, 968, 620, 834, 620];
 
 const floorCables: readonly FloorCable[] = [
-  { start: [0, 548], curves: [[150, 545, 280, 552, 362, 574], RIM_FRONT], pulse: 0 },
-  { start: [1672, 548], curves: [[1522, 545, 1392, 552, 1310, 574], RIM_FRONT_RIGHT], pulse: 2.6 },
-  { start: [0, 690], curves: [[150, 660, 270, 615, 372, 590], RIM_FRONT], pulse: 5.2 },
-  { start: [1672, 690], curves: [[1522, 660, 1402, 615, 1300, 590], RIM_FRONT_RIGHT], pulse: 7.8 },
+  { start: [0, 548], curves: [[150, 545, 280, 552, 362, 574], RIM_FRONT], pulse: 4 },
+  { start: [1672, 548], curves: [[1522, 545, 1392, 552, 1310, 574], RIM_FRONT_RIGHT], pulse: 64 },
+  { start: [0, 690], curves: [[150, 660, 270, 615, 372, 590], RIM_FRONT], pulse: null },
+  { start: [1672, 690], curves: [[1522, 660, 1402, 615, 1300, 590], RIM_FRONT_RIGHT], pulse: null },
   { start: [60, 941], curves: [[170, 820, 290, 680, 388, 600]], pulse: null },
   { start: [1612, 941], curves: [[1502, 820, 1382, 680, 1284, 600]], pulse: null },
 ];
@@ -119,7 +121,7 @@ const cablePulseKeyframes = floorCables
   .map((cable, index) => {
     if (cable.pulse === null) return "";
     const points = cablePoints(cable);
-    const travel = 18; // % do ciclo gasto percorrendo o cabo
+    const travel = (CABLE_TRAVEL_SECONDS / CABLE_CYCLE) * 100; // % do ciclo gasto percorrendo o cabo
     const frames = points.map(([x, y], i) => {
       const at = ((i / (points.length - 1)) * travel).toFixed(2);
       const opacity = i === 0 ? 0 : 1;
@@ -127,7 +129,7 @@ const cablePulseKeyframes = floorCables
     });
     const [ex, ey] = points[points.length - 1];
     const end = `${((ex / STAGE_W) * 100).toFixed(3)}cqw ${((ey / STAGE_H) * 100).toFixed(3)}cqh`;
-    return `@keyframes lp-pulse-${index}{${frames.join("")}${(travel + 1.5).toFixed(2)}%,100%{translate:${end};opacity:0}}`;
+    return `@keyframes lp-pulse-${index}{${frames.join("")}${(travel + 0.4).toFixed(2)}%,100%{translate:${end};opacity:0}}`;
   })
   .join("");
 
@@ -618,7 +620,7 @@ export function PortalLanding() {
               {floorCables.map((cable, index) =>
                 cable.pulse === null
                   ? null
-                  : [0, 0.06, 0.12].map((lag, tail) => (
+                  : [0, 0.04, 0.08].map((lag, tail) => (
                       <span
                         key={`${index}-${tail}`}
                         className="lp-pulse"

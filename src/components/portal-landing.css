@@ -1999,3 +1999,74 @@ a.lp-system:hover,
 .lp-pulse { width: 1.9cqw; height: 1.9cqw; margin: -0.95cqw 0 0 -0.95cqw; }
 .lp-pulse[data-tail="1"] { width: 1.3cqw; height: 1.3cqw; margin: -0.65cqw 0 0 -0.65cqw; }
 .lp-pulse[data-tail="2"] { width: 0.9cqw; height: 0.9cqw; margin: -0.45cqw 0 0 -0.45cqw; }
+
+/* Energia mais sóbria: cabos apagados, pulso pequeno com rastro curto, flash suave. */
+.lp-cable { stroke: #01040a; stroke-width: 9; opacity: 0.6; }
+.lp-cable__core { stroke: #1a3150; stroke-width: 2; opacity: 0.55; }
+.lp-cable__core[data-live="true"] { stroke: #3b86cc; stroke-width: 2; opacity: 0.32; }
+
+.lp-pulse {
+  width: 0.9cqw;
+  height: 0.9cqw;
+  margin: -0.45cqw 0 0 -0.45cqw;
+  background: radial-gradient(circle, #ffffff 0%, #d2f2ff 25%, rgba(110, 195, 255, 0.4) 50%, rgba(90, 184, 255, 0) 72%);
+}
+.lp-pulse[data-tail="1"] { width: 0.65cqw; height: 0.65cqw; margin: -0.325cqw 0 0 -0.325cqw; opacity: 0; }
+.lp-pulse[data-tail="2"] { width: 0.45cqw; height: 0.45cqw; margin: -0.225cqw 0 0 -0.225cqw; opacity: 0; }
+
+.lp-flash { animation: lp-energy-arrive 60s ease-out infinite; }
+.lp-flash--rim { animation-delay: 6.4s; }
+.lp-flash--base { animation-delay: 6.6s; }
+
+@keyframes lp-energy-arrive {
+  0%, 100% { opacity: 0.04; }
+  0.6% { opacity: 0.55; }
+  3% { opacity: 0.06; }
+}
+
+/* ==========================================================================
+   Ilustrações dos sistemas em duotone: monocromáticas, tingidas na cor do
+   sistema, com mais contraste. Visual mais sóbrio; a cor original volta no hover.
+   ========================================================================== */
+
+.lp-system__media img {
+  filter: grayscale(1) contrast(1.18) brightness(0.8);
+  transition: filter 500ms ease;
+}
+
+.lp-system__media::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 3px),
+    color-mix(in srgb, var(--accent) 80%, #0b2340);
+  mix-blend-mode: color;
+  opacity: 0.85;
+  pointer-events: none;
+  transition: opacity 500ms ease;
+}
+
+.lp-system__media::after { z-index: 1; }
+.lp-status { z-index: 2; }
+
+a.lp-system:hover .lp-system__media img { filter: none; }
+a.lp-system:hover .lp-system__media::before { opacity: 0; }
+
+/* Carrossel do hero: mesmo tratamento; o card ativo ganha um pouco de cor. */
+.lp-card3d__media {
+  filter: grayscale(1) contrast(1.15) brightness(0.78);
+  transition: opacity 300ms ease, transform 650ms var(--lp-ease), filter 400ms ease;
+}
+
+.lp-card3d__media::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--accent) 80%, #0b2340);
+  mix-blend-mode: color;
+  opacity: 0.8;
+}
+
+.lp-card3d[data-active="true"] .lp-card3d__media { filter: grayscale(0.55) contrast(1.1) brightness(0.85); }
