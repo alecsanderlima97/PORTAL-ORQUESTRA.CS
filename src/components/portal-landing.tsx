@@ -197,6 +197,24 @@ export function PortalLanding() {
     card.style.setProperty("--glare-y", `${((y + 0.5) * 100).toFixed(1)}%`);
   }, []);
 
+  // Superfície 3D dos cards das seções: inclina e move o reflexo seguindo o mouse.
+  const handleSurfaceTilt = useCallback((event: ReactPointerEvent<HTMLElement>) => {
+    if (event.pointerType !== "mouse") return;
+    const card = event.currentTarget;
+    const rect = card.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width;
+    const y = (event.clientY - rect.top) / rect.height;
+    card.style.setProperty("--rx", `${((0.5 - y) * 9).toFixed(2)}deg`);
+    card.style.setProperty("--ry", `${((x - 0.5) * 11).toFixed(2)}deg`);
+    card.style.setProperty("--mx", `${(x * 100).toFixed(1)}%`);
+    card.style.setProperty("--my", `${(y * 100).toFixed(1)}%`);
+  }, []);
+
+  const resetSurfaceTilt = useCallback((event: ReactPointerEvent<HTMLElement>) => {
+    const card = event.currentTarget;
+    ["--rx", "--ry", "--mx", "--my"].forEach((name) => card.style.removeProperty(name));
+  }, []);
+
   const resetCardTilt = useCallback((event: ReactPointerEvent<HTMLAnchorElement>) => {
     const card = event.currentTarget;
     card.style.removeProperty("--tilt-x");
@@ -673,8 +691,8 @@ export function PortalLanding() {
                       </>
                     );
                     return project.url
-                      ? <a key={project.id} href={project.url} target="_blank" rel="noopener noreferrer" className={`lp-system lp-accent--${project.accent}`}>{content}</a>
-                      : <div key={project.id} className={`lp-system lp-system--disabled lp-accent--${project.accent}`}>{content}</div>;
+                      ? <a key={project.id} href={project.url} target="_blank" rel="noopener noreferrer" className={`lp-system lp-accent--${project.accent}`} onPointerMove={handleSurfaceTilt} onPointerLeave={resetSurfaceTilt}>{content}</a>
+                      : <div key={project.id} className={`lp-system lp-system--disabled lp-accent--${project.accent}`} onPointerMove={handleSurfaceTilt} onPointerLeave={resetSurfaceTilt}>{content}</div>;
                   })}
                 </div>
               </div>
@@ -690,7 +708,7 @@ export function PortalLanding() {
             </div>
             <div className="lp-grid lp-grid--3">
               {serviceCards.map((service) => (
-                <article key={service.number} className="lp-service">
+                <article key={service.number} className="lp-service" onPointerMove={handleSurfaceTilt} onPointerLeave={resetSurfaceTilt}>
                   <span className="lp-service__media">
                     <Image src={service.image} alt={service.imageAlt} fill sizes="(max-width: 900px) 100vw, 380px" />
                   </span>
@@ -713,7 +731,7 @@ export function PortalLanding() {
             </div>
             <div className="lp-grid lp-grid--3">
               {plans.map((plan) => (
-                <article key={plan.name} className="lp-plan" data-featured={plan.featured || undefined}>
+                <article key={plan.name} className="lp-plan" data-featured={plan.featured || undefined} onPointerMove={handleSurfaceTilt} onPointerLeave={resetSurfaceTilt}>
                   <span className="lp-plan__name">{plan.name}</span>
                   <h3>{plan.title}</h3>
                   <p>{plan.description}</p>
