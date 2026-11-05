@@ -2152,3 +2152,34 @@ a.lp-system:hover .lp-system__media::before { opacity: 0; }
   .lp-cta { padding: 1.4rem 1.1rem; gap: 1.25rem; }
   .lp-footer { font-size: 0.82rem; padding-block: 1.5rem; }
 }
+
+/* ==========================================================================
+   Celular: primeira tela com respiro. A imagem com o "O" aparece limpa em cima;
+   título, texto e botões ficam abaixo dela. Carrossel só com o nome do sistema
+   (navegação por deslize) e fora da primeira dobra.
+   ========================================================================== */
+
+@media (max-width: 640px) {
+  .lp-hero__scene { bottom: auto; height: min(100%, 88svh); }
+
+  .lp-hero__scene::after {
+    background: linear-gradient(180deg,
+      rgba(5, 12, 22, 0.35) 0%,
+      rgba(5, 12, 22, 0.05) 18%,
+      rgba(5, 12, 22, 0.1) 40%,
+      rgba(5, 12, 22, 0.78) 58%,
+      var(--lp-bg) 82%);
+  }
+
+  .lp-hero__content { padding-top: 42svh; padding-bottom: 2.25rem; align-items: flex-start; }
+  .lp-hero__copy .lp-eyebrow { display: none; }
+  .lp-hero__title { font-size: clamp(1.85rem, 8.6vw, 2.2rem); margin-top: 0 !important; }
+  .lp-hero__lead { font-size: 0.9rem; color: #c3d2e0; max-width: 32ch; }
+  .lp-hero__actions { margin-top: 1.25rem; }
+  .lp-btn { min-height: 40px; font-size: 0.82rem; }
+
+  .lp-showcase { padding-top: 0.5rem; padding-bottom: 1.75rem; --card-w: min(46vw, 175px); }
+  .lp-showcase__head .lp-round-btn,
+  .lp-showcase__label small { display: none; }
+  .lp-showcase__label span { font-size: 0.7rem; color: #b3c4d6; }
+}
