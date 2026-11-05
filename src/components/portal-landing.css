@@ -1612,3 +1612,290 @@ a.lp-system:hover,
 
 /* `.lp a { color: inherit }` vencia a cor do botão primário: texto escuro garante contraste no azul. */
 .lp .lp-btn--primary { color: #03172c; }
+
+/* ==========================================================================
+   Vidro temperado / acrílico: superfície translúcida com desfoque do fundo,
+   reflexos diagonais, aresta clara e um neon na cor do card subindo de baixo.
+   (Substitui a "chapa" escura das versões anteriores.)
+   ========================================================================== */
+
+.lp-system,
+.lp-service,
+.lp-plan {
+  --neon: color-mix(in srgb, var(--accent, #5ab8ff) 85%, white 15%);
+  border-width: 1.5px;
+  background:
+    /* neon subindo de baixo em degradê */
+    linear-gradient(0deg,
+      color-mix(in srgb, var(--neon) 34%, transparent) 0%,
+      color-mix(in srgb, var(--neon) 12%, transparent) 18%,
+      transparent 42%) padding-box,
+    /* reflexo que acompanha o mouse */
+    radial-gradient(circle at var(--mx, 20%) var(--my, 0%), rgba(255, 255, 255, 0.12), transparent 42%) padding-box,
+    /* faixas de reflexo do vidro */
+    linear-gradient(118deg,
+      rgba(255, 255, 255, 0.13) 0%,
+      rgba(255, 255, 255, 0.04) 24%,
+      transparent 24.5%,
+      transparent 58%,
+      rgba(255, 255, 255, 0.05) 58.5%,
+      rgba(255, 255, 255, 0.015) 70%,
+      transparent 70.5%) padding-box,
+    /* massa do vidro (levemente azulada) */
+    linear-gradient(180deg, rgba(150, 200, 255, 0.07), rgba(20, 40, 70, 0.32)) padding-box,
+    /* aresta: clara em cima, acende no neon embaixo */
+    linear-gradient(180deg,
+      rgba(255, 255, 255, 0.55) 0%,
+      rgba(200, 230, 255, 0.16) 22%,
+      rgba(200, 230, 255, 0.08) 60%,
+      var(--neon) 100%) border-box;
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 1px 0 0 rgba(255, 255, 255, 0.08),
+    inset -1px 0 0 rgba(255, 255, 255, 0.05),
+    inset 0 -22px 34px -20px color-mix(in srgb, var(--neon) 75%, transparent),
+    0 1px 0 rgba(200, 230, 255, 0.12),
+    0 2px 0 rgba(200, 230, 255, 0.06),
+    0 22px 42px -14px color-mix(in srgb, var(--neon) 50%, transparent),
+    0 34px 60px -34px rgba(0, 0, 0, 0.95);
+}
+
+.lp-system:hover,
+a.lp-system:hover,
+.lp-service:hover,
+.lp-plan:hover {
+  --lift: -8px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 1px 0 0 rgba(255, 255, 255, 0.12),
+    inset -1px 0 0 rgba(255, 255, 255, 0.08),
+    inset 0 -30px 44px -20px color-mix(in srgb, var(--neon) 95%, transparent),
+    0 1px 0 rgba(200, 230, 255, 0.16),
+    0 2px 0 rgba(200, 230, 255, 0.08),
+    0 28px 56px -12px color-mix(in srgb, var(--neon) 75%, transparent),
+    0 40px 70px -34px rgba(0, 0, 0, 0.95);
+}
+
+.lp-plan[data-featured] {
+  --neon: #7fd0ff;
+  background:
+    linear-gradient(0deg, rgba(127, 208, 255, 0.42) 0%, rgba(127, 208, 255, 0.14) 22%, transparent 48%) padding-box,
+    radial-gradient(circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, 0.14), transparent 45%) padding-box,
+    linear-gradient(118deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 24%, transparent 24.5%, transparent 58%, rgba(255, 255, 255, 0.06) 58.5%, transparent 70.5%) padding-box,
+    linear-gradient(180deg, rgba(150, 200, 255, 0.1), rgba(20, 50, 90, 0.38)) padding-box,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(200, 230, 255, 0.2) 22%, rgba(200, 230, 255, 0.1) 60%, #7fd0ff 100%) border-box;
+}
+
+/* Imagens dentro do vidro: aresta interna fina, sem sombra pesada. */
+.lp-system__media,
+.lp-service__media { box-shadow: 0 1px 0 rgba(255, 255, 255, 0.14); }
+.lp-system__media::after { background: linear-gradient(180deg, transparent 60%, rgba(10, 22, 38, 0.55)); }
+
+/* Tags e ícones também de vidro. */
+.lp-system__tags span {
+  border-color: rgba(220, 240, 255, 0.2);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.lp-system__icon {
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, rgba(255, 255, 255, 0.2));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 0 14px -4px var(--accent);
+}
+
+/* Carrossel do hero: mesmo vidro, com neon embaixo (sem desfoque por estar em 3D). */
+.lp-card3d__inner {
+  --neon: color-mix(in srgb, var(--accent) 85%, white 15%);
+  border-width: 1.5px;
+  background:
+    linear-gradient(0deg, color-mix(in srgb, var(--neon) 38%, transparent) 0%, color-mix(in srgb, var(--neon) 10%, transparent) 22%, transparent 45%) padding-box,
+    linear-gradient(118deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.04) 24%, transparent 24.5%) padding-box,
+    linear-gradient(180deg, rgba(40, 70, 110, 0.35), rgba(8, 18, 32, 0.7)) padding-box,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(200, 230, 255, 0.14) 30%, var(--neon) 100%) border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -20px 30px -18px color-mix(in srgb, var(--neon) 80%, transparent),
+    0 20px 40px -14px color-mix(in srgb, var(--neon) 45%, transparent),
+    0 30px 44px -26px rgba(0, 0, 0, 0.95);
+}
+
+.lp-card3d__media { opacity: 0.55; }
+.lp-card3d[data-active="true"] .lp-card3d__media { opacity: 0.8; }
+.lp-card3d__media::after {
+  background: linear-gradient(180deg, rgba(6, 14, 26, 0.15) 0%, rgba(6, 14, 26, 0.1) 35%, rgba(6, 14, 26, 0.78) 72%, rgba(6, 14, 26, 0.88) 100%);
+}
+
+/* Sem suporte a backdrop-filter: vidro mais opaco para manter a leitura. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .lp-system,
+  .lp-service,
+  .lp-plan { background-color: rgba(12, 24, 41, 0.92); }
+}
+
+/* Ajuste fino do neon: mais concentrado na base e com cor pura, para não lavar o texto. */
+.lp-system,
+.lp-service,
+.lp-plan {
+  --neon: var(--accent, #5ab8ff);
+  background:
+    linear-gradient(0deg,
+      color-mix(in srgb, var(--neon) 30%, transparent) 0%,
+      color-mix(in srgb, var(--neon) 10%, transparent) 9%,
+      color-mix(in srgb, var(--neon) 3%, transparent) 20%,
+      transparent 30%) padding-box,
+    radial-gradient(circle at var(--mx, 20%) var(--my, 0%), rgba(255, 255, 255, 0.1), transparent 42%) padding-box,
+    linear-gradient(118deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.03) 24%,
+      transparent 24.5%,
+      transparent 58%,
+      rgba(255, 255, 255, 0.04) 58.5%,
+      rgba(255, 255, 255, 0.01) 70%,
+      transparent 70.5%) padding-box,
+    linear-gradient(180deg, rgba(120, 175, 240, 0.06), rgba(10, 24, 44, 0.55)) padding-box,
+    linear-gradient(180deg,
+      rgba(255, 255, 255, 0.5) 0%,
+      rgba(200, 230, 255, 0.14) 22%,
+      rgba(200, 230, 255, 0.07) 62%,
+      var(--neon) 100%) border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    inset 1px 0 0 rgba(255, 255, 255, 0.07),
+    inset -1px 0 0 rgba(255, 255, 255, 0.04),
+    inset 0 -2px 0 color-mix(in srgb, var(--neon) 80%, transparent),
+    inset 0 -14px 22px -14px var(--neon),
+    0 1px 0 rgba(200, 230, 255, 0.1),
+    0 16px 34px -14px color-mix(in srgb, var(--neon) 55%, transparent),
+    0 34px 60px -34px rgba(0, 0, 0, 0.95);
+}
+
+.lp-system:hover,
+a.lp-system:hover,
+.lp-service:hover,
+.lp-plan:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 1px 0 0 rgba(255, 255, 255, 0.1),
+    inset -1px 0 0 rgba(255, 255, 255, 0.06),
+    inset 0 -2px 0 var(--neon),
+    inset 0 -22px 30px -16px var(--neon),
+    0 1px 0 rgba(200, 230, 255, 0.14),
+    0 24px 50px -12px color-mix(in srgb, var(--neon) 75%, transparent),
+    0 40px 70px -34px rgba(0, 0, 0, 0.95);
+}
+
+.lp-plan[data-featured] {
+  background:
+    linear-gradient(0deg, rgba(127, 208, 255, 0.34) 0%, rgba(127, 208, 255, 0.11) 10%, rgba(127, 208, 255, 0.03) 22%, transparent 32%) padding-box,
+    radial-gradient(circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, 0.12), transparent 45%) padding-box,
+    linear-gradient(118deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 24%, transparent 24.5%, transparent 58%, rgba(255, 255, 255, 0.05) 58.5%, transparent 70.5%) padding-box,
+    linear-gradient(180deg, rgba(120, 180, 250, 0.1), rgba(12, 32, 60, 0.6)) padding-box,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(200, 230, 255, 0.18) 22%, rgba(200, 230, 255, 0.09) 60%, #7fd0ff 100%) border-box;
+}
+
+.lp-system__cta { text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6); }
+.lp-plan, .lp-system__body, .lp-service__body { padding-bottom: 1.6rem; }
+
+.lp-card3d__inner {
+  --neon: var(--accent);
+  background:
+    linear-gradient(0deg, color-mix(in srgb, var(--neon) 32%, transparent) 0%, color-mix(in srgb, var(--neon) 8%, transparent) 12%, transparent 28%) padding-box,
+    linear-gradient(118deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 24%, transparent 24.5%) padding-box,
+    linear-gradient(180deg, rgba(40, 70, 110, 0.35), rgba(8, 18, 32, 0.72)) padding-box,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(200, 230, 255, 0.12) 30%, var(--neon) 100%) border-box;
+}
+
+/* Desfoque real (backdrop-filter) custava ~15 FPS na rolagem: o vidro fica só com
+   transparência, reflexos e aresta, que no fundo escuro tem praticamente o mesmo efeito. */
+.lp-system,
+.lp-service,
+.lp-plan {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Desempenho: HUD sem filtro de sombra e sombras externas mais compactas. */
+.lp-grid > *::before { filter: none !important; --hud: rgba(170, 225, 255, 1); }
+
+.lp-system,
+.lp-service,
+.lp-plan {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    inset 1px 0 0 rgba(255, 255, 255, 0.07),
+    inset 0 -2px 0 color-mix(in srgb, var(--neon) 80%, transparent),
+    inset 0 -14px 22px -14px var(--neon),
+    0 1px 0 rgba(200, 230, 255, 0.1),
+    0 14px 28px -14px color-mix(in srgb, var(--neon) 55%, transparent),
+    0 26px 40px -26px rgba(0, 0, 0, 0.95);
+}
+
+/* ==========================================================================
+   Hero: poeira fina e feixe mais espaçado.
+   - Partículas viram poeira: menores, poucas, lentas e bem discretas.
+   - O feixe passa a cada ~16s e revela uma poeira cintilante (como o brilho
+     da logo no vídeo). A poeira fica parada na tela enquanto o feixe desce:
+     a camada interna anda em sentido oposto ao feixe (só transform).
+   ========================================================================== */
+
+.lp-particles span {
+  background: #e6f6ff;
+  box-shadow: 0 0 3px rgba(190, 230, 255, 0.6);
+}
+
+@keyframes lp-particle {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  15% { opacity: 0.35; }
+  75% { opacity: 0.18; }
+  100% { transform: translate3d(var(--drift, 0px), -55vh, 0); opacity: 0; }
+}
+
+/* Desliga o feixe antigo (pseudo-elemento) em favor do novo com poeira. */
+.lp-hero__scan::before { content: none; }
+
+.lp-beam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 30%;
+  overflow: hidden;
+  background: linear-gradient(180deg, transparent 0%, rgba(90, 184, 255, 0.04) 55%, rgba(160, 220, 255, 0.16) 96%, rgba(220, 245, 255, 0.35) 99%, transparent 100%);
+  translate: 0 -100%;
+  animation: lp-beam-move 16s cubic-bezier(0.45, 0, 0.55, 1) 2s infinite;
+  will-change: translate;
+}
+
+.lp-beam__dust {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 333.34%;
+  /* Poeira: textura com pontos aleatórios (tamanho, brilho e cor variados), repetida sem emenda. */
+  background: url("/orquestra-dust.png") 0 0 / 384px 384px repeat;
+  opacity: 0.8;
+  translate: 0 30%;
+  animation: lp-beam-dust 16s cubic-bezier(0.45, 0, 0.55, 1) 2s infinite;
+  will-change: translate;
+}
+
+@keyframes lp-beam-move {
+  0% { translate: 0 -100%; opacity: 0; }
+  4% { opacity: 1; }
+  32% { opacity: 1; }
+  38%, 100% { translate: 0 360%; opacity: 0; }
+}
+
+/* Movimento oposto ao feixe: mantém a poeira parada em relação à tela. */
+@keyframes lp-beam-dust {
+  0% { translate: 0 30%; }
+  38%, 100% { translate: 0 -108%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-beam,
+  .lp-beam__dust { animation: none; opacity: 0; }
+}

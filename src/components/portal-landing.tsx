@@ -64,12 +64,12 @@ const serviceCards = [
 ];
 
 // Partículas do hero: posições fixas (sem Math.random) para não divergir entre servidor e cliente.
-const heroParticles = Array.from({ length: 18 }, (_, i) => ({
+const heroParticles = Array.from({ length: 10 }, (_, i) => ({
   left: (i * 37 + 11) % 100,
-  size: 2 + (i % 3),
-  duration: 9 + ((i * 7) % 8),
-  delay: -((i * 13) % 17),
-  drift: ((i % 5) - 2) * 14,
+  size: i % 3 === 0 ? 2 : 1,
+  duration: 16 + ((i * 7) % 10),
+  delay: -((i * 13) % 23),
+  drift: ((i % 5) - 2) * 10,
 }));
 
 const DECODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&/<>*+";
@@ -541,7 +541,11 @@ export function PortalLanding() {
               sizes="100vw"
               className="lp-hero__image"
             />
-            <span className="lp-hero__scan" />
+            <span className="lp-hero__scan">
+              <span className="lp-beam">
+                <span className="lp-beam__dust" />
+              </span>
+            </span>
             <span className="lp-particles">
               {heroParticles.map((particle, index) => (
                 <span
