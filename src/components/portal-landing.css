@@ -939,3 +939,1134 @@ a.lp-system:hover .lp-system__media img { transform: scale(1.05); }
   .lp-hero__title { margin-top: 0 !important; }
   .lp-hero__actions .lp-btn { min-height: 42px; }
 }
+
+/* ==========================================================================
+   Projeção ao rolar (scroll-driven animations).
+   Cada bloco se "monta" conforme entra na tela, amarrado à posição da rolagem.
+   Roda no compositor (só translate/rotate/scale/opacity), sem JavaScript por frame.
+   Navegadores sem suporte usam a revelação por IntersectionObserver já existente.
+   ========================================================================== */
+
+.lp-system,
+.lp-service,
+.lp-plan,
+.lp-cta { position: relative; }
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    /* Desliga a revelação por JS: a rolagem passa a comandar. */
+    .lp-reveal[data-reveal] { opacity: 1; transform: none; transition: none; }
+
+    /* Hero: ao rolar, o texto sobe mais rápido que o fundo e a sala se aproxima. */
+    .lp-hero__content,
+    .lp-showcase {
+      animation: lp-hero-out linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 85vh;
+    }
+    .lp-showcase { animation-name: lp-hero-out-soft; }
+    .lp-hero__image {
+      animation: lp-hero-zoom linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 100vh;
+    }
+
+    /* Títulos de seção. */
+    .lp-section__head,
+    .lp-group__head,
+    .lp-about__copy {
+      animation: lp-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 28%;
+    }
+
+    /* Cards: saem de um plano inclinado e "projetam" para frente, em sequência. */
+    .lp-grid {
+      view-timeline: --lp-grid block;
+      perspective: 1400px;
+      perspective-origin: 50% 0%;
+    }
+    .lp-grid > * {
+      transform-origin: 50% 100%;
+      animation: lp-project linear both;
+      animation-timeline: --lp-grid;
+      animation-range: entry 0% cover 32%;
+    }
+    .lp-grid > :nth-child(2) { animation-range: entry 6% cover 38%; }
+    .lp-grid > :nth-child(3) { animation-range: entry 12% cover 44%; }
+    .lp-grid > :nth-child(4) { animation-range: entry 18% cover 50%; }
+
+    /* Feixe de luz que varre o card enquanto ele se forma. */
+    .lp-grid > *::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      border-radius: inherit;
+      background: linear-gradient(180deg, rgba(120, 200, 255, 0.28) 0%, rgba(120, 200, 255, 0.06) 22%, transparent 45%);
+      pointer-events: none;
+      animation: lp-beam linear both;
+      animation-timeline: --lp-grid;
+      animation-range: inherit;
+    }
+
+    .lp-about__media {
+      animation: lp-frame linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 40%;
+    }
+
+    .lp-cta {
+      animation: lp-project linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 35%;
+    }
+  }
+}
+
+@keyframes lp-hero-out {
+  to { opacity: 0; translate: 0 -90px; }
+}
+
+@keyframes lp-hero-out-soft {
+  to { opacity: 0.2; translate: 0 -40px; }
+}
+
+@keyframes lp-hero-zoom {
+  to { scale: 1.12; }
+}
+
+@keyframes lp-rise {
+  from { opacity: 0; translate: 0 48px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+@keyframes lp-project {
+  from { opacity: 0; translate: 0 90px; rotate: x 28deg; scale: 0.9; }
+  60% { opacity: 1; }
+  to { opacity: 1; translate: 0 0; rotate: x 0deg; scale: 1; }
+}
+
+@keyframes lp-beam {
+  0%, 35% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes lp-frame {
+  from { opacity: 0; scale: 0.88; rotate: y -14deg; }
+  to { opacity: 1; scale: 1; rotate: y 0deg; }
+}
+
+.lp-about { perspective: 1400px; }
+
+/* ==========================================================================
+   Camada "tecnológica": grade em perspectiva, progresso, varredura, partículas,
+   HUD nos cards e cursor nos rótulos. Tudo em transform/opacity.
+   ========================================================================== */
+
+.lp { isolation: isolate; }
+
+/* Seções alternadas deixam a grade aparecer por baixo. */
+.lp-section--alt {
+  background:
+    radial-gradient(ellipse 60% 50% at 85% 0%, rgba(47, 141, 228, 0.1), transparent 70%),
+    rgba(8, 19, 34, 0.72);
+}
+
+/* ---------- Fundo fixo: brilho + grade correndo no chão ---------- */
+
+.lp-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.lp-backdrop__glow {
+  position: absolute;
+  inset: auto -20% -30% -20%;
+  height: 70%;
+  background: radial-gradient(ellipse 50% 60% at 50% 100%, rgba(47, 141, 228, 0.22), transparent 70%);
+}
+
+.lp-backdrop__grid {
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  bottom: -12%;
+  height: 66%;
+  background-image:
+    linear-gradient(rgba(90, 184, 255, 0.22) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(90, 184, 255, 0.16) 1px, transparent 1px);
+  background-size: 64px 64px;
+  transform-origin: 50% 100%;
+  /* O próprio plano anda (só transform): o navegador move a camada pronta, sem redesenhar. */
+  transform: perspective(520px) rotateX(62deg) translate3d(0, 0, 0);
+  animation: lp-grid-run 3.2s linear infinite;
+  will-change: transform;
+}
+
+/* Esmaece a grade em direção ao horizonte (degradê por cima, sem mask-image, que é caro). */
+.lp-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, var(--lp-bg) 0%, var(--lp-bg) 42%, rgba(5, 12, 22, 0.55) 70%, rgba(5, 12, 22, 0) 100%);
+}
+
+@keyframes lp-grid-run {
+  from { transform: perspective(520px) rotateX(62deg) translate3d(0, 0, 0); }
+  to { transform: perspective(520px) rotateX(62deg) translate3d(0, 64px, 0); }
+}
+
+/* ---------- Barra de progresso da rolagem (no header) ---------- */
+
+.lp-header__bar { position: relative; }
+
+.lp-progress {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(90, 184, 255, 0), var(--lp-accent) 40%, #b8ecff);
+  box-shadow: 0 0 12px rgba(90, 184, 255, 0.8);
+  transform-origin: 0 50%;
+  scale: 0 1;
+  pointer-events: none;
+}
+
+
+/* ---------- Hero: varredura e partículas ---------- */
+
+.lp-hero__scene::after { z-index: 0; }
+
+.lp-hero__scan,
+.lp-particles {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.lp-hero__scan::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 30%;
+  background: linear-gradient(180deg, transparent, rgba(90, 184, 255, 0.05) 70%, rgba(150, 220, 255, 0.28) 98%, transparent);
+  translate: 0 -100%;
+  animation: lp-hero-scan 7s cubic-bezier(0.45, 0, 0.55, 1) 1s infinite;
+  will-change: translate;
+}
+
+@keyframes lp-hero-scan {
+  0% { translate: 0 -100%; opacity: 0; }
+  10% { opacity: 1; }
+  70%, 100% { translate: 0 360%; opacity: 0; }
+}
+
+.lp-particles span {
+  position: absolute;
+  bottom: -12px;
+  border-radius: 50%;
+  background: #b8ecff;
+  box-shadow: 0 0 8px 2px rgba(90, 184, 255, 0.7);
+  opacity: 0;
+  animation-name: lp-particle;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes lp-particle {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  12% { opacity: 0.9; }
+  80% { opacity: 0.5; }
+  100% { transform: translate3d(var(--drift, 0px), -75vh, 0); opacity: 0; }
+}
+
+/* ---------- Rótulos com cursor de terminal ---------- */
+
+.lp-eyebrow::after {
+  content: "";
+  width: 0.55em;
+  height: 1.05em;
+  margin-left: -0.25rem;
+  background: currentColor;
+  opacity: 0.85;
+  animation: lp-caret 1.05s steps(1, end) infinite;
+}
+
+@keyframes lp-caret {
+  50% { opacity: 0; }
+}
+
+/* Títulos decodificando: brilho enquanto os caracteres trocam. */
+.lp [data-decode][aria-label] {
+  color: #d9f1ff;
+  text-shadow: 0 0 18px rgba(90, 184, 255, 0.55);
+}
+
+/* ---------- Cards: HUD + linha de varredura durante a projeção ---------- */
+
+.lp-plan { overflow: hidden; }
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .lp-progress {
+      animation: lp-progress linear both;
+      animation-timeline: scroll(root);
+    }
+
+    /* Cantos de mira que travam no lugar. */
+    .lp-grid > *::before {
+      content: "";
+      position: absolute;
+      inset: 6px;
+      z-index: 4;
+      pointer-events: none;
+      --hud: rgba(150, 215, 255, 0.95);
+      background:
+        linear-gradient(var(--hud) 0 0) top left / 16px 2px no-repeat,
+        linear-gradient(var(--hud) 0 0) top left / 2px 16px no-repeat,
+        linear-gradient(var(--hud) 0 0) top right / 16px 2px no-repeat,
+        linear-gradient(var(--hud) 0 0) top right / 2px 16px no-repeat,
+        linear-gradient(var(--hud) 0 0) bottom left / 16px 2px no-repeat,
+        linear-gradient(var(--hud) 0 0) bottom left / 2px 16px no-repeat,
+        linear-gradient(var(--hud) 0 0) bottom right / 16px 2px no-repeat,
+        linear-gradient(var(--hud) 0 0) bottom right / 2px 16px no-repeat;
+      filter: drop-shadow(0 0 4px rgba(90, 184, 255, 0.9));
+      animation: lp-hud linear both;
+      animation-timeline: --lp-grid;
+      animation-range: inherit;
+    }
+
+    /* Linha de varredura que desce enquanto o card se forma. */
+    .lp-grid > *::after {
+      background: linear-gradient(180deg, transparent 0%, rgba(120, 200, 255, 0.04) 55%, rgba(120, 200, 255, 0.24) 93%, rgba(200, 240, 255, 0.95) 99%, transparent 100%);
+      animation-name: lp-scanline;
+    }
+
+    .lp-section__head,
+    .lp-group__head { animation-name: lp-rise-glitch; }
+  }
+}
+
+@keyframes lp-progress {
+  to { scale: 1 1; }
+}
+
+@keyframes lp-hud {
+  0% { opacity: 0; scale: 1.18; }
+  35% { opacity: 1; }
+  70% { opacity: 1; scale: 1; }
+  100% { opacity: 0.22; scale: 1; }
+}
+
+@keyframes lp-scanline {
+  0% { translate: 0 -100%; opacity: 1; }
+  85% { opacity: 1; }
+  100% { translate: 0 100%; opacity: 0; }
+}
+
+@keyframes lp-rise-glitch {
+  0% { opacity: 0; translate: 0 48px; }
+  55% { opacity: 0.7; translate: 6px 6px; }
+  62% { translate: -5px 3px; }
+  70% { opacity: 1; translate: 2px 0; }
+  100% { opacity: 1; translate: 0 0; }
+}
+
+@media (max-width: 640px) {
+  .lp-backdrop__grid { height: 45%; }
+  .lp-particles span:nth-child(n + 11) { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-backdrop__grid,
+  .lp-hero__scan::before,
+  .lp-particles span,
+  .lp-eyebrow::after { animation: none; }
+  .lp-particles { display: none; }
+}
+
+/* ==========================================================================
+   Cards com volume: espessura, borda chanfrada com brilho, superfície de
+   vidro com reflexo que segue o mouse e inclinação 3D. + Legibilidade.
+   ========================================================================== */
+
+/* Contraste maior para textos secundários (WCAG AA com folga sobre o fundo escuro). */
+.lp {
+  --lp-muted: #c9d6e3;
+  --lp-subtle: #a3b5c8;
+  --lp-text: #f4f8fc;
+}
+
+.lp-system,
+.lp-service,
+.lp-plan {
+  --rx: 0deg;
+  --ry: 0deg;
+  --lift: 0px;
+  --edge: color-mix(in srgb, var(--accent, #5ab8ff) 45%, #06101c);
+  border: 1px solid transparent;
+  background:
+    radial-gradient(circle at var(--mx, 25%) var(--my, 0%), rgba(170, 220, 255, 0.13), transparent 48%) padding-box,
+    linear-gradient(165deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0) 30%) padding-box,
+    linear-gradient(180deg, #14263f 0%, #0c1829 100%) padding-box,
+    linear-gradient(155deg,
+      rgba(180, 225, 255, 0.7) 0%,
+      rgba(120, 180, 240, 0.16) 30%,
+      rgba(120, 180, 240, 0.08) 65%,
+      color-mix(in srgb, var(--accent, #5ab8ff) 60%, transparent) 100%) border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.55),
+    0 2px 0 #0b1729,
+    0 4px 0 #091322,
+    0 6px 0 #070f1b,
+    0 7px 0 var(--edge),
+    0 30px 44px -20px rgba(0, 0, 0, 0.9);
+  transform: perspective(1000px) rotateX(var(--rx)) rotateY(var(--ry)) translate3d(0, var(--lift), 0);
+  transition: transform 260ms var(--lp-ease), box-shadow 300ms ease;
+}
+
+.lp-system:hover,
+a.lp-system:hover,
+.lp-service:hover,
+.lp-plan:hover {
+  --lift: -8px;
+  transform: perspective(1000px) rotateX(var(--rx)) rotateY(var(--ry)) translate3d(0, var(--lift), 0);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.55),
+    0 2px 0 #0b1729,
+    0 4px 0 #091322,
+    0 6px 0 #070f1b,
+    0 7px 0 color-mix(in srgb, var(--accent, #5ab8ff) 75%, #06101c),
+    0 38px 60px -24px color-mix(in srgb, var(--accent, #5ab8ff) 45%, black);
+}
+
+.lp-service,
+.lp-plan { --accent: #5ab8ff; }
+
+.lp-plan[data-featured] {
+  background:
+    radial-gradient(circle at var(--mx, 50%) var(--my, 0%), rgba(170, 220, 255, 0.18), transparent 50%) padding-box,
+    radial-gradient(ellipse 90% 60% at 50% 0%, rgba(90, 184, 255, 0.2), transparent 70%) padding-box,
+    linear-gradient(180deg, #17304f 0%, #0d1c31 100%) padding-box,
+    linear-gradient(155deg, #9fdcff 0%, rgba(90, 184, 255, 0.35) 40%, rgba(90, 184, 255, 0.7) 100%) border-box;
+}
+
+/* Divisória brilhante entre imagem e conteúdo, como uma aresta. */
+.lp-system__media,
+.lp-service__media { box-shadow: 0 1px 0 rgba(170, 220, 255, 0.25); }
+
+/* Carrossel do hero: mesma linguagem de volume. */
+.lp-card3d__inner {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 30%) padding-box,
+    linear-gradient(160deg, var(--lp-surface-2), var(--lp-surface)) padding-box,
+    linear-gradient(155deg, rgba(180, 225, 255, 0.6), rgba(120, 180, 240, 0.12) 35%, color-mix(in srgb, var(--accent) 55%, transparent)) border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 2px 0 #0b1729,
+    0 4px 0 #091322,
+    0 5px 0 color-mix(in srgb, var(--accent) 40%, #06101c),
+    0 24px 40px -22px rgba(0, 0, 0, 0.95);
+}
+
+/* ---------- Tamanhos e cores de texto ---------- */
+
+.lp-eyebrow { font-size: 0.8rem; letter-spacing: 0.14em; }
+.lp-header__nav a { font-size: 0.95rem; color: #d3dfeb; }
+.lp-hero__lead { color: #dbe6f0; font-size: clamp(1.05rem, 1.4vw, 1.2rem); }
+
+.lp-showcase__label span { font-size: 0.9rem; }
+.lp-showcase__label small { font-size: 0.78rem; color: #b3c4d6; }
+
+.lp-card3d__name { font-size: 1.08rem; }
+.lp-card3d__desc { font-size: 0.86rem; color: #e1eaf3; line-height: 1.45; }
+.lp-card3d__cta { font-size: 0.8rem; }
+
+.lp-section__head > p:last-child,
+.lp-about__copy > p:last-child,
+.lp-cta p:last-child { font-size: 1.1rem; }
+
+.lp-group__head h3 { font-size: 1.25rem; }
+.lp-group__head p { font-size: 1rem; }
+
+.lp-system__title strong { font-size: 1.08rem; }
+.lp-system__title small { font-size: 0.85rem; }
+.lp-system__desc { font-size: 0.97rem; line-height: 1.6; color: #d4dfea; }
+.lp-system__tags span { font-size: 0.8rem; color: #e1eaf3; border-color: rgba(160, 205, 245, 0.24); background: rgba(255, 255, 255, 0.03); padding: 0.3rem 0.6rem; }
+.lp-system__cta { font-size: 0.92rem; }
+.lp-status { font-size: 0.76rem; padding: 0.32rem 0.65rem; background: rgba(4, 12, 22, 0.9); }
+
+.lp-service__number { font-size: 0.85rem; }
+.lp-service h3 { font-size: 1.32rem; }
+.lp-service p,
+.lp-plan p { font-size: 1rem; color: #d4dfea; }
+.lp-plan__name { font-size: 0.8rem; }
+.lp-plan h3 { font-size: 1.36rem; }
+
+.lp-footer { font-size: 0.92rem; color: #b3c4d6; }
+
+/* ==========================================================================
+   Relevo forte: cards com chapa espessa e bisel marcado; botões em alto-relevo
+   que afundam ao clicar.
+   ========================================================================== */
+
+/* ---------- Cards: chapa de ~12px, bisel claro em cima, sombra interna embaixo ---------- */
+
+.lp-system,
+.lp-service,
+.lp-plan {
+  border-width: 2px;
+  background:
+    radial-gradient(circle at var(--mx, 25%) var(--my, 0%), rgba(170, 220, 255, 0.16), transparent 48%) padding-box,
+    linear-gradient(170deg, rgba(255, 255, 255, 0.11) 0%, rgba(255, 255, 255, 0) 26%) padding-box,
+    linear-gradient(180deg, #172b46 0%, #0c1829 100%) padding-box,
+    linear-gradient(160deg,
+      #d4efff 0%,
+      rgba(140, 200, 250, 0.45) 18%,
+      rgba(90, 150, 210, 0.16) 45%,
+      rgba(60, 110, 170, 0.22) 75%,
+      color-mix(in srgb, var(--accent, #5ab8ff) 80%, transparent) 100%) border-box;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.22),
+    inset 2px 0 0 rgba(255, 255, 255, 0.05),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.5),
+    0 3px 0 #10203a,
+    0 6px 0 #0c192e,
+    0 9px 0 #091425,
+    0 12px 0 #070f1c,
+    0 13px 0 var(--edge),
+    0 14px 6px -2px rgba(0, 0, 0, 0.6),
+    0 44px 56px -26px rgba(0, 0, 0, 0.95);
+}
+
+.lp-system:hover,
+a.lp-system:hover,
+.lp-service:hover,
+.lp-plan:hover {
+  --lift: -10px;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.3),
+    inset 2px 0 0 rgba(255, 255, 255, 0.07),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.5),
+    0 3px 0 #10203a,
+    0 6px 0 #0c192e,
+    0 9px 0 #091425,
+    0 12px 0 #070f1c,
+    0 13px 0 color-mix(in srgb, var(--accent, #5ab8ff) 90%, #06101c),
+    0 18px 10px -4px rgba(0, 0, 0, 0.55),
+    0 50px 70px -26px color-mix(in srgb, var(--accent, #5ab8ff) 50%, black);
+}
+
+.lp-plan[data-featured] {
+  background:
+    radial-gradient(circle at var(--mx, 50%) var(--my, 0%), rgba(170, 220, 255, 0.2), transparent 50%) padding-box,
+    linear-gradient(170deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 26%) padding-box,
+    radial-gradient(ellipse 90% 60% at 50% 0%, rgba(90, 184, 255, 0.22), transparent 70%) padding-box,
+    linear-gradient(180deg, #1a3557 0%, #0d1c31 100%) padding-box,
+    linear-gradient(160deg, #e2f5ff 0%, #7cc8ff 30%, rgba(90, 184, 255, 0.35) 60%, #5ab8ff 100%) border-box;
+}
+
+/* Espaço para a espessura não encostar no que vem abaixo. */
+.lp-grid { row-gap: 2rem; padding-bottom: 14px; }
+
+/* Tags em baixo-relevo, como teclas. */
+.lp-system__tags span {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 0 rgba(0, 0, 0, 0.45);
+}
+
+.lp-system__icon {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 3px 0 rgba(0, 0, 0, 0.45);
+}
+
+/* Carrossel do hero: chapa mais grossa também. */
+.lp-card3d__inner {
+  border-width: 2px;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.45),
+    0 3px 0 #10203a,
+    0 6px 0 #0c192e,
+    0 9px 0 #091425,
+    0 10px 0 color-mix(in srgb, var(--accent) 55%, #06101c),
+    0 30px 44px -22px rgba(0, 0, 0, 0.95);
+}
+
+/* ---------- Botões em alto-relevo ---------- */
+
+.lp-btn {
+  position: relative;
+  border-width: 1px;
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 160ms ease, border-color 160ms ease;
+}
+
+.lp-btn--primary {
+  border-color: #c4e9ff #6fbdf7 #2f86d6;
+  background: linear-gradient(180deg, #a6dcff 0%, #6cc0ff 42%, #3f9bec 100%);
+  color: #03172c;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -2px 0 rgba(12, 70, 140, 0.4),
+    0 1px 0 #2c80cc,
+    0 2px 0 #2672bb,
+    0 3px 0 #2065a9,
+    0 4px 0 #1b5895,
+    0 5px 0 #164b80,
+    0 6px 0 #113e6c,
+    0 14px 24px -6px rgba(47, 141, 228, 0.75);
+}
+
+.lp-btn--primary:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -2px 0 rgba(12, 70, 140, 0.4),
+    0 1px 0 #2c80cc,
+    0 2px 0 #2672bb,
+    0 3px 0 #2065a9,
+    0 4px 0 #1b5895,
+    0 5px 0 #164b80,
+    0 6px 0 #113e6c,
+    0 7px 0 #0e3459,
+    0 8px 0 #0b2a48,
+    0 20px 30px -6px rgba(47, 141, 228, 0.9);
+}
+
+.lp-btn--ghost,
+.lp-round-btn,
+.lp-header__menu {
+  border: 1px solid;
+  border-color: rgba(190, 228, 255, 0.55) rgba(130, 180, 230, 0.3) rgba(70, 120, 180, 0.25);
+  background: linear-gradient(180deg, #1d3352 0%, #12223a 55%, #0c1829 100%);
+  color: var(--lp-text);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.45),
+    0 1px 0 #0b1729,
+    0 2px 0 #0a1424,
+    0 3px 0 #08111f,
+    0 4px 0 #070e1a,
+    0 5px 0 #050b15,
+    0 12px 20px -6px rgba(0, 0, 0, 0.85);
+}
+
+.lp-btn--ghost:hover,
+.lp-round-btn:hover,
+.lp-header__menu:hover {
+  transform: translateY(-2px);
+  border-color: rgba(200, 235, 255, 0.8) rgba(140, 195, 245, 0.45) rgba(80, 140, 200, 0.35);
+  background: linear-gradient(180deg, #24406a 0%, #162a47 55%, #0f1e33 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.45),
+    0 1px 0 #0b1729,
+    0 2px 0 #0a1424,
+    0 3px 0 #08111f,
+    0 4px 0 #070e1a,
+    0 5px 0 #050b15,
+    0 6px 0 #040912,
+    0 7px 0 #03070f,
+    0 0 0 1px rgba(90, 184, 255, 0.15),
+    0 16px 26px -6px rgba(47, 141, 228, 0.45);
+}
+
+/* Ao clicar, o botão afunda até a base. */
+.lp-btn:active,
+.lp-round-btn:active,
+.lp-header__menu:active {
+  transform: translateY(5px);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 1px 0 #0a1424,
+    0 4px 10px -4px rgba(0, 0, 0, 0.8);
+}
+
+.lp-round-btn { width: 42px; height: 42px; }
+
+/* Pílula "Acessar" do carrossel com bisel. */
+.lp-card3d__cta {
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 34%, #0c1829), color-mix(in srgb, var(--accent) 16%, #08121f));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 0 rgba(0, 0, 0, 0.5), 0 3px 0 color-mix(in srgb, var(--accent) 30%, #050b14);
+}
+
+@media (max-width: 640px) {
+  .lp-grid--systems { padding-bottom: 1.75rem; }
+}
+
+/* `.lp a { color: inherit }` vencia a cor do botão primário: texto escuro garante contraste no azul. */
+.lp .lp-btn--primary { color: #03172c; }
+
+/* ==========================================================================
+   Vidro temperado / acrílico: superfície translúcida com desfoque do fundo,
+   reflexos diagonais, aresta clara e um neon na cor do card subindo de baixo.
+   (Substitui a "chapa" escura das versões anteriores.)
+   ========================================================================== */
+
+.lp-system,
+.lp-service,
+.lp-plan {
+  --neon: color-mix(in srgb, var(--accent, #5ab8ff) 85%, white 15%);
+  border-width: 1.5px;
+  background:
+    /* neon subindo de baixo em degradê */
+    linear-gradient(0deg,
+      color-mix(in srgb, var(--neon) 34%, transparent) 0%,
+      color-mix(in srgb, var(--neon) 12%, transparent) 18%,
+      transparent 42%) padding-box,
+    /* reflexo que acompanha o mouse */
+    radial-gradient(circle at var(--mx, 20%) var(--my, 0%), rgba(255, 255, 255, 0.12), transparent 42%) padding-box,
+    /* faixas de reflexo do vidro */
+    linear-gradient(118deg,
+      rgba(255, 255, 255, 0.13) 0%,
+      rgba(255, 255, 255, 0.04) 24%,
+      transparent 24.5%,
+      transparent 58%,
+      rgba(255, 255, 255, 0.05) 58.5%,
+      rgba(255, 255, 255, 0.015) 70%,
+      transparent 70.5%) padding-box,
+    /* massa do vidro (levemente azulada) */
+    linear-gradient(180deg, rgba(150, 200, 255, 0.07), rgba(20, 40, 70, 0.32)) padding-box,
+    /* aresta: clara em cima, acende no neon embaixo */
+    linear-gradient(180deg,
+      rgba(255, 255, 255, 0.55) 0%,
+      rgba(200, 230, 255, 0.16) 22%,
+      rgba(200, 230, 255, 0.08) 60%,
+      var(--neon) 100%) border-box;
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 1px 0 0 rgba(255, 255, 255, 0.08),
+    inset -1px 0 0 rgba(255, 255, 255, 0.05),
+    inset 0 -22px 34px -20px color-mix(in srgb, var(--neon) 75%, transparent),
+    0 1px 0 rgba(200, 230, 255, 0.12),
+    0 2px 0 rgba(200, 230, 255, 0.06),
+    0 22px 42px -14px color-mix(in srgb, var(--neon) 50%, transparent),
+    0 34px 60px -34px rgba(0, 0, 0, 0.95);
+}
+
+.lp-system:hover,
+a.lp-system:hover,
+.lp-service:hover,
+.lp-plan:hover {
+  --lift: -8px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 1px 0 0 rgba(255, 255, 255, 0.12),
+    inset -1px 0 0 rgba(255, 255, 255, 0.08),
+    inset 0 -30px 44px -20px color-mix(in srgb, var(--neon) 95%, transparent),
+    0 1px 0 rgba(200, 230, 255, 0.16),
+    0 2px 0 rgba(200, 230, 255, 0.08),
+    0 28px 56px -12px color-mix(in srgb, var(--neon) 75%, transparent),
+    0 40px 70px -34px rgba(0, 0, 0, 0.95);
+}
+
+.lp-plan[data-featured] {
+  --neon: #7fd0ff;
+  background:
+    linear-gradient(0deg, rgba(127, 208, 255, 0.42) 0%, rgba(127, 208, 255, 0.14) 22%, transparent 48%) padding-box,
+    radial-gradient(circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, 0.14), transparent 45%) padding-box,
+    linear-gradient(118deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 24%, transparent 24.5%, transparent 58%, rgba(255, 255, 255, 0.06) 58.5%, transparent 70.5%) padding-box,
+    linear-gradient(180deg, rgba(150, 200, 255, 0.1), rgba(20, 50, 90, 0.38)) padding-box,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(200, 230, 255, 0.2) 22%, rgba(200, 230, 255, 0.1) 60%, #7fd0ff 100%) border-box;
+}
+
+/* Imagens dentro do vidro: aresta interna fina, sem sombra pesada. */
+.lp-system__media,
+.lp-service__media { box-shadow: 0 1px 0 rgba(255, 255, 255, 0.14); }
+.lp-system__media::after { background: linear-gradient(180deg, transparent 60%, rgba(10, 22, 38, 0.55)); }
+
+/* Tags e ícones também de vidro. */
+.lp-system__tags span {
+  border-color: rgba(220, 240, 255, 0.2);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.lp-system__icon {
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, rgba(255, 255, 255, 0.2));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 0 14px -4px var(--accent);
+}
+
+/* Carrossel do hero: mesmo vidro, com neon embaixo (sem desfoque por estar em 3D). */
+.lp-card3d__inner {
+  --neon: color-mix(in srgb, var(--accent) 85%, white 15%);
+  border-width: 1.5px;
+  background:
+    linear-gradient(0deg, color-mix(in srgb, var(--neon) 38%, transparent) 0%, color-mix(in srgb, var(--neon) 10%, transparent) 22%, transparent 45%) padding-box,
+    linear-gradient(118deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.04) 24%, transparent 24.5%) padding-box,
+    linear-gradient(180deg, rgba(40, 70, 110, 0.35), rgba(8, 18, 32, 0.7)) padding-box,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(200, 230, 255, 0.14) 30%, var(--neon) 100%) border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -20px 30px -18px color-mix(in srgb, var(--neon) 80%, transparent),
+    0 20px 40px -14px color-mix(in srgb, var(--neon) 45%, transparent),
+    0 30px 44px -26px rgba(0, 0, 0, 0.95);
+}
+
+.lp-card3d__media { opacity: 0.55; }
+.lp-card3d[data-active="true"] .lp-card3d__media { opacity: 0.8; }
+.lp-card3d__media::after {
+  background: linear-gradient(180deg, rgba(6, 14, 26, 0.15) 0%, rgba(6, 14, 26, 0.1) 35%, rgba(6, 14, 26, 0.78) 72%, rgba(6, 14, 26, 0.88) 100%);
+}
+
+/* Sem suporte a backdrop-filter: vidro mais opaco para manter a leitura. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .lp-system,
+  .lp-service,
+  .lp-plan { background-color: rgba(12, 24, 41, 0.92); }
+}
+
+/* Ajuste fino do neon: mais concentrado na base e com cor pura, para não lavar o texto. */
+.lp-system,
+.lp-service,
+.lp-plan {
+  --neon: var(--accent, #5ab8ff);
+  background:
+    linear-gradient(0deg,
+      color-mix(in srgb, var(--neon) 30%, transparent) 0%,
+      color-mix(in srgb, var(--neon) 10%, transparent) 9%,
+      color-mix(in srgb, var(--neon) 3%, transparent) 20%,
+      transparent 30%) padding-box,
+    radial-gradient(circle at var(--mx, 20%) var(--my, 0%), rgba(255, 255, 255, 0.1), transparent 42%) padding-box,
+    linear-gradient(118deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.03) 24%,
+      transparent 24.5%,
+      transparent 58%,
+      rgba(255, 255, 255, 0.04) 58.5%,
+      rgba(255, 255, 255, 0.01) 70%,
+      transparent 70.5%) padding-box,
+    linear-gradient(180deg, rgba(120, 175, 240, 0.06), rgba(10, 24, 44, 0.55)) padding-box,
+    linear-gradient(180deg,
+      rgba(255, 255, 255, 0.5) 0%,
+      rgba(200, 230, 255, 0.14) 22%,
+      rgba(200, 230, 255, 0.07) 62%,
+      var(--neon) 100%) border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    inset 1px 0 0 rgba(255, 255, 255, 0.07),
+    inset -1px 0 0 rgba(255, 255, 255, 0.04),
+    inset 0 -2px 0 color-mix(in srgb, var(--neon) 80%, transparent),
+    inset 0 -14px 22px -14px var(--neon),
+    0 1px 0 rgba(200, 230, 255, 0.1),
+    0 16px 34px -14px color-mix(in srgb, var(--neon) 55%, transparent),
+    0 34px 60px -34px rgba(0, 0, 0, 0.95);
+}
+
+.lp-system:hover,
+a.lp-system:hover,
+.lp-service:hover,
+.lp-plan:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 1px 0 0 rgba(255, 255, 255, 0.1),
+    inset -1px 0 0 rgba(255, 255, 255, 0.06),
+    inset 0 -2px 0 var(--neon),
+    inset 0 -22px 30px -16px var(--neon),
+    0 1px 0 rgba(200, 230, 255, 0.14),
+    0 24px 50px -12px color-mix(in srgb, var(--neon) 75%, transparent),
+    0 40px 70px -34px rgba(0, 0, 0, 0.95);
+}
+
+.lp-plan[data-featured] {
+  background:
+    linear-gradient(0deg, rgba(127, 208, 255, 0.34) 0%, rgba(127, 208, 255, 0.11) 10%, rgba(127, 208, 255, 0.03) 22%, transparent 32%) padding-box,
+    radial-gradient(circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, 0.12), transparent 45%) padding-box,
+    linear-gradient(118deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 24%, transparent 24.5%, transparent 58%, rgba(255, 255, 255, 0.05) 58.5%, transparent 70.5%) padding-box,
+    linear-gradient(180deg, rgba(120, 180, 250, 0.1), rgba(12, 32, 60, 0.6)) padding-box,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(200, 230, 255, 0.18) 22%, rgba(200, 230, 255, 0.09) 60%, #7fd0ff 100%) border-box;
+}
+
+.lp-system__cta { text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6); }
+.lp-plan, .lp-system__body, .lp-service__body { padding-bottom: 1.6rem; }
+
+.lp-card3d__inner {
+  --neon: var(--accent);
+  background:
+    linear-gradient(0deg, color-mix(in srgb, var(--neon) 32%, transparent) 0%, color-mix(in srgb, var(--neon) 8%, transparent) 12%, transparent 28%) padding-box,
+    linear-gradient(118deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 24%, transparent 24.5%) padding-box,
+    linear-gradient(180deg, rgba(40, 70, 110, 0.35), rgba(8, 18, 32, 0.72)) padding-box,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(200, 230, 255, 0.12) 30%, var(--neon) 100%) border-box;
+}
+
+/* Desfoque real (backdrop-filter) custava ~15 FPS na rolagem: o vidro fica só com
+   transparência, reflexos e aresta, que no fundo escuro tem praticamente o mesmo efeito. */
+.lp-system,
+.lp-service,
+.lp-plan {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Desempenho: HUD sem filtro de sombra e sombras externas mais compactas. */
+.lp-grid > *::before { filter: none !important; --hud: rgba(170, 225, 255, 1); }
+
+.lp-system,
+.lp-service,
+.lp-plan {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    inset 1px 0 0 rgba(255, 255, 255, 0.07),
+    inset 0 -2px 0 color-mix(in srgb, var(--neon) 80%, transparent),
+    inset 0 -14px 22px -14px var(--neon),
+    0 1px 0 rgba(200, 230, 255, 0.1),
+    0 14px 28px -14px color-mix(in srgb, var(--neon) 55%, transparent),
+    0 26px 40px -26px rgba(0, 0, 0, 0.95);
+}
+
+/* ==========================================================================
+   Hero: poeira fina e feixe mais espaçado.
+   - Partículas viram poeira: menores, poucas, lentas e bem discretas.
+   - O feixe passa a cada ~16s e revela uma poeira cintilante (como o brilho
+     da logo no vídeo). A poeira fica parada na tela enquanto o feixe desce:
+     a camada interna anda em sentido oposto ao feixe (só transform).
+   ========================================================================== */
+
+.lp-particles span {
+  background: #e6f6ff;
+  box-shadow: 0 0 3px rgba(190, 230, 255, 0.6);
+}
+
+@keyframes lp-particle {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  15% { opacity: 0.35; }
+  75% { opacity: 0.18; }
+  100% { transform: translate3d(var(--drift, 0px), -55vh, 0); opacity: 0; }
+}
+
+
+/* ==========================================================================
+   Hero: palco alinhado à foto, cabos de energia no chão e o "O" balançando.
+   ========================================================================== */
+
+/* O palco reproduz o object-fit: cover da imagem com container queries,
+   para que o SVG dos cabos e o recorte do anel fiquem exatamente sobre a foto. */
+.lp-hero__scene { container-type: size; }
+
+.lp-stage {
+  --px: 0.62;
+  --py: 0.3;
+  --w: max(100cqw, 177.6833cqh);
+  --h: max(100cqh, 56.2799cqw);
+  position: absolute;
+  z-index: 0;
+  width: var(--w);
+  height: var(--h);
+  left: calc((100cqw - var(--w)) * var(--px));
+  top: calc((100cqh - var(--h)) * var(--py));
+  transform-origin: 50% 40%;
+}
+
+.lp-stage .lp-hero__image { object-fit: cover; object-position: 50% 50%; animation: none; }
+
+@media (max-width: 640px) {
+  .lp-stage { --px: 0.5; }
+}
+
+/* ---------- Cabos ---------- */
+
+.lp-cables {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.lp-cable {
+  fill: none;
+  stroke: #02060c;
+  stroke-width: 9;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+
+.lp-cable__core {
+  fill: none;
+  stroke: #1e3a60;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+
+.lp-cable__core[data-live="true"] { stroke: #4fb2ff; stroke-width: 3; opacity: 0.55; }
+
+.lp-stage { container-type: size; }
+
+/* Pulsos de eletricidade: pontos de luz que percorrem os cabos (translate + opacity). */
+.lp-pulse {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1.5cqw;
+  height: 1.5cqw;
+  margin: -0.75cqw 0 0 -0.75cqw;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 0%, #c8f0ff 22%, rgba(90, 184, 255, 0.55) 45%, rgba(90, 184, 255, 0) 70%);
+  opacity: 0;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: translate, opacity;
+  pointer-events: none;
+}
+
+.lp-pulse[data-tail="1"] { width: 1.1cqw; height: 1.1cqw; margin: -0.55cqw 0 0 -0.55cqw; filter: none; }
+.lp-pulse[data-tail="2"] { width: 0.8cqw; height: 0.8cqw; margin: -0.4cqw 0 0 -0.4cqw; }
+
+/* Flash quando a energia chega: borda do pedestal e base do anel. */
+.lp-flash {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.05;
+  pointer-events: none;
+  animation: lp-rim-flash 2.625s ease-out infinite;
+  will-change: opacity;
+}
+
+.lp-flash--rim {
+  left: 38.5%;
+  top: 63.2%;
+  width: 23%;
+  height: 4.6%;
+  background: radial-gradient(ellipse at center, rgba(120, 200, 255, 0.9), rgba(90, 184, 255, 0.25) 45%, transparent 70%);
+  animation-delay: 1.85s;
+}
+
+.lp-flash--base {
+  left: 45.7%;
+  top: 51.3%;
+  width: 8.4%;
+  height: 3.2%;
+  background: radial-gradient(ellipse at center, rgba(220, 245, 255, 0.95), rgba(120, 200, 255, 0.3) 50%, transparent 72%);
+  animation-delay: 2.05s;
+}
+
+/* ---------- Anel "O": balança devagar + brilho percorrendo o aro ---------- */
+
+.lp-ring {
+  position: absolute;
+  left: 40.9091%;
+  top: 22.3167%;
+  width: 17.9426%;
+  height: 31.881%;
+  background: url("/orquestra-ring-o.webp") center / 100% 100% no-repeat;
+  transform-origin: 50% 50%;
+  animation: lp-ring-sway 9s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes lp-ring-sway {
+  from { transform: rotate(-4deg); }
+  to { transform: rotate(4deg); }
+}
+
+/* O feixe de varredura foi substituído pelos cabos. */
+.lp-hero__scan { display: none; }
+
+/* Sem zoom ao rolar no palco: combinado com o anel animado, custava ~10 FPS. */
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-ring,
+  .lp-flash { animation: none; }
+  .lp-pulse { display: none; }
+}
+
+/* Camada de efeitos acima do escurecimento do hero (o ::after da cena tem z-index 0). */
+.lp-stage--fx { z-index: 1; pointer-events: none; }
+
+.lp-cable { stroke: #01040a; stroke-width: 10; opacity: 0.7; }
+.lp-cable__core { stroke: #24476f; stroke-width: 2.6; opacity: 0.75; }
+.lp-cable__core[data-live="true"] { stroke: #5cbcff; stroke-width: 3.2; opacity: 0.7; }
+
+.lp-pulse { width: 1.9cqw; height: 1.9cqw; margin: -0.95cqw 0 0 -0.95cqw; }
+.lp-pulse[data-tail="1"] { width: 1.3cqw; height: 1.3cqw; margin: -0.65cqw 0 0 -0.65cqw; }
+.lp-pulse[data-tail="2"] { width: 0.9cqw; height: 0.9cqw; margin: -0.45cqw 0 0 -0.45cqw; }
+
+/* Energia mais sóbria: cabos apagados, pulso pequeno com rastro curto, flash suave. */
+.lp-cable { stroke: #01040a; stroke-width: 9; opacity: 0.6; }
+.lp-cable__core { stroke: #1a3150; stroke-width: 2; opacity: 0.55; }
+.lp-cable__core[data-live="true"] { stroke: #3b86cc; stroke-width: 2; opacity: 0.32; }
+
+.lp-pulse {
+  width: 0.9cqw;
+  height: 0.9cqw;
+  margin: -0.45cqw 0 0 -0.45cqw;
+  background: radial-gradient(circle, #ffffff 0%, #d2f2ff 25%, rgba(110, 195, 255, 0.4) 50%, rgba(90, 184, 255, 0) 72%);
+}
+.lp-pulse[data-tail="1"] { width: 0.65cqw; height: 0.65cqw; margin: -0.325cqw 0 0 -0.325cqw; opacity: 0; }
+.lp-pulse[data-tail="2"] { width: 0.45cqw; height: 0.45cqw; margin: -0.225cqw 0 0 -0.225cqw; opacity: 0; }
+
+.lp-flash { animation: lp-energy-arrive 60s ease-out infinite; }
+.lp-flash--rim { animation-delay: 6.4s; }
+.lp-flash--base { animation-delay: 6.6s; }
+
+@keyframes lp-energy-arrive {
+  0%, 100% { opacity: 0.04; }
+  0.6% { opacity: 0.55; }
+  3% { opacity: 0.06; }
+}
+
+/* ==========================================================================
+   Ilustrações dos sistemas em duotone: monocromáticas, tingidas na cor do
+   sistema, com mais contraste. Visual mais sóbrio; a cor original volta no hover.
+   ========================================================================== */
+
+.lp-system__media img {
+  filter: grayscale(1) contrast(1.18) brightness(0.8);
+  transition: filter 500ms ease;
+}
+
+.lp-system__media::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 3px),
+    color-mix(in srgb, var(--accent) 80%, #0b2340);
+  mix-blend-mode: color;
+  opacity: 0.85;
+  pointer-events: none;
+  transition: opacity 500ms ease;
+}
+
+.lp-system__media::after { z-index: 1; }
+.lp-status { z-index: 2; }
+
+a.lp-system:hover .lp-system__media img { filter: none; }
+a.lp-system:hover .lp-system__media::before { opacity: 0; }
+
+/* Carrossel do hero: mesmo tratamento; o card ativo ganha um pouco de cor. */
+.lp-card3d__media {
+  filter: grayscale(1) contrast(1.15) brightness(0.78);
+  transition: opacity 300ms ease, transform 650ms var(--lp-ease), filter 400ms ease;
+}
+
+.lp-card3d__media::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--accent) 80%, #0b2340);
+  mix-blend-mode: color;
+  opacity: 0.8;
+}
+
+.lp-card3d[data-active="true"] .lp-card3d__media { filter: grayscale(0.55) contrast(1.1) brightness(0.85); }

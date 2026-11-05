@@ -28,8 +28,11 @@ export const metadata: Metadata = {
     google: "FbVL3rdpZyPilU2AxvTO4kHnYDWInQtMLQNHdeLP28k",
   },
   icons: {
-    icon: "/orquestra-app-icon-hermetico-v15.png",
-    apple: "/orquestra-app-icon-hermetico-v15.png",
+    icon: [
+      { url: "/orquestra-favicon-48.png", sizes: "48x48", type: "image/png" },
+      { url: "/orquestra-app-icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/orquestra-apple-touch-icon.png",
   },
 };
 

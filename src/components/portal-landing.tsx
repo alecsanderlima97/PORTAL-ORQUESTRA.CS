@@ -15,7 +15,7 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent, WheelEvent as Re
 type GatewayPhase = "arrival" | "entering" | "inside";
 type EntranceMode = "video" | "procedural";
 
-const PORTAL_ASSET_VERSION = "20261027";
+const PORTAL_ASSET_VERSION = "20261104";
 
 const heroProjects = deployedProjects.filter((project) => project.status !== "legado" && project.relation !== "site");
 const initialHeroProjectIndex = Math.max(heroProjects.findIndex((project) => project.id === "orquestra-hub"), 0);
@@ -62,6 +62,78 @@ const serviceCards = [
     imageAlt: "Ilustração conceitual de interface de gestão e automação empresarial",
   },
 ];
+
+// Partículas do hero: posições fixas (sem Math.random) para não divergir entre servidor e cliente.
+const heroParticles = Array.from({ length: 10 }, (_, i) => ({
+  left: (i * 37 + 11) % 100,
+  size: i % 3 === 0 ? 2 : 1,
+  duration: 16 + ((i * 7) % 10),
+  delay: -((i * 13) % 23),
+  drift: ((i % 5) - 2) * 10,
+}));
+
+// Cabos de energia no chão da sala (coordenadas da imagem 1672x941). Saem das laterais,
+// contornam a borda do pedestal e chegam à frente, embaixo do anel.
+type Point = readonly [number, number];
+type Curve = readonly [number, number, number, number, number, number];
+type FloorCable = { start: Point; curves: readonly Curve[]; pulse: number | null };
+
+const STAGE_W = 1672;
+const STAGE_H = 941;
+// Um pulso por minuto, alternando os lados: energia discreta, não um efeito constante.
+const CABLE_CYCLE = 120;
+const CABLE_TRAVEL_SECONDS = 2.6;
+const RIM_FRONT: Curve = [520, 614, 700, 620, 834, 620];
+const RIM_FRONT_RIGHT: Curve = [1148, 614, 968, 620, 834, 620];
+
+const floorCables: readonly FloorCable[] = [
+  { start: [0, 548], curves: [[150, 545, 280, 552, 362, 574], RIM_FRONT], pulse: 4 },
+  { start: [1672, 548], curves: [[1522, 545, 1392, 552, 1310, 574], RIM_FRONT_RIGHT], pulse: 64 },
+  { start: [0, 690], curves: [[150, 660, 270, 615, 372, 590], RIM_FRONT], pulse: null },
+  { start: [1672, 690], curves: [[1522, 660, 1402, 615, 1300, 590], RIM_FRONT_RIGHT], pulse: null },
+  { start: [60, 941], curves: [[170, 820, 290, 680, 388, 600]], pulse: null },
+  { start: [1612, 941], curves: [[1502, 820, 1382, 680, 1284, 600]], pulse: null },
+];
+
+function cablePath(cable: FloorCable) {
+  return `M${cable.start[0]} ${cable.start[1]} ${cable.curves.map((c) => `C${c.join(" ")}`).join(" ")}`;
+}
+
+function cablePoints(cable: FloorCable, perCurve = 8): Point[] {
+  const points: Point[] = [cable.start];
+  let [x0, y0] = cable.start;
+  for (const [x1, y1, x2, y2, x3, y3] of cable.curves) {
+    for (let i = 1; i <= perCurve; i++) {
+      const t = i / perCurve;
+      const u = 1 - t;
+      points.push([
+        u * u * u * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x3,
+        u * u * u * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y3,
+      ]);
+    }
+    [x0, y0] = [x3, y3];
+  }
+  return points;
+}
+
+// Keyframes dos pulsos: só translate (em unidades do palco, cqw/cqh) e opacity, que rodam no compositor.
+const cablePulseKeyframes = floorCables
+  .map((cable, index) => {
+    if (cable.pulse === null) return "";
+    const points = cablePoints(cable);
+    const travel = (CABLE_TRAVEL_SECONDS / CABLE_CYCLE) * 100; // % do ciclo gasto percorrendo o cabo
+    const frames = points.map(([x, y], i) => {
+      const at = ((i / (points.length - 1)) * travel).toFixed(2);
+      const opacity = i === 0 ? 0 : 1;
+      return `${at}%{translate:${((x / STAGE_W) * 100).toFixed(3)}cqw ${((y / STAGE_H) * 100).toFixed(3)}cqh;opacity:${opacity}}`;
+    });
+    const [ex, ey] = points[points.length - 1];
+    const end = `${((ex / STAGE_W) * 100).toFixed(3)}cqw ${((ey / STAGE_H) * 100).toFixed(3)}cqh`;
+    return `@keyframes lp-pulse-${index}{${frames.join("")}${(travel + 0.4).toFixed(2)}%,100%{translate:${end};opacity:0}}`;
+  })
+  .join("");
+
+const DECODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&/<>*+";
 
 const plans = [
   { name: "Essencial", title: "Uma solução para organizar a rotina.", description: "Ideal para começar com um sistema objetivo e suporte próximo.", featured: false },
@@ -184,6 +256,24 @@ export function PortalLanding() {
     card.style.setProperty("--tilt-y", `${(x * 12).toFixed(2)}deg`);
     card.style.setProperty("--glare-x", `${((x + 0.5) * 100).toFixed(1)}%`);
     card.style.setProperty("--glare-y", `${((y + 0.5) * 100).toFixed(1)}%`);
+  }, []);
+
+  // Superfície 3D dos cards das seções: inclina e move o reflexo seguindo o mouse.
+  const handleSurfaceTilt = useCallback((event: ReactPointerEvent<HTMLElement>) => {
+    if (event.pointerType !== "mouse") return;
+    const card = event.currentTarget;
+    const rect = card.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width;
+    const y = (event.clientY - rect.top) / rect.height;
+    card.style.setProperty("--rx", `${((0.5 - y) * 9).toFixed(2)}deg`);
+    card.style.setProperty("--ry", `${((x - 0.5) * 11).toFixed(2)}deg`);
+    card.style.setProperty("--mx", `${(x * 100).toFixed(1)}%`);
+    card.style.setProperty("--my", `${(y * 100).toFixed(1)}%`);
+  }, []);
+
+  const resetSurfaceTilt = useCallback((event: ReactPointerEvent<HTMLElement>) => {
+    const card = event.currentTarget;
+    ["--rx", "--ry", "--mx", "--my"].forEach((name) => card.style.removeProperty(name));
   }, []);
 
   const resetCardTilt = useCallback((event: ReactPointerEvent<HTMLAnchorElement>) => {
@@ -345,6 +435,62 @@ export function PortalLanding() {
   }, [enterPortal, phase]);
 
 
+  // Títulos se "decodificam" (caracteres aleatórios até o texto final) ao entrar na tela, uma vez só.
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) return;
+    const headings = Array.from(document.querySelectorAll<HTMLElement>(".lp [data-decode]"));
+    const frames = new Map<HTMLElement, number>();
+
+    const decode = (element: HTMLElement) => {
+      const finalText = element.dataset.text || element.textContent || "";
+      element.dataset.text = finalText;
+      element.setAttribute("aria-label", finalText);
+      element.style.minHeight = `${element.offsetHeight}px`;
+      const duration = 900;
+      const start = performance.now();
+      const step = (now: number) => {
+        const progress = Math.min((now - start) / duration, 1);
+        const revealed = Math.floor(progress * finalText.length);
+        let output = finalText.slice(0, revealed);
+        for (let i = revealed; i < finalText.length; i++) {
+          const char = finalText[i];
+          output += char === " " || char === "." ? char : DECODE_CHARS[(Math.random() * DECODE_CHARS.length) | 0];
+        }
+        element.textContent = output;
+        if (progress < 1) {
+          frames.set(element, requestAnimationFrame(step));
+        } else {
+          element.textContent = finalText;
+          element.style.minHeight = "";
+          element.removeAttribute("aria-label");
+          frames.delete(element);
+        }
+      };
+      frames.set(element, requestAnimationFrame(step));
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          observer.unobserve(entry.target);
+          decode(entry.target as HTMLElement);
+        });
+      },
+      { threshold: 0.6 },
+    );
+    headings.forEach((heading) => observer.observe(heading));
+    return () => {
+      observer.disconnect();
+      frames.forEach((frame, element) => {
+        cancelAnimationFrame(frame);
+        if (element.dataset.text) element.textContent = element.dataset.text;
+        element.style.minHeight = "";
+        element.removeAttribute("aria-label");
+      });
+    };
+  }, []);
+
   useEffect(() => {
     if (!menuOpen) return;
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -410,8 +556,13 @@ export function PortalLanding() {
       </div>
 
       <div ref={siteRef} className="lp" tabIndex={-1} inert={phase !== "inside"} aria-hidden={phase !== "inside"}>
+        <div className="lp-backdrop" aria-hidden="true">
+          <span className="lp-backdrop__glow" />
+          <span className="lp-backdrop__grid" />
+        </div>
         <header className="lp-header" data-open={menuOpen}>
           <div className="lp-header__bar">
+            <span className="lp-progress" aria-hidden="true" />
             <Link href="/" className="lp-header__brand" aria-label="Orquestra.cs - início">
               <BrandLogo variant="essential" size={32} showWordmark tone="light" />
             </Link>
@@ -442,15 +593,60 @@ export function PortalLanding() {
 
         <section className="lp-hero" id="empresa">
           <div ref={commandSceneRef} className="lp-hero__scene" aria-hidden="true">
-            <Image
-              src={`/orquestra-command-room-reference-v1.webp?v=${PORTAL_ASSET_VERSION}`}
-              alt=""
-              fill
-              priority
-              unoptimized
-              sizes="100vw"
-              className="lp-hero__image"
-            />
+            {/* Palco com a mesma proporção da imagem: cabos e anel ficam alinhados à foto em qualquer tela. */}
+            <div className="lp-stage">
+              <Image
+                src={`/orquestra-command-room-reference-v1.webp?v=${PORTAL_ASSET_VERSION}`}
+                alt=""
+                fill
+                priority
+                unoptimized
+                sizes="100vw"
+                className="lp-hero__image"
+              />
+              <span className="lp-ring" />
+            </div>
+            {/* Segunda camada com a mesma geometria, acima do escurecimento: cabos e energia ficam visíveis. */}
+            <div className="lp-stage lp-stage--fx">
+              <svg className="lp-cables" viewBox={`0 0 ${STAGE_W} ${STAGE_H}`} preserveAspectRatio="none" focusable="false">
+                {floorCables.map((cable, index) => (
+                  <g key={index}>
+                    <path d={cablePath(cable)} className="lp-cable" />
+                    <path d={cablePath(cable)} className="lp-cable__core" data-live={cable.pulse !== null} />
+                  </g>
+                ))}
+              </svg>
+              <style>{cablePulseKeyframes}</style>
+              {floorCables.map((cable, index) =>
+                cable.pulse === null
+                  ? null
+                  : [0, 0.04, 0.08].map((lag, tail) => (
+                      <span
+                        key={`${index}-${tail}`}
+                        className="lp-pulse"
+                        data-tail={tail}
+                        style={{ animationName: `lp-pulse-${index}`, animationDelay: `${(cable.pulse ?? 0) + lag}s`, animationDuration: `${CABLE_CYCLE}s` }}
+                      />
+                    )),
+              )}
+              <span className="lp-flash lp-flash--rim" />
+              <span className="lp-flash lp-flash--base" />
+            </div>
+            <span className="lp-particles">
+              {heroParticles.map((particle, index) => (
+                <span
+                  key={index}
+                  style={{
+                    left: `${particle.left}%`,
+                    width: particle.size,
+                    height: particle.size,
+                    animationDuration: `${particle.duration}s`,
+                    animationDelay: `${particle.delay}s`,
+                    "--drift": `${particle.drift}px`,
+                  } as CSSProperties}
+                />
+              ))}
+            </span>
           </div>
 
           <div className="lp-container lp-hero__content">
@@ -542,7 +738,7 @@ export function PortalLanding() {
           <div className="lp-container">
             <div className="lp-section__head">
               <p className="lp-eyebrow">Sistemas publicados</p>
-              <h2>Produtos reais da Orquestra.cs.</h2>
+              <h2 data-decode>Produtos reais da Orquestra.cs.</h2>
               <p>Cada sistema nasce para resolver uma rotina específica e pode evoluir com a operação.</p>
             </div>
             {solutionGroups.map((group) => (
@@ -585,8 +781,8 @@ export function PortalLanding() {
                       </>
                     );
                     return project.url
-                      ? <a key={project.id} href={project.url} target="_blank" rel="noopener noreferrer" className={`lp-system lp-accent--${project.accent}`}>{content}</a>
-                      : <div key={project.id} className={`lp-system lp-system--disabled lp-accent--${project.accent}`}>{content}</div>;
+                      ? <a key={project.id} href={project.url} target="_blank" rel="noopener noreferrer" className={`lp-system lp-accent--${project.accent}`} onPointerMove={handleSurfaceTilt} onPointerLeave={resetSurfaceTilt}>{content}</a>
+                      : <div key={project.id} className={`lp-system lp-system--disabled lp-accent--${project.accent}`} onPointerMove={handleSurfaceTilt} onPointerLeave={resetSurfaceTilt}>{content}</div>;
                   })}
                 </div>
               </div>
@@ -598,11 +794,11 @@ export function PortalLanding() {
           <div className="lp-container">
             <div className="lp-section__head">
               <p className="lp-eyebrow">Como ajudamos</p>
-              <h2>Do problema à solução em uma única direção.</h2>
+              <h2 data-decode>Do problema à solução em uma única direção.</h2>
             </div>
             <div className="lp-grid lp-grid--3">
               {serviceCards.map((service) => (
-                <article key={service.number} className="lp-service">
+                <article key={service.number} className="lp-service" onPointerMove={handleSurfaceTilt} onPointerLeave={resetSurfaceTilt}>
                   <span className="lp-service__media">
                     <Image src={service.image} alt={service.imageAlt} fill sizes="(max-width: 900px) 100vw, 380px" />
                   </span>
@@ -621,11 +817,11 @@ export function PortalLanding() {
           <div className="lp-container">
             <div className="lp-section__head">
               <p className="lp-eyebrow">Planos e projetos</p>
-              <h2>Comece pelo que sua operação precisa hoje.</h2>
+              <h2 data-decode>Comece pelo que sua operação precisa hoje.</h2>
             </div>
             <div className="lp-grid lp-grid--3">
               {plans.map((plan) => (
-                <article key={plan.name} className="lp-plan" data-featured={plan.featured || undefined}>
+                <article key={plan.name} className="lp-plan" data-featured={plan.featured || undefined} onPointerMove={handleSurfaceTilt} onPointerLeave={resetSurfaceTilt}>
                   <span className="lp-plan__name">{plan.name}</span>
                   <h3>{plan.title}</h3>
                   <p>{plan.description}</p>
@@ -643,7 +839,7 @@ export function PortalLanding() {
             </div>
             <div className="lp-about__copy">
               <p className="lp-eyebrow">Quem somos</p>
-              <h2>A Orquestra.cs resolve problemas através de tecnologia.</h2>
+              <h2 data-decode>A Orquestra.cs resolve problemas através de tecnologia.</h2>
               <p>Somos uma empresa de consultoria, infraestrutura comercial, corporativa e industrial. Unimos visão de negócio, equipamentos, software e automação para transformar complexidade em uma operação mais clara, segura e eficiente.</p>
             </div>
           </div>
@@ -654,7 +850,7 @@ export function PortalLanding() {
             <div className="lp-cta">
               <div>
                 <p className="lp-eyebrow">Vamos tirar seu projeto do papel</p>
-                <h2>Uma operação mais clara começa com uma boa conversa.</h2>
+                <h2 data-decode>Uma operação mais clara começa com uma boa conversa.</h2>
                 <p>Conte o que sua empresa precisa. A Orquestra.cs ajuda você a encontrar o sistema, site ou automação certa para avançar.</p>
               </div>
               <div className="lp-cta__actions">
