@@ -2070,3 +2070,116 @@ a.lp-system:hover .lp-system__media::before { opacity: 0; }
 }
 
 .lp-card3d[data-active="true"] .lp-card3d__media { filter: grayscale(0.55) contrast(1.1) brightness(0.85); }
+
+/* ==========================================================================
+   Celular compacto (≤ 640px): escala menor de tipografia, botões, cards e
+   espaçamentos. Pensado a partir de 360px de largura.
+   ========================================================================== */
+
+@media (max-width: 640px) {
+  .lp { --lp-gutter: 1rem; }
+
+  /* Header: mais baixo, sem o subtítulo da marca e opaco (o conteúdo não vaza por trás). */
+  .lp-header { padding-top: 0.4rem; }
+  .lp-header__bar { height: 50px; padding-inline: 0.7rem 0.4rem; background: rgba(5, 13, 25, 0.97); }
+  .lp-header__brand > span { gap: 0.6rem; }
+  .lp-header__brand > span > span:first-child { width: 26px !important; height: 26px !important; }
+  .lp-header__brand > span > span:last-child > span:last-child { display: none; }
+  .lp-header__menu { width: 38px; height: 38px; }
+  .lp-hero { margin-top: -56px; padding-top: 56px; min-height: auto; }
+
+  /* Hero */
+  .lp-hero__content { padding-block: 1.25rem 0.75rem; }
+  .lp-eyebrow { font-size: 0.66rem; letter-spacing: 0.12em; gap: 0.45rem; }
+  .lp-eyebrow::before { width: 1rem; }
+  .lp-hero__title { font-size: clamp(2rem, 9.5vw, 2.5rem); margin-top: 0.6rem !important; }
+  .lp-hero__lead { font-size: 0.95rem; line-height: 1.55; margin-top: 0.75rem !important; }
+  .lp-hero__actions { gap: 0.6rem; margin-top: 1.1rem; flex-wrap: nowrap; }
+  .lp-hero__actions .lp-btn { flex: 1 1 0; min-width: 0; }
+  .lp-btn { min-height: 42px; padding: 0 0.9rem; font-size: 0.86rem; }
+
+  /* Carrossel do hero */
+  .lp-showcase { --card-w: min(50vw, 190px); --card-h: calc(var(--card-w) * 1.22); --step: calc(var(--card-w) * 0.92); padding-bottom: 1rem; }
+  .lp-showcase__head { gap: 0.6rem; margin-bottom: 0.5rem; }
+  .lp-showcase__label { min-width: 0; }
+  .lp-showcase__label span { font-size: 0.76rem; letter-spacing: 0.12em; }
+  .lp-showcase__label small { font-size: 0.68rem; }
+  .lp-round-btn { width: 36px; height: 36px; }
+  .lp-card3d__inner { padding: 0.75rem; }
+  .lp-card3d__icon { width: 32px; height: 32px; border-radius: 9px; }
+  .lp-card3d__name { font-size: 0.92rem; }
+  .lp-card3d__desc { font-size: 0.76rem; }
+  .lp-card3d__cta { font-size: 0.7rem; padding: 0.3rem 0.6rem; }
+
+  /* Seções */
+  .lp-section { padding-block: 2.75rem; }
+  .lp-section__head { gap: 0.6rem; margin-bottom: 1.5rem; }
+  .lp-section__head h2,
+  .lp-about__copy h2,
+  .lp-cta h2 { font-size: 1.55rem; line-height: 1.15; }
+  .lp-section__head > p:last-child,
+  .lp-about__copy > p:last-child,
+  .lp-cta p:last-child { font-size: 0.95rem; }
+  .lp-group + .lp-group { margin-top: 2rem; }
+  .lp-group__head { margin-bottom: 0.9rem; padding-bottom: 0.6rem; }
+  .lp-group__head h3 { font-size: 1.05rem; }
+
+  /* Cards de sistemas (faixa deslizante) */
+  .lp-grid--systems { grid-auto-columns: 70%; gap: 0.75rem; }
+  .lp-system__media { aspect-ratio: 16 / 9; }
+  .lp-system__body { gap: 0.55rem; padding: 0.85rem 0.9rem 1.1rem; }
+  .lp-system__icon { width: 30px; height: 30px; border-radius: 8px; }
+  .lp-system__title { gap: 0.55rem; }
+  .lp-system__title strong { font-size: 0.98rem; }
+  .lp-system__title small { font-size: 0.76rem; }
+  .lp-system__desc { font-size: 0.86rem; line-height: 1.5; }
+  .lp-system__tags { gap: 0.3rem; }
+  .lp-system__tags span { font-size: 0.72rem; padding: 0.22rem 0.5rem; }
+  .lp-system__tags span:nth-child(3) { display: none; }
+  .lp-system__cta { font-size: 0.84rem; padding-top: 0.2rem; }
+  .lp-status { font-size: 0.68rem; padding: 0.25rem 0.55rem; top: 0.5rem; right: 0.5rem; }
+
+  /* Serviços, planos, sobre e contato */
+  .lp-grid--3 { gap: 1rem; }
+  .lp-service__body { padding: 1rem 1.05rem 1.2rem; gap: 0.45rem; }
+  .lp-service h3 { font-size: 1.1rem; }
+  .lp-service p,
+  .lp-plan p { font-size: 0.9rem; }
+  .lp-plan { padding: 1.15rem 1.1rem 1.3rem; gap: 0.6rem; }
+  .lp-plan h3 { font-size: 1.12rem; }
+  .lp-plan__name { font-size: 0.7rem; }
+  .lp-about { gap: 1.5rem; }
+  .lp-cta { padding: 1.4rem 1.1rem; gap: 1.25rem; }
+  .lp-footer { font-size: 0.82rem; padding-block: 1.5rem; }
+}
+
+/* ==========================================================================
+   Celular: primeira tela com respiro. A imagem com o "O" aparece limpa em cima;
+   título, texto e botões ficam abaixo dela. Carrossel só com o nome do sistema
+   (navegação por deslize) e fora da primeira dobra.
+   ========================================================================== */
+
+@media (max-width: 640px) {
+  .lp-hero__scene { bottom: auto; height: min(100%, 88svh); }
+
+  .lp-hero__scene::after {
+    background: linear-gradient(180deg,
+      rgba(5, 12, 22, 0.35) 0%,
+      rgba(5, 12, 22, 0.05) 18%,
+      rgba(5, 12, 22, 0.1) 40%,
+      rgba(5, 12, 22, 0.78) 58%,
+      var(--lp-bg) 82%);
+  }
+
+  .lp-hero__content { padding-top: 42svh; padding-bottom: 2.25rem; align-items: flex-start; }
+  .lp-hero__copy .lp-eyebrow { display: none; }
+  .lp-hero__title { font-size: clamp(1.85rem, 8.6vw, 2.2rem); margin-top: 0 !important; }
+  .lp-hero__lead { font-size: 0.9rem; color: #c3d2e0; max-width: 32ch; }
+  .lp-hero__actions { margin-top: 1.25rem; }
+  .lp-btn { min-height: 40px; font-size: 0.82rem; }
+
+  .lp-showcase { padding-top: 0.5rem; padding-bottom: 1.75rem; --card-w: min(46vw, 175px); }
+  .lp-showcase__head .lp-round-btn,
+  .lp-showcase__label small { display: none; }
+  .lp-showcase__label span { font-size: 0.7rem; color: #b3c4d6; }
+}
