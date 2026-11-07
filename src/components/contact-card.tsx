@@ -16,6 +16,13 @@ import styles from "./contact-card.module.css";
 
 const contactStars = Array.from({ length: 16 }, (_, index) => index);
 
+// Cometas raros: cada um cruza a tela em ~2s e espera dezenas de segundos até voltar.
+const comets = [
+  { top: "14%", angle: 18, every: 31, delay: 4, length: 220 },
+  { top: "62%", angle: -12, every: 47, delay: 19, length: 160 },
+  { top: "34%", angle: 28, every: 71, delay: 38, length: 260 },
+];
+
 function ActionIcon({ children }: { children: ReactNode }) {
   return <span className={styles.actionIcon}>{children}</span>;
 }
@@ -82,8 +89,22 @@ export default function ContactCard() {
 
     return (
     <main className={styles.page}>
-      <div className={styles.ambientRing} aria-hidden="true" />
-      <div className={styles.outerFog} aria-hidden="true" />
+      {/* Espaço: estrelas em duas profundidades, órbita com satélite e cometas ocasionais. */}
+      <div className={styles.space} aria-hidden="true">
+        <span className={styles.starsFar} />
+        <span className={styles.starsNear} />
+        <span className={styles.nebula} />
+        <span className={styles.orbit}><span className={styles.orbitSpin}><span className={styles.satellite} /></span></span>
+        {comets.map((comet, index) => (
+          <span
+            key={index}
+            className={styles.cometPath}
+            style={{ top: comet.top, transform: `rotate(${comet.angle}deg)` }}
+          >
+            <span className={styles.comet} style={{ animationDuration: `${comet.every}s`, animationDelay: `${comet.delay}s`, width: comet.length }} />
+          </span>
+        ))}
+      </div>
       <div className={styles.deck}>
       <div
         className={styles.stage}
