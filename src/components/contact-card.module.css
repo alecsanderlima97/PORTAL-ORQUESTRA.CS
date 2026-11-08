@@ -792,3 +792,418 @@
 .backWordmark span {
   color: #8edcff;
 }
+
+/* ==========================================================================
+   Desempenho: desliga efeitos que redesenhavam a tela a cada quadro
+   (backdrop-filter em áreas grandes, background-position animado, blur animado).
+   ========================================================================== */
+
+.card,
+.front,
+.front .actions,
+.portraitBrand { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+
+.front {
+  background: linear-gradient(125deg, rgba(40, 92, 128, .9), rgba(12, 38, 60, .95) 36%, rgba(30, 50, 92, .9) 70%, rgba(8, 30, 52, .96)) !important;
+}
+
+.portraitBrand { background: rgba(245, 250, 255, .9) !important; }
+
+.card > .crystalFoil,
+.page::before,
+.page::after,
+.starField::before,
+.crystalLight i,
+.lowFog { animation: none !important; }
+
+.page::before,
+.page::after,
+.ambientRing,
+.outerFog { display: none !important; }
+
+.holographicSweep { filter: none !important; }
+
+/* ==========================================================================
+   Espaço: o cartão flutua em órbita; estrelas com profundidade, uma órbita com
+   satélite e cometas que passam de vez em quando por trás. Só transform/opacity.
+   ========================================================================== */
+
+.space {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 45% at 50% -5%, rgba(60, 140, 210, .22), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 10% 85%, rgba(70, 60, 160, .16), transparent 70%),
+    linear-gradient(180deg, #04142a 0%, #020a17 55%, #01050d 100%);
+}
+
+.starsFar,
+.starsNear {
+  position: absolute;
+  inset: -50% 0 0;
+  height: 200%;
+  will-change: transform;
+}
+
+.starsFar {
+  background: url("/contato-stars-far.png") 0 0 / 420px 420px repeat;
+  opacity: .85;
+  animation: starsDrift 140s linear infinite;
+}
+
+.starsNear {
+  background: url("/contato-stars-near.png") 0 0 / 560px 560px repeat;
+  animation: starsDrift 80s linear infinite;
+}
+
+@keyframes starsDrift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, 25%, 0); }
+}
+
+.nebula {
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  top: 30%;
+  height: 60%;
+  background:
+    radial-gradient(ellipse 40% 50% at 30% 50%, rgba(70, 110, 220, .14), transparent 70%),
+    radial-gradient(ellipse 35% 45% at 72% 45%, rgba(120, 70, 200, .1), transparent 70%);
+}
+
+/* Órbita inclinada atrás do cartão, com um satélite percorrendo. */
+.orbit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(150vw, 980px);
+  aspect-ratio: 1;
+  margin: calc(min(150vw, 980px) / -2) 0 0 calc(min(150vw, 980px) / -2);
+  border: 1px solid rgba(130, 200, 255, .16);
+  border-radius: 50%;
+  box-shadow: 0 0 40px rgba(90, 170, 255, .06), inset 0 0 40px rgba(90, 170, 255, .05);
+  transform: rotateX(74deg) rotateZ(-16deg);
+}
+
+.orbitSpin {
+  position: absolute;
+  inset: 0;
+  animation: orbitSpin 70s linear infinite;
+  will-change: transform;
+}
+
+.satellite {
+  position: absolute;
+  left: 50%;
+  top: -5px;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 0 25%, #9fdcff 45%, rgba(90, 184, 255, 0) 72%);
+  box-shadow: 0 0 14px 4px rgba(120, 200, 255, .55);
+}
+
+@keyframes orbitSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Cometas: o caminho fica inclinado; o cometa só desliza nele (translateX). */
+.cometPath {
+  position: absolute;
+  left: 0;
+  width: 100vw;
+  height: 0;
+  transform-origin: 0 0;
+}
+
+.comet {
+  position: absolute;
+  left: 0;
+  top: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, rgba(150, 210, 255, .12) 35%, rgba(200, 236, 255, .55) 80%, #ffffff);
+  opacity: 0;
+  animation-name: cometFly;
+  animation-timing-function: cubic-bezier(.3, .1, .6, 1);
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
+}
+
+.comet::after {
+  content: "";
+  position: absolute;
+  right: -3px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 0 30%, rgba(170, 225, 255, .6) 55%, transparent 72%);
+  box-shadow: 0 0 12px 3px rgba(150, 215, 255, .6);
+}
+
+@keyframes cometFly {
+  0% { transform: translate3d(-40vw, 0, 0); opacity: 0; }
+  0.6% { opacity: 1; }
+  5% { opacity: .9; }
+  6.5%, 100% { transform: translate3d(150vw, 0, 0); opacity: 0; }
+}
+
+/* Cartão flutuando em órbita. */
+.deck {
+  animation: cardFloat 11s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes cardFloat {
+  0% { transform: translate3d(0, -6px, 0) rotate(-.7deg); }
+  50% { transform: translate3d(0, 4px, 0) rotate(.3deg); }
+  100% { transform: translate3d(0, 10px, 0) rotate(.8deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .starsFar, .starsNear, .orbitSpin, .deck { animation: none; }
+  .comet { display: none; }
+}
+
+/* Celular: cartão um pouco menor para o espaço aparecer em volta. */
+@media (max-width: 520px) {
+  .page { padding: 48px 0 56px; }
+  .deck { width: min(86vw, 400px); }
+}
+
+.orbit { border-color: rgba(140, 205, 255, .3); box-shadow: 0 0 30px rgba(90, 170, 255, .12), inset 0 0 30px rgba(90, 170, 255, .08); }
+
+/* ==========================================================================
+   Crachá digital fiel ao físico: arte do crachá como base e, por cima da faixa
+   escura, textos, contatos e QR reais (nítidos e clicáveis).
+   Medidas em cqw = % da largura do crachá, então escala igual em qualquer tela.
+   ========================================================================== */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+}
+
+.deck { width: min(86vw, 420px); }
+
+.badgeStage {
+  display: grid;
+  perspective: 1600px;
+  touch-action: pan-y pinch-zoom;
+}
+
+.badge {
+  grid-area: 1 / 1;
+  position: relative;
+  aspect-ratio: 638 / 1004;
+  overflow: hidden;
+  border-radius: 6% / 3.8%;
+  container-type: inline-size;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transition: transform .85s cubic-bezier(.22, .7, .18, 1);
+  box-shadow:
+    0 0 0 1px rgba(170, 225, 255, .45),
+    0 0 24px rgba(90, 180, 255, .35),
+    0 30px 70px rgba(0, 0, 0, .6);
+}
+
+.badgeArt { object-fit: cover; user-select: none; }
+
+.badgeFront { transform: rotateY(0deg); }
+.badgeBack { transform: rotateY(-180deg); }
+.badgeStage[data-flipped="true"] .badgeFront { transform: rotateY(180deg); }
+.badgeStage[data-flipped="true"] .badgeBack { transform: rotateY(0deg); }
+
+/* Faixa escura com a mesma diagonal do crachá físico. */
+.badgePanel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 44.5%;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16.5cqw 6.5cqw 4.5cqw 7.5cqw;
+  clip-path: polygon(0 0, 100% 37%, 100% 100%, 0 100%);
+  background:
+    radial-gradient(ellipse 70% 40% at 100% 100%, rgba(40, 120, 220, .22), transparent 70%),
+    linear-gradient(180deg, #020b20 0%, #010817 55%, #000512 100%);
+  color: #f2f8ff;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.badgeName {
+  margin: 0;
+  font-size: 7cqw;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -.02em;
+}
+
+.badgeRole {
+  margin: 1.2cqw 0 0;
+  color: #3fa9ff;
+  font-size: 5cqw;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.badgeArea {
+  margin: .8cqw 0 0;
+  color: #9fd6ff;
+  font-size: 3.9cqw;
+  line-height: 1.2;
+}
+
+.badgeDivider {
+  display: block;
+  width: 26cqw;
+  height: 2px;
+  margin: 3cqw 0 3.4cqw;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #2fd0ff, rgba(47, 208, 255, .2));
+  box-shadow: 0 0 8px rgba(47, 208, 255, .6);
+}
+
+.badgeBody {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 3cqw;
+}
+
+.badgeRows { display: grid; gap: 1.4cqw; min-width: 0; }
+
+.badgeRow {
+  display: flex;
+  align-items: center;
+  gap: 3cqw;
+  min-height: 6.6cqw;
+  color: #8ccfff;
+  font-size: 3.7cqw;
+  text-decoration: none;
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+}
+
+.badgeRow:hover span:last-child { color: #d6efff; text-decoration: underline; text-underline-offset: 3px; }
+.badgeRow:focus-visible { outline: 2px solid #8ce4ff; outline-offset: 3px; }
+
+.badgeRowIcon { display: grid; place-items: center; flex: none; width: 6.4cqw; height: 6.4cqw; color: #5cc8ff; }
+.badgeRowIcon svg { width: 100%; height: 100%; stroke-width: 1.7; }
+
+.badgeQr {
+  display: grid;
+  justify-items: center;
+  gap: 2cqw;
+  width: 33cqw;
+  padding: 3cqw 3cqw 2.6cqw;
+  background: #04122a;
+  border: 1px solid rgba(120, 190, 255, .18);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .45);
+}
+
+.badgeQr img {
+  width: 100%;
+  height: auto;
+  padding: 1.6cqw;
+  background: #fff;
+}
+
+.badgeQr span {
+  color: #e6f2ff;
+  font-size: 2.5cqw;
+  line-height: 1.25;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.badgeFooter {
+  margin: auto 0 0;
+  padding-top: 3cqw;
+  color: #eef6ff;
+  font-size: 2.85cqw;
+  font-weight: 500;
+  line-height: 1.7;
+  letter-spacing: .2em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* Ações abaixo do crachá. */
+.badgeActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  width: min(86vw, 420px);
+}
+
+.badgeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid rgba(160, 215, 255, .35);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(30, 60, 100, .85), rgba(10, 26, 48, .9));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 8px 20px rgba(0, 0, 0, .4);
+  color: #eaf6ff;
+  font: 600 14px/1 Inter, system-ui, sans-serif;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.badgeButton svg { width: 17px; height: 17px; }
+.badgeButton:hover { border-color: rgba(170, 225, 255, .7); }
+.badgeButton:focus-visible { outline: 2px solid #8ce4ff; outline-offset: 3px; }
+
+.badgeButtonPrimary {
+  flex: 1 1 100%;
+  border-color: #c4e9ff;
+  background: linear-gradient(180deg, #a6dcff, #5cb8ff 50%, #3a96ea);
+  color: #03172c;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .6), 0 10px 24px rgba(47, 141, 228, .5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge { transition: none; }
+}
+
+/* Ajustes: arte recortada até a borda do crachá e textos com folga. */
+.badge { aspect-ratio: 629 / 975; }
+.badgePanel { top: 45.8%; clip-path: polygon(0 0, 100% 38%, 100% 100%, 0 100%); padding: 17.5cqw 5.5cqw 4cqw 7cqw; }
+.badgeName { font-size: 6.5cqw; }
+.badgeRole { font-size: 4.7cqw; margin-top: 1cqw; }
+.badgeArea { font-size: 3.6cqw; }
+.badgeDivider { margin: 2.4cqw 0 2.8cqw; }
+.badgeBody { gap: 2.5cqw; }
+.badgeRows { gap: .9cqw; }
+.badgeRow { min-height: 6cqw; gap: 2.4cqw; font-size: 3.3cqw; white-space: nowrap; overflow-wrap: normal; }
+.badgeRow span:last-child { overflow: hidden; text-overflow: ellipsis; }
+.badgeRowIcon { width: 5.6cqw; height: 5.6cqw; }
+.badgeQr { width: 28cqw; padding: 2.4cqw 2.4cqw 2cqw; gap: 1.6cqw; }
+.badgeQr img { padding: 1.2cqw; }
+.badgeQr span { font-size: 2.2cqw; }
+.badgeFooter { font-size: 2.6cqw; padding-top: 2.4cqw; line-height: 1.65; }
+
+/* Diagonal um pouco mais alta (cobre o nome gravado na arte) + linha neon na borda. */
+.badgePanel { top: 43.5%; clip-path: polygon(0 0, 100% 38%, 100% 100%, 0 100%); padding-top: 16cqw; padding-bottom: 3.2cqw; }
+.badgeEdge { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.badgeEdgeGlow { stroke: rgba(80, 190, 255, .45); stroke-width: 6px; vector-effect: non-scaling-stroke; }
+.badgeEdgeLine { stroke: #8fe2ff; stroke-width: 1.6px; vector-effect: non-scaling-stroke; }
+.badgeName { margin-top: 1.5cqw; }
+.badgeFooter { font-size: 2.45cqw; padding-top: 2cqw; line-height: 1.6; letter-spacing: .18em; }

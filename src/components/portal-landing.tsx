@@ -532,7 +532,8 @@ export function PortalLanding() {
             src={`/portal-entry-room-web.mp4?v=${PORTAL_ASSET_VERSION}`}
             playsInline
             muted
-            preload="metadata"
+            preload="auto"
+            poster="/portal-entry-poster.webp"
             aria-hidden="true"
             onCanPlay={() => setEntranceVideoReady(true)}
             onError={() => {
@@ -854,6 +855,15 @@ export function PortalLanding() {
                 <p>Conte o que sua empresa precisa. A Orquestra.cs ajuda você a encontrar o sistema, site ou automação certa para avançar.</p>
               </div>
               <div className="lp-cta__actions">
+                <Link href="/contato" className="lp-agent">
+                  <Image src="/cracha-thumb.webp" alt="" width={64} height={99} className="lp-agent__badge" />
+                  <span className="lp-agent__text">
+                    <small>Fale com um de nossos atendentes</small>
+                    <strong>Alecsander Lima</strong>
+                    <span>Fundador · Tecnologia &amp; Sistemas</span>
+                  </span>
+                  <ArrowUpRight className="lp-agent__arrow size-4" aria-hidden="true" />
+                </Link>
                 <a href="https://wa.me/5515998478705?text=Ol%C3%A1%2C%20quero%20conversar%20sobre%20um%20or%C3%A7amento%20com%20a%20Orquestra.cs." target="_blank" rel="noopener noreferrer" className="lp-btn lp-btn--primary"><MessageCircle className="size-4" aria-hidden="true" /> Falar sobre meu projeto</a>
                 <a href="mailto:orquestracs@gmail.com?subject=Suporte Orquestra.cs" className="lp-btn lp-btn--ghost"><Mail className="size-4" aria-hidden="true" /> Enviar e-mail ao suporte</a>
               </div>

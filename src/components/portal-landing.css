@@ -2183,3 +2183,32 @@ a.lp-system:hover .lp-system__media::before { opacity: 0; }
   .lp-showcase__label small { display: none; }
   .lp-showcase__label span { font-size: 0.7rem; color: #b3c4d6; }
 }
+
+/* Hero um pouco mais claro. */
+.lp-hero__scene::after {
+  background:
+    linear-gradient(90deg, rgba(5, 12, 22, 0.86) 0%, rgba(5, 12, 22, 0.55) 30%, rgba(5, 12, 22, 0.04) 62%, rgba(5, 12, 22, 0.22) 100%),
+    linear-gradient(180deg, rgba(5, 12, 22, 0.15) 0%, rgba(5, 12, 22, 0) 30%, rgba(5, 12, 22, 0.45) 74%, var(--lp-bg) 100%);
+}
+.lp-hero__image { filter: brightness(1.12); }
+
+/* Atendente: atalho para o cartão de contato digital. */
+.lp-agent {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.7rem 0.9rem 0.7rem 0.7rem;
+  border: 1px solid rgba(150, 210, 255, 0.35);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(30, 60, 100, 0.55), rgba(10, 24, 44, 0.75));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 12px 28px -14px rgba(90, 184, 255, 0.55);
+  transition: transform 200ms var(--lp-ease), border-color 200ms ease;
+}
+.lp-agent:hover { transform: translateY(-2px); border-color: rgba(170, 225, 255, 0.7); }
+.lp-agent__badge { width: 46px; height: auto; border-radius: 5px; box-shadow: 0 0 0 1px rgba(170, 225, 255, 0.4), 0 6px 16px rgba(0, 0, 0, 0.5); }
+.lp-agent__text { display: grid; gap: 0.1rem; min-width: 0; }
+.lp-agent__text small { color: var(--lp-accent); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.lp-agent__text strong { font-size: 1rem; }
+.lp-agent__text span { color: var(--lp-muted); font-size: 0.82rem; }
+.lp-agent__arrow { color: var(--lp-accent); }
