@@ -401,3 +401,15 @@ body {
     transition: none;
   }
 }
+
+/* Tela de entrada: quadro do vídeo aparece de imediato (poster), também no celular,
+   e com menos escurecimento por cima. */
+.portal-gateway__scene { background: #020b15 url("/portal-entry-poster.webp") center / cover no-repeat; }
+.portal-shell--arrival:not(.portal-shell--video-ready) .portal-gateway__video { opacity: 1; }
+.portal-gateway__video { filter: brightness(1.12) saturate(1.06); }
+.portal-gateway__veil {
+  background:
+    linear-gradient(180deg, rgba(1, 9, 18, 0.12), rgba(1, 9, 18, 0) 44%, rgba(1, 9, 18, 0.32)),
+    linear-gradient(90deg, rgba(1, 9, 18, 0.14), transparent 48%, rgba(1, 9, 18, 0.1));
+}
+.portal-gateway__focus { box-shadow: inset 0 0 120px rgba(1, 9, 18, 0.4); opacity: 0.6; }
