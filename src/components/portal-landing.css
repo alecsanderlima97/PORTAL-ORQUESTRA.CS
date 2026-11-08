@@ -2212,3 +2212,13 @@ a.lp-system:hover .lp-system__media::before { opacity: 0; }
 .lp-agent__text strong { font-size: 1rem; }
 .lp-agent__text span { color: var(--lp-muted); font-size: 0.82rem; }
 .lp-agent__arrow { color: var(--lp-accent); }
+
+/* O topo não esmaece mais ao rolar (no celular parecia "escuro/apagado").
+   Fica só um leve deslocamento; no celular, nenhum. */
+@keyframes lp-hero-out { to { opacity: 1; translate: 0 -40px; } }
+@keyframes lp-hero-out-soft { to { opacity: 1; translate: 0 -16px; } }
+
+@media (max-width: 640px) {
+  .lp-hero__content,
+  .lp-showcase { animation: none !important; }
+}
