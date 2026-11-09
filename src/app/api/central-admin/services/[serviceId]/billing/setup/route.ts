@@ -1,7 +1,7 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { AsaasConfigError, AsaasRequestError, createAsaasCustomer, createAsaasSubscription, getAsaasEnvironment, isAsaasConfigured, listAsaasSubscriptionPayments, mapAsaasPaymentStatus, updateAsaasCustomer, type AsaasPayment } from "@/lib/asaas";
+import { AsaasConfigError, AsaasRequestError, createAsaasCustomer, createAsaasSubscription, findAsaasCustomerByDocument, getAsaasEnvironment, listActiveAsaasSubscriptions, isAsaasConfigured, listAsaasSubscriptionPayments, mapAsaasPaymentStatus, updateAsaasCustomer, type AsaasPayment } from "@/lib/asaas";
 import { getFirebaseAdminDb } from "@/lib/firebase-admin";
 import { createPublicPaymentToken, getPublicPaymentUrl } from "@/lib/payment-links";
 import { getCurrentSession } from "@/lib/session";
@@ -127,6 +127,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ ser
     const customerName = String(company.tradeName || company.legalName || company.name || "Cliente Orquestra.cs").trim();
     const existingCustomerId = typeof company.asaasCustomerId === "string" && company.asaasCustomerId ? company.asaasCustomerId : null;
     let customerId = existingCustomerId;
+    const companyDocument = typeof company.cnpj === "string" && company.cnpj ? company.cnpj : typeof company.cpf === "string" ? company.cpf : "";
+
+    // Cliente já cadastrado direto no Asaas: reaproveita pelo CPF/CNPJ em vez de criar outro.
+    if (!customerId && companyDocument) {
+      const found = await findAsaasCustomerByDocument(companyDocument);
+      if (found) {
+        customerId = found.id;
+        await companyRef.update({ asaasCustomerId: customerId, updatedAt: FieldValue.serverTimestamp() });
+      }
+    }
 
     if (!customerId) {
       const customer = await createAsaasCustomer({
@@ -143,7 +153,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ ser
       await updateAsaasCustomer(customerId, { notificationDisabled: true });
     }
 
-    const subscription = await createAsaasSubscription({
+    // Assinatura já criada direto no Asaas: vincula a existente em vez de criar uma segunda cobrança.
+    // Com uma única assinatura ativa, vincula; com várias, só vincula a que já aponta para este serviço
+    // ou tem o mesmo valor; caso contrário, pede revisão manual.
+    const activeSubscriptions = await listActiveAsaasSubscriptions(customerId);
+    const roundedFee = Math.round(monthlyFee * 100) / 100;
+    const linkedSubscription = activeSubscriptions.find((item) => item.externalReference === `managed-service:${serviceId}`)
+      ?? (activeSubscriptions.length === 1 ? activeSubscriptions[0] : activeSubscriptions.filter((item) => Number(item.value) === roundedFee).length === 1 ? activeSubscriptions.find((item) => Number(item.value) === roundedFee) : undefined);
+    if (!linkedSubscription && activeSubscriptions.length > 1) {
+      return NextResponse.json({
+        code: "multiple_subscriptions",
+        error: "Este cliente já tem mais de uma assinatura ativa no Asaas. Para não cobrar em dobro, vincule manualmente a assinatura correta.",
+      }, { status: 409 });
+    }
+
+    const subscription = linkedSubscription ?? await createAsaasSubscription({
       customer: customerId,
       value: Math.round(monthlyFee * 100) / 100,
       nextDueDate: nextDueDate(billingDay),
@@ -183,15 +207,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ ser
       tenantId,
       actorUserId: session.uid,
       actorRole: session.role,
-      action: "billing.subscription.created",
+      action: linkedSubscription ? "billing.subscription.linked" : "billing.subscription.created",
       targetType: "managedService",
       targetId: serviceId,
       createdAt: now,
-      metadata: { provider: "asaas", environment: getAsaasEnvironment(), subscriptionId: subscription.id, paymentReady: Boolean(payment), notificationsDisabled: true, graceDays: Number(service.graceDays) || 3 },
+      metadata: { provider: "asaas", environment: getAsaasEnvironment(), subscriptionId: subscription.id, linkedExisting: Boolean(linkedSubscription), paymentReady: Boolean(payment), notificationsDisabled: true, graceDays: Number(service.graceDays) || 3 },
     });
     await batch.commit();
 
-    return NextResponse.json({ ok: true, environment: getAsaasEnvironment(), subscriptionId: subscription.id, checkoutUrl, paymentReady: Boolean(payment) });
+    return NextResponse.json({ ok: true, environment: getAsaasEnvironment(), subscriptionId: subscription.id, linkedExisting: Boolean(linkedSubscription), checkoutUrl, paymentReady: Boolean(payment) });
   } catch (error) {
     if (error instanceof AsaasConfigError) return NextResponse.json({ error: error.message }, { status: 503 });
     if (error instanceof AsaasRequestError) {

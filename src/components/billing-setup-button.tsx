@@ -16,7 +16,7 @@ export function BillingSetupButton({ serviceId, subscriptionId, environment, che
     if (configuredId) return;
     if (environment === "production") {
       if (!window.confirm("Atenção: este produto será cadastrado no Asaas Produção e poderá gerar cobrança real. Confirmar criação da assinatura?")) return;
-    } else if (!window.confirm("Preparar a assinatura deste produto no ambiente configurado do Asaas? Se o Portal estiver em Produção, a assinatura poderá gerar cobrança real no vencimento.")) {
+    } else if (!window.confirm("Preparar a assinatura deste produto no Asaas? Se o cliente já tiver uma assinatura ativa lá, ela será vinculada em vez de criar outra. Se o Portal estiver em Produção, uma assinatura nova poderá gerar cobrança real no vencimento.")) {
       return;
     }
     setLoading(true);
@@ -33,16 +33,16 @@ export function BillingSetupButton({ serviceId, subscriptionId, environment, che
         body: JSON.stringify({ csrfToken: csrf.csrfToken, confirmProduction }),
       });
       let response = await requestSetup(environment === "production");
-      let result = await response.json() as { code?: string; error?: string; subscriptionId?: string; environment?: BillingEnvironment; checkoutUrl?: string; alreadyConfigured?: boolean };
+      let result = await response.json() as { code?: string; error?: string; subscriptionId?: string; environment?: BillingEnvironment; checkoutUrl?: string; alreadyConfigured?: boolean; linkedExisting?: boolean };
       if (!response.ok && result.code === "production_confirmation_required" && window.confirm("Atenção: este produto será cadastrado no Asaas Produção e poderá gerar cobrança real. Confirmar criação da assinatura?")) {
         response = await requestSetup(true);
-        result = await response.json() as { code?: string; error?: string; subscriptionId?: string; environment?: BillingEnvironment; checkoutUrl?: string; alreadyConfigured?: boolean };
+        result = await response.json() as { code?: string; error?: string; subscriptionId?: string; environment?: BillingEnvironment; checkoutUrl?: string; alreadyConfigured?: boolean; linkedExisting?: boolean };
       }
       if (!response.ok) throw new Error(result.error ?? "Não foi possível preparar a cobrança.");
       setConfiguredId(result.subscriptionId ?? configuredId ?? "configured");
       setConfiguredEnvironment(result.environment ?? configuredEnvironment ?? "sandbox");
       setPublicUrl(result.checkoutUrl ?? publicUrl);
-      setMessage(result.alreadyConfigured ? "A assinatura já estava configurada." : `Assinatura preparada em ${result.environment === "production" ? "produção" : "ambiente de testes"}.`);
+      setMessage(result.alreadyConfigured ? "A assinatura já estava configurada." : result.linkedExisting ? "Assinatura existente no Asaas vinculada (nenhuma cobrança nova foi criada)." : `Assinatura preparada em ${result.environment === "production" ? "produção" : "ambiente de testes"}.`);
     } catch (setupError) {
       setError(setupError instanceof Error ? setupError.message : "Não foi possível preparar a cobrança.");
     } finally {
