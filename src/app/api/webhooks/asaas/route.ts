@@ -1,7 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
-import { mapAsaasPaymentStatus } from "@/lib/asaas";
+import { getAsaasPayment, mapAsaasPaymentStatus } from "@/lib/asaas";
 import { getFirebaseAdminDb } from "@/lib/firebase-admin";
 import { sendConnectorCommand } from "@/lib/connector-commands";
 
@@ -45,6 +45,10 @@ function eventKey(eventId: string) {
 
 function referenceMonth(dueDate: string | null | undefined) {
   return typeof dueDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dueDate) ? dueDate.slice(0, 7) : "";
+}
+
+function cents(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? Math.round(value * 100) : null;
 }
 
 export async function POST(request: Request) {
@@ -116,6 +120,11 @@ export async function POST(request: Request) {
       }
     }
 
+    if (creditOrderRef) {
+      const creditChargeRef = db.collection("billingCharges").doc(`asaas-credit-${paymentId}`);
+      if ((await creditChargeRef.get()).exists) chargeRef = creditChargeRef;
+    }
+
     if (chargeRef) {
       const charge = await chargeRef.get();
       const serviceId = charge.data()?.serviceId;
@@ -148,14 +157,44 @@ export async function POST(request: Request) {
     }
 
     const status = mapAsaasPaymentStatus(event, safeText(payment?.status, 40));
-    const paidAt = status === "paga" ? (payment?.paymentDate || payment?.confirmedDate || new Date().toISOString()) : null;
+    // A entrega do webhook informa o evento, mas o recurso atual do Asaas confirma
+    // pagamento, valor e vínculo antes de liberar qualquer crédito.
+    const verifiedPayment = status === "paga" ? await getAsaasPayment(paymentId) : null;
+    if (verifiedPayment) {
+      if (verifiedPayment.id !== paymentId || mapAsaasPaymentStatus("", safeText(verifiedPayment.status, 40)) !== "paga") {
+        throw new Error("asaas-payment-not-confirmed");
+      }
+      if (creditOrderRef && creditOrderData) {
+        const expectedPaymentId = safeText(creditOrderData.asaasPaymentId, 160);
+        if ((expectedPaymentId && expectedPaymentId !== paymentId) ||
+          verifiedPayment.externalReference !== `ai-credits:${creditOrderRef.id}` ||
+          cents(verifiedPayment.value) !== cents(Number(creditOrderData.amount))) {
+          throw new Error("asaas-credit-order-mismatch");
+        }
+        const tenantId = safeText(creditOrderData.tenantId, 160);
+        const company = tenantId ? await db.collection("companies").doc(tenantId).get() : null;
+        const expectedCustomerId = safeText(company?.data()?.asaasCustomerId, 160);
+        if (!expectedCustomerId || verifiedPayment.customer !== expectedCustomerId) {
+          throw new Error("asaas-credit-customer-mismatch");
+        }
+      } else if (serviceData) {
+        const subscriptionId = safeText(serviceData.asaasSubscriptionId, 160);
+        const customerId = safeText(serviceData.asaasCustomerId, 160);
+        if ((subscriptionId && verifiedPayment.subscription !== subscriptionId) ||
+          (customerId && verifiedPayment.customer !== customerId)) {
+          throw new Error("asaas-subscription-mismatch");
+        }
+      }
+    }
+    const confirmedPayment = verifiedPayment ?? payment;
+    const paidAt = status === "paga" ? (confirmedPayment?.paymentDate || confirmedPayment?.confirmedDate || new Date().toISOString()) : null;
     const chargeData = {
       billingProvider: "asaas",
       asaasPaymentId: paymentId,
-      asaasSubscriptionId: safeText(payment?.subscription, 160) || null,
-      amount: typeof payment?.value === "number" ? payment.value : null,
-      dueDate: safeText(payment?.dueDate, 20) || null,
-      invoiceUrl: safeText(payment?.invoiceUrl, 1000) || null,
+      asaasSubscriptionId: safeText(confirmedPayment?.subscription, 160) || null,
+      amount: typeof confirmedPayment?.value === "number" ? confirmedPayment.value : null,
+      dueDate: safeText(confirmedPayment?.dueDate, 20) || null,
+      invoiceUrl: safeText(confirmedPayment?.invoiceUrl, 1000) || null,
       status,
       paidAt,
       lastWebhookEvent: event,
@@ -165,7 +204,7 @@ export async function POST(request: Request) {
     if (chargeRef) {
       await chargeRef.update(chargeData);
     } else if (serviceRef && serviceData && typeof serviceData.tenantId === "string") {
-      chargeRef = db.collection("billingCharges").doc(`asaas-${paymentId}`);
+      chargeRef = db.collection("billingCharges").doc(creditOrderRef ? `asaas-credit-${paymentId}` : `asaas-${paymentId}`);
       await chargeRef.set({
         tenantId: serviceData.tenantId,
         serviceId: serviceRef.id,

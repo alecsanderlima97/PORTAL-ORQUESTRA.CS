@@ -186,6 +186,10 @@ export async function listAsaasSubscriptionPayments(subscriptionId: string) {
   return Array.isArray(result.data) ? result.data : [];
 }
 
+export async function getAsaasPayment(paymentId: string) {
+  return asaasRequest<AsaasPayment>(`/payments/${encodeURIComponent(paymentId)}`);
+}
+
 export function mapAsaasPaymentStatus(event: string, paymentStatus: string): BillingStatus {
   const normalized = `${event} ${paymentStatus}`.toUpperCase();
   if (normalized.includes("RECEIVED") || normalized.includes("CONFIRMED")) return "paga";
