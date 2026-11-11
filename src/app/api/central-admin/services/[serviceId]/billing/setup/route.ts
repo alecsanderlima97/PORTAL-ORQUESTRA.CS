@@ -1,7 +1,8 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { AsaasConfigError, AsaasRequestError, createAsaasCustomer, createAsaasSubscription, getAsaasEnvironment, isAsaasConfigured, listAsaasSubscriptionPayments, mapAsaasPaymentStatus, updateAsaasCustomer, type AsaasPayment } from "@/lib/asaas";
+import { AsaasConfigError, AsaasRequestError, createAsaasSubscription, findAsaasSubscriptionByExternalReference, getAsaasEnvironment, isAsaasConfigured, listAsaasSubscriptionPayments, mapAsaasPaymentStatus, resolveAsaasCustomer, type AsaasPayment } from "@/lib/asaas";
+import { asaasCustomerIdUpdate, asaasDocumentId, asaasServiceBillingUpdate, getAsaasCustomerId, getAsaasEnvironmentBilling, getLegacyAsaasCustomerId } from "@/lib/asaas-environment-records";
 import { getFirebaseAdminDb } from "@/lib/firebase-admin";
 import { createPublicPaymentToken, getPublicPaymentUrl } from "@/lib/payment-links";
 import { getCurrentSession } from "@/lib/session";
@@ -64,33 +65,45 @@ export async function POST(request: Request, { params }: { params: Promise<{ ser
     if (!serviceSnapshot.exists) return NextResponse.json({ error: "Serviço não encontrado." }, { status: 404 });
 
     const service = serviceSnapshot.data() ?? {};
-    const configuredEnvironment = service.billingEnvironment === "production" || service.billingEnvironment === "sandbox"
-      ? service.billingEnvironment
-      : getAsaasEnvironment();
-    const existingSubscriptionId = typeof service.asaasSubscriptionId === "string" && service.asaasSubscriptionId ? service.asaasSubscriptionId : null;
-    const existingCheckoutUrl = typeof service.billingCheckoutUrl === "string" && service.billingCheckoutUrl ? service.billingCheckoutUrl : null;
-    const hasPublicToken = typeof service.billingPublicTokenHash === "string" && service.billingPublicTokenHash.length > 0;
+    const environment = getAsaasEnvironment();
+    const environmentBilling = getAsaasEnvironmentBilling(service, environment);
+    const existingSubscriptionId = environmentBilling.subscriptionId;
+    const existingCheckoutUrl = environmentBilling.checkoutUrl;
+    const hasPublicToken = Boolean(environmentBilling.publicTokenHash);
 
     if (existingSubscriptionId) {
       let checkoutUrl = existingCheckoutUrl;
-      let publicTokenHash = hasPublicToken ? service.billingPublicTokenHash : null;
+      let publicTokenHash = hasPublicToken ? environmentBilling.publicTokenHash : null;
       if (!checkoutUrl || !publicTokenHash) {
         const publicPayment = createPublicPaymentToken();
         checkoutUrl = getPublicPaymentUrl(request, publicPayment.token);
         publicTokenHash = publicPayment.hash;
-        await serviceRef.update({ billingCheckoutUrl: checkoutUrl, billingPublicTokenHash: publicTokenHash, updatedAt: FieldValue.serverTimestamp() });
       }
 
       let payment: AsaasPayment | null = null;
+      let subscriptionExists = true;
       try {
         payment = firstPayment(await listAsaasSubscriptionPayments(existingSubscriptionId));
-      } catch {
-        payment = null;
+      } catch (error) {
+        if (!(error instanceof AsaasRequestError) || error.status !== 404) throw error;
+        subscriptionExists = false;
+      }
+      if (subscriptionExists) {
+        await serviceRef.update({
+          ...asaasServiceBillingUpdate(environment, {
+            checkoutUrl,
+            customerId: environmentBilling.customerId ?? payment?.customer ?? (environment === "production" ? getLegacyAsaasCustomerId(service) : null),
+            publicTokenHash,
+            subscriptionId: existingSubscriptionId,
+          }),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
       }
       if (payment) {
-        await db.collection("billingCharges").doc(`asaas-${payment.id}`).set({
+        await db.collection("billingCharges").doc(asaasDocumentId("asaas", environment, payment.id)).set({
           tenantId: typeof service.tenantId === "string" ? service.tenantId : null,
           serviceId,
+          billingEnvironment: environment,
           referenceMonth: referenceMonth(payment.dueDate),
           ...chargeData(payment, existingSubscriptionId, Number(service.monthlyFee) || 0),
           createdAt: FieldValue.serverTimestamp(),
@@ -99,14 +112,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ ser
       return NextResponse.json({
         ok: true,
         alreadyConfigured: true,
-        environment: configuredEnvironment,
+        environment,
         subscriptionId: existingSubscriptionId,
         checkoutUrl,
         paymentReady: Boolean(payment),
       });
     }
 
-    if (getAsaasEnvironment() === "production" && body.confirmProduction !== true) {
+    if (environment === "production" && body.confirmProduction !== true) {
       return NextResponse.json({
         code: "production_confirmation_required",
         error: "Esta ação criará uma assinatura real no Asaas Produção e precisa de confirmação explícita.",
@@ -125,30 +138,30 @@ export async function POST(request: Request, { params }: { params: Promise<{ ser
     if (!companySnapshot.exists) return NextResponse.json({ error: "Cliente vinculado não foi encontrado." }, { status: 404 });
     const company = companySnapshot.data() ?? {};
     const customerName = String(company.tradeName || company.legalName || company.name || "Cliente Orquestra.cs").trim();
-    const existingCustomerId = typeof company.asaasCustomerId === "string" && company.asaasCustomerId ? company.asaasCustomerId : null;
-    let customerId = existingCustomerId;
+    const customer = await resolveAsaasCustomer({
+      candidateIds: [
+        getAsaasCustomerId(company, environment),
+        environmentBilling.customerId,
+        ...(environment === "production" ? [getLegacyAsaasCustomerId(company), getLegacyAsaasCustomerId(service)] : []),
+      ],
+      name: customerName,
+      email: typeof company.contactEmail === "string" ? company.contactEmail : null,
+      phone: typeof company.contactPhone === "string" ? company.contactPhone : null,
+      cpfCnpj: typeof company.cnpj === "string" && company.cnpj ? company.cnpj : typeof company.cpf === "string" ? company.cpf : null,
+      externalReference: `company:${tenantId}`,
+      notificationDisabled: true,
+    });
+    const customerId = customer.id;
+    await companyRef.update({ ...asaasCustomerIdUpdate(environment, customerId), updatedAt: FieldValue.serverTimestamp() });
 
-    if (!customerId) {
-      const customer = await createAsaasCustomer({
-        name: customerName,
-        email: typeof company.contactEmail === "string" ? company.contactEmail : null,
-        phone: typeof company.contactPhone === "string" ? company.contactPhone : null,
-        cpfCnpj: typeof company.cnpj === "string" && company.cnpj ? company.cnpj : typeof company.cpf === "string" ? company.cpf : null,
-        externalReference: `company:${tenantId}`,
-        notificationDisabled: true,
-      });
-      customerId = customer.id;
-      await companyRef.update({ asaasCustomerId: customerId, updatedAt: FieldValue.serverTimestamp() });
-    } else {
-      await updateAsaasCustomer(customerId, { notificationDisabled: true });
-    }
-
-    const subscription = await createAsaasSubscription({
+    const externalReference = `managed-service:${serviceId}`;
+    const existingSubscription = await findAsaasSubscriptionByExternalReference(externalReference, customerId);
+    const subscription = existingSubscription ?? await createAsaasSubscription({
       customer: customerId,
       value: Math.round(monthlyFee * 100) / 100,
       nextDueDate: nextDueDate(billingDay),
       description: `${String(service.name || "Produto Orquestra.cs").trim()} · ${String(service.plan || "Plano").trim()}`.slice(0, 255),
-      externalReference: `managed-service:${serviceId}`,
+      externalReference,
     });
     const publicPayment = createPublicPaymentToken();
     const checkoutUrl = getPublicPaymentUrl(request, publicPayment.token);
@@ -162,18 +175,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ ser
     const batch = db.batch();
     batch.update(serviceRef, {
       billingProvider: "asaas",
-      billingEnvironment: getAsaasEnvironment(),
-      asaasCustomerId: customerId,
-      asaasSubscriptionId: subscription.id,
+      ...asaasServiceBillingUpdate(environment, {
+        checkoutUrl,
+        customerId,
+        publicTokenHash: publicPayment.hash,
+        subscriptionId: subscription.id,
+      }),
       graceDays: Number(service.graceDays) >= 0 && Number(service.graceDays) <= 30 ? Math.round(Number(service.graceDays)) : 3,
-      billingPublicTokenHash: publicPayment.hash,
-      billingCheckoutUrl: checkoutUrl,
       updatedAt: FieldValue.serverTimestamp(),
     });
     if (payment) {
-      batch.set(db.collection("billingCharges").doc(`asaas-${payment.id}`), {
+      batch.set(db.collection("billingCharges").doc(asaasDocumentId("asaas", environment, payment.id)), {
         tenantId,
         serviceId,
+        billingEnvironment: environment,
         referenceMonth: referenceMonth(payment.dueDate),
         ...chargeData(payment, subscription.id, Math.round(monthlyFee * 100) / 100),
         createdAt: FieldValue.serverTimestamp(),
@@ -187,11 +202,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ ser
       targetType: "managedService",
       targetId: serviceId,
       createdAt: now,
-      metadata: { provider: "asaas", environment: getAsaasEnvironment(), subscriptionId: subscription.id, paymentReady: Boolean(payment), notificationsDisabled: true, graceDays: Number(service.graceDays) || 3 },
+      metadata: { provider: "asaas", environment, subscriptionId: subscription.id, reusedSubscription: Boolean(existingSubscription), paymentReady: Boolean(payment), notificationsDisabled: true, graceDays: Number(service.graceDays) || 3 },
     });
     await batch.commit();
 
-    return NextResponse.json({ ok: true, environment: getAsaasEnvironment(), subscriptionId: subscription.id, checkoutUrl, paymentReady: Boolean(payment) });
+    return NextResponse.json({ ok: true, environment, subscriptionId: subscription.id, checkoutUrl, paymentReady: Boolean(payment) });
   } catch (error) {
     if (error instanceof AsaasConfigError) return NextResponse.json({ error: error.message }, { status: 503 });
     if (error instanceof AsaasRequestError) {

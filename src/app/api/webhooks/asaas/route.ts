@@ -1,7 +1,8 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
-import { getAsaasPayment, mapAsaasPaymentStatus } from "@/lib/asaas";
+import { getAsaasEnvironment, getAsaasPayment, mapAsaasPaymentStatus } from "@/lib/asaas";
+import { asaasDocumentId, getAsaasCustomerId, getAsaasEnvironmentBilling, getLegacyAsaasCustomerId } from "@/lib/asaas-environment-records";
 import { getFirebaseAdminDb } from "@/lib/firebase-admin";
 import { sendConnectorCommand } from "@/lib/connector-commands";
 
@@ -69,7 +70,9 @@ export async function POST(request: Request) {
     if (!event || !paymentId) return NextResponse.json({ error: "Evento sem identificação suficiente." }, { status: 400 });
 
     const db = getFirebaseAdminDb();
-    const currentEventRef = db.collection("asaasWebhookEvents").doc(eventKey(eventId));
+    const environment = getAsaasEnvironment();
+    const environmentEventId = environment === "production" ? eventId : `${environment}:${eventId}`;
+    const currentEventRef = db.collection("asaasWebhookEvents").doc(eventKey(environmentEventId));
     eventRef = currentEventRef;
     const eventClaim = await db.runTransaction(async (transaction) => {
       const snapshot = await transaction.get(currentEventRef);
@@ -77,14 +80,18 @@ export async function POST(request: Request) {
       if (data.processedAt) return "duplicate" as const;
       const processingMs = data.processingAt instanceof Timestamp ? data.processingAt.toMillis() : 0;
       if (processingMs && Date.now() - processingMs < EVENT_LOCK_MS) return "in_progress" as const;
-      transaction.set(currentEventRef, { eventId, event, paymentId, receivedAt: FieldValue.serverTimestamp(), processingAt: Timestamp.now() }, { merge: true });
+      transaction.set(currentEventRef, { eventId, event, paymentId, billingEnvironment: environment, receivedAt: FieldValue.serverTimestamp(), processingAt: Timestamp.now() }, { merge: true });
       return "claimed" as const;
     });
     if (eventClaim === "duplicate") return NextResponse.json({ ok: true, duplicate: true });
     if (eventClaim === "in_progress") return NextResponse.json({ error: "Evento em processamento." }, { status: 409 });
 
-    const paymentQuery = await db.collection("billingCharges").where("asaasPaymentId", "==", paymentId).limit(1).get();
-    let chargeRef = paymentQuery.docs[0]?.ref ?? null;
+    const paymentQuery = await db.collection("billingCharges").where("asaasPaymentId", "==", paymentId).limit(10).get();
+    const matchingCharge = paymentQuery.docs.find((doc) => {
+      const data = doc.data();
+      return data.billingEnvironment === environment || (environment === "production" && !data.billingEnvironment);
+    });
+    let chargeRef = matchingCharge?.ref ?? null;
     let creditOrderRef = null as FirebaseFirestore.DocumentReference | null;
     let creditOrderData: FirebaseFirestore.DocumentData | null = null;
     let serviceRef = null as FirebaseFirestore.DocumentReference | null;
@@ -103,8 +110,11 @@ export async function POST(request: Request) {
       }
     }
     if (!creditOrderRef) {
-      const orderQuery = await db.collection("creditOrders").where("asaasPaymentId", "==", paymentId).limit(1).get();
-      const orderSnapshot = orderQuery.docs[0];
+      const orderQuery = await db.collection("creditOrders").where("asaasPaymentId", "==", paymentId).limit(10).get();
+      const orderSnapshot = orderQuery.docs.find((doc) => {
+        const data = doc.data();
+        return data.billingEnvironment === environment || (environment === "production" && !data.billingEnvironment);
+      });
       if (orderSnapshot) {
         creditOrderRef = orderSnapshot.ref;
         creditOrderData = orderSnapshot.data();
@@ -121,7 +131,7 @@ export async function POST(request: Request) {
     }
 
     if (creditOrderRef) {
-      const creditChargeRef = db.collection("billingCharges").doc(`asaas-credit-${paymentId}`);
+      const creditChargeRef = db.collection("billingCharges").doc(asaasDocumentId("asaas-credit", environment, paymentId));
       if ((await creditChargeRef.get()).exists) chargeRef = creditChargeRef;
     }
 
@@ -136,8 +146,15 @@ export async function POST(request: Request) {
     }
 
     if (!serviceRef && payment?.subscription) {
-      const serviceQuery = await db.collection("managedServices").where("asaasSubscriptionId", "==", payment.subscription).limit(1).get();
-      const serviceSnapshot = serviceQuery.docs[0];
+      const environmentQuery = await db.collection("managedServices")
+        .where(`asaasBillingEnvironments.${environment}.subscriptionId`, "==", payment.subscription)
+        .limit(1)
+        .get();
+      let serviceSnapshot: FirebaseFirestore.QueryDocumentSnapshot<FirebaseFirestore.DocumentData> | undefined = environmentQuery.docs[0];
+      if (!serviceSnapshot) {
+        const legacyQuery = await db.collection("managedServices").where("asaasSubscriptionId", "==", payment.subscription).limit(5).get();
+        serviceSnapshot = legacyQuery.docs.find((doc) => doc.data().billingEnvironment === environment);
+      }
       if (serviceSnapshot) {
         serviceRef = serviceSnapshot.ref;
         serviceData = serviceSnapshot.data();
@@ -173,15 +190,19 @@ export async function POST(request: Request) {
         }
         const tenantId = safeText(creditOrderData.tenantId, 160);
         const company = tenantId ? await db.collection("companies").doc(tenantId).get() : null;
-        const expectedCustomerId = safeText(company?.data()?.asaasCustomerId, 160);
+        const companyData = company?.data() ?? {};
+        const orderEnvironment = safeText(creditOrderData.billingEnvironment, 20);
+        const expectedCustomerId = safeText(creditOrderData.asaasCustomerId, 160)
+          || getAsaasCustomerId(companyData, environment)
+          || (orderEnvironment === environment || (environment === "production" && !orderEnvironment) ? getLegacyAsaasCustomerId(companyData) : null);
         if (!expectedCustomerId || verifiedPayment.customer !== expectedCustomerId) {
           throw new Error("asaas-credit-customer-mismatch");
         }
       } else if (serviceData) {
-        const subscriptionId = safeText(serviceData.asaasSubscriptionId, 160);
-        const customerId = safeText(serviceData.asaasCustomerId, 160);
-        if ((subscriptionId && verifiedPayment.subscription !== subscriptionId) ||
-          (customerId && verifiedPayment.customer !== customerId)) {
+        const billing = getAsaasEnvironmentBilling(serviceData, environment);
+        const subscriptionId = billing.subscriptionId;
+        const customerId = billing.customerId;
+        if (!subscriptionId || !customerId || verifiedPayment.subscription !== subscriptionId || verifiedPayment.customer !== customerId) {
           throw new Error("asaas-subscription-mismatch");
         }
       }
@@ -190,6 +211,8 @@ export async function POST(request: Request) {
     const paidAt = status === "paga" ? (confirmedPayment?.paymentDate || confirmedPayment?.confirmedDate || new Date().toISOString()) : null;
     const chargeData = {
       billingProvider: "asaas",
+      billingEnvironment: environment,
+      asaasCustomerId: safeText(confirmedPayment?.customer, 160) || null,
       asaasPaymentId: paymentId,
       asaasSubscriptionId: safeText(confirmedPayment?.subscription, 160) || null,
       amount: typeof confirmedPayment?.value === "number" ? confirmedPayment.value : null,
@@ -204,7 +227,7 @@ export async function POST(request: Request) {
     if (chargeRef) {
       await chargeRef.update(chargeData);
     } else if (serviceRef && serviceData && typeof serviceData.tenantId === "string") {
-      chargeRef = db.collection("billingCharges").doc(creditOrderRef ? `asaas-credit-${paymentId}` : `asaas-${paymentId}`);
+      chargeRef = db.collection("billingCharges").doc(asaasDocumentId(creditOrderRef ? "asaas-credit" : "asaas", environment, paymentId));
       await chargeRef.set({
         tenantId: serviceData.tenantId,
         serviceId: serviceRef.id,
@@ -214,9 +237,10 @@ export async function POST(request: Request) {
         createdAt: FieldValue.serverTimestamp(),
       }, { merge: true });
     } else {
-      await db.collection("asaasUnmatchedEvents").doc(eventKey(eventId)).set({
+      await db.collection("asaasUnmatchedEvents").doc(eventKey(environmentEventId)).set({
         eventId,
         event,
+        billingEnvironment: environment,
         paymentId,
         subscriptionId: safeText(payment?.subscription, 160) || null,
         customerId: safeText(payment?.customer, 160) || null,
@@ -234,7 +258,7 @@ export async function POST(request: Request) {
       targetType: "billingCharge",
       targetId: chargeRef?.id ?? paymentId,
       createdAt: new Date().toISOString(),
-      metadata: { provider: "asaas", event, paymentId, status },
+      metadata: { provider: "asaas", environment, event, paymentId, status },
     });
 
     if (creditOrderRef && creditOrderData && status === "paga") {

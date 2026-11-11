@@ -4,14 +4,17 @@ import type { BillingStatus } from "@/lib/platform-types";
 
 export type AsaasEnvironment = "sandbox" | "production";
 
-type AsaasCustomer = {
+export type AsaasCustomer = {
   id: string;
   name: string;
   email?: string | null;
+  externalReference?: string | null;
 };
 
-type AsaasSubscription = {
+export type AsaasSubscription = {
   id: string;
+  customer?: string | null;
+  externalReference?: string | null;
   status?: string;
   nextDueDate?: string;
   value?: number;
@@ -60,8 +63,23 @@ export function isAsaasConfigured() {
 
 function getBaseUrl() {
   const configuredUrl = process.env.ASAAS_API_BASE_URL?.trim();
-  if (configuredUrl) return configuredUrl.replace(/\/$/, "");
-  return getAsaasEnvironment() === "production" ? "https://api.asaas.com/v3" : "https://api-sandbox.asaas.com/v3";
+  const environment = getAsaasEnvironment();
+  const defaultUrl = environment === "production" ? "https://api.asaas.com/v3" : "https://api-sandbox.asaas.com/v3";
+  if (!configuredUrl) return defaultUrl;
+
+  try {
+    const configuredHost = new URL(configuredUrl).hostname.toLowerCase();
+    const isSandboxHost = configuredHost === "api-sandbox.asaas.com";
+    const isProductionHost = configuredHost === "api.asaas.com";
+    if ((environment === "production" && isSandboxHost) || (environment === "sandbox" && isProductionHost)) {
+      throw new AsaasConfigError("ASAAS_ENVIRONMENT e ASAAS_API_BASE_URL apontam para ambientes diferentes.");
+    }
+  } catch (error) {
+    if (error instanceof AsaasConfigError) throw error;
+    throw new AsaasConfigError("ASAAS_API_BASE_URL não contém uma URL válida.");
+  }
+
+  return configuredUrl.replace(/\/$/, "");
 }
 
 async function asaasRequest<T>(path: string, init: RequestInit = {}) {
@@ -123,6 +141,55 @@ export async function updateAsaasCustomer(customerId: string, input: { notificat
   });
 }
 
+export async function getAsaasCustomer(customerId: string) {
+  return asaasRequest<AsaasCustomer>(`/customers/${encodeURIComponent(customerId)}`);
+}
+
+export async function findAsaasCustomerByExternalReference(externalReference: string) {
+  const result = await asaasRequest<AsaasListResponse<AsaasCustomer>>(
+    `/customers?externalReference=${encodeURIComponent(externalReference)}&limit=10`,
+  );
+  return Array.isArray(result.data) ? result.data[0] ?? null : null;
+}
+
+export async function resolveAsaasCustomer(input: {
+  candidateIds: Array<string | null | undefined>;
+  email?: string | null;
+  externalReference: string;
+  name: string;
+  notificationDisabled?: boolean;
+  phone?: string | null;
+  cpfCnpj?: string | null;
+}) {
+  const candidateIds = [...new Set(input.candidateIds.filter((value): value is string => Boolean(value)))];
+  for (const customerId of candidateIds) {
+    try {
+      const customer = await getAsaasCustomer(customerId);
+      if (!customer.externalReference || customer.externalReference === input.externalReference) {
+        await updateAsaasCustomer(customer.id, { notificationDisabled: input.notificationDisabled ?? false });
+        return customer;
+      }
+    } catch (error) {
+      if (!(error instanceof AsaasRequestError) || error.status !== 404) throw error;
+    }
+  }
+
+  const existing = await findAsaasCustomerByExternalReference(input.externalReference);
+  if (existing) {
+    await updateAsaasCustomer(existing.id, { notificationDisabled: input.notificationDisabled ?? false });
+    return existing;
+  }
+
+  return createAsaasCustomer({
+    name: input.name,
+    email: input.email,
+    phone: input.phone,
+    cpfCnpj: input.cpfCnpj,
+    externalReference: input.externalReference,
+    notificationDisabled: input.notificationDisabled,
+  });
+}
+
 export async function createAsaasSubscription(input: {
   customer: string;
   value: number;
@@ -142,6 +209,14 @@ export async function createAsaasSubscription(input: {
       externalReference: input.externalReference,
     }),
   });
+}
+
+export async function findAsaasSubscriptionByExternalReference(externalReference: string, customerId: string) {
+  const result = await asaasRequest<AsaasListResponse<AsaasSubscription>>(
+    `/subscriptions?externalReference=${encodeURIComponent(externalReference)}&customer=${encodeURIComponent(customerId)}&limit=10`,
+  );
+  const subscriptions = Array.isArray(result.data) ? result.data : [];
+  return subscriptions.find((subscription) => subscription.status === "ACTIVE") ?? subscriptions[0] ?? null;
 }
 
 export async function createAsaasPayment(input: {
