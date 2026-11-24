@@ -194,6 +194,7 @@ export const projectSourceSystems: Record<string, string> = {
   "orquestra-studio": "orquestra_studio",
   "orquestra-blend": "orquestra_blend",
   "orquestra-moda": "orquestra_moda",
+  transgestao: "transgestao",
 };
 
 export const projectCatalogDetails: Record<string, ProjectCatalogDetails> = {
