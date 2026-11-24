@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
-import { createAsaasCustomer, createAsaasPayment, findAsaasPaymentByExternalReference, isAsaasConfigured } from "@/lib/asaas";
+import { createAsaasPayment, findAsaasPaymentByExternalReference, getAsaasEnvironment, isAsaasConfigured, resolveAsaasCustomer } from "@/lib/asaas";
+import { asaasCustomerIdUpdate, asaasDocumentId, getAsaasCustomerId, getAsaasEnvironmentBilling, getLegacyAsaasCustomerId } from "@/lib/asaas-environment-records";
 import { createCreditOrderKey, getAiCreditPackage, verifyCreditPurchaseToken } from "@/lib/ai-credit-purchases";
 import { getFirebaseAdminDb } from "@/lib/firebase-admin";
 import { clientIp, consumeRateLimit } from "@/lib/rate-limit";
@@ -63,7 +64,9 @@ export async function POST(request: Request) {
     const companySnapshot = await companyRef.get();
     if (!companySnapshot.exists) return NextResponse.json({ error: "Cliente do produto não encontrado." }, { status: 404 });
     const company = companySnapshot.data() ?? {};
-    const orderKey = createCreditOrderKey(claims.sourceSystem, claims.externalTenantId, packageId as keyof typeof import("@/lib/ai-credit-purchases").AI_CREDIT_PACKAGES);
+    const environment = getAsaasEnvironment();
+    const legacyOrderKey = createCreditOrderKey(claims.sourceSystem, claims.externalTenantId, packageId as keyof typeof import("@/lib/ai-credit-purchases").AI_CREDIT_PACKAGES);
+    const orderKey = environment === "production" ? legacyOrderKey : `sandbox-${legacyOrderKey}`;
     const orderRef = db.collection("creditOrders").doc(orderKey);
 
     // Reserva do pedido em transação: duas requisições simultâneas não podem criar duas cobranças.
@@ -86,6 +89,7 @@ export async function POST(request: Request) {
         packageId,
         sourceSystem: claims.sourceSystem,
         externalTenantId: claims.externalTenantId,
+        billingEnvironment: environment,
         serviceId: serviceRef.id,
         tenantId,
         status: "creating",
@@ -104,24 +108,29 @@ export async function POST(request: Request) {
     }
 
     const customerName = safeText(company.tradeName || company.legalName || company.name, 160) || "Cliente Orquestra.cs";
-    const existingCustomerId = safeText(company.asaasCustomerId, 160);
-    let customerId = existingCustomerId;
-    if (!customerId) {
-      const customer = await createAsaasCustomer({
-        name: customerName,
-        email: safeText(company.contactEmail, 180) || null,
-        phone: safeText(company.contactPhone, 40) || null,
-        cpfCnpj: safeText(company.cnpj || company.cpf || company.document, 32) || null,
-        externalReference: `company:${tenantId}`,
-        notificationDisabled: true,
-      });
-      customerId = customer.id;
-      await companyRef.update({ asaasCustomerId: customerId, updatedAt: FieldValue.serverTimestamp() });
-    }
+    const serviceBilling = getAsaasEnvironmentBilling(service, environment);
+    const customer = await resolveAsaasCustomer({
+      candidateIds: [
+        getAsaasCustomerId(company, environment),
+        serviceBilling.customerId,
+        ...(environment === "production" ? [getLegacyAsaasCustomerId(company), getLegacyAsaasCustomerId(service)] : []),
+      ],
+      name: customerName,
+      email: safeText(company.contactEmail, 180) || null,
+      phone: safeText(company.contactPhone, 40) || null,
+      cpfCnpj: safeText(company.cnpj || company.cpf || company.document, 32) || null,
+      externalReference: `company:${tenantId}`,
+      notificationDisabled: true,
+    });
+    const customerId = customer.id;
+    await companyRef.update({ ...asaasCustomerIdUpdate(environment, customerId), updatedAt: FieldValue.serverTimestamp() });
 
     // Antes de criar, verifica se o Asaas já aceitou uma cobrança deste pedido (retry após falha).
     // Se a consulta falhar, a função lança erro e NÃO cria outra cobrança.
     const existingPayment = await findAsaasPaymentByExternalReference(`ai-credits:${orderRef.id}`);
+    if (existingPayment && (existingPayment.customer !== customerId || Math.round(Number(existingPayment.value) * 100) !== Math.round(creditPackage.price * 100))) {
+      throw new Error("asaas-credit-payment-mismatch");
+    }
     const payment = existingPayment ?? await createAsaasPayment({
       customer: customerId,
       value: creditPackage.price,
@@ -130,12 +139,13 @@ export async function POST(request: Request) {
       externalReference: `ai-credits:${orderRef.id}`,
       notificationDisabled: true,
     });
-    const chargeId = `asaas-credit-${payment.id}`;
+    const chargeId = asaasDocumentId("asaas-credit", environment, payment.id);
     await db.runTransaction(async (transaction) => {
       const current = await transaction.get(orderRef);
       if (current.data()?.status === "paga") return;
       transaction.set(orderRef, {
         asaasPaymentId: payment.id,
+        asaasCustomerId: customerId,
         amount: creditPackage.price,
         creditAmount: creditPackage.credits,
         dueDate: payment.dueDate || nextDueDate(),
@@ -145,6 +155,7 @@ export async function POST(request: Request) {
         serviceId: serviceRef.id,
         sourceSystem: claims.sourceSystem,
         externalTenantId: claims.externalTenantId,
+        billingEnvironment: environment,
         tenantId,
         status: "aberta",
         updatedAt: FieldValue.serverTimestamp(),
@@ -156,6 +167,8 @@ export async function POST(request: Request) {
         creditPackageId: packageId,
         creditAmount: creditPackage.credits,
         billingProvider: "asaas",
+        billingEnvironment: environment,
+        asaasCustomerId: customerId,
         asaasPaymentId: payment.id,
         amount: creditPackage.price,
         dueDate: payment.dueDate || nextDueDate(),
@@ -173,7 +186,7 @@ export async function POST(request: Request) {
         targetType: "creditOrder",
         targetId: orderRef.id,
         createdAt: new Date().toISOString(),
-        metadata: { packageId, credits: creditPackage.credits, amount: creditPackage.price, serviceId: serviceRef.id, paymentId: payment.id, reusedPayment: Boolean(existingPayment) },
+        metadata: { packageId, credits: creditPackage.credits, amount: creditPackage.price, serviceId: serviceRef.id, paymentId: payment.id, environment, reusedPayment: Boolean(existingPayment) },
       });
     });
 
