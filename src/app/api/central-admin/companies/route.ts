@@ -19,7 +19,7 @@ const sourceSystemNames: Record<string, string> = {
   orquestra_studio: "Orquestra Studio",
   orquestra_auto_detail: "Orquestra Auto Detail",
   orquestra_moda: "Orquestra Moda",
-  transgestao: "TransGestão Frotas",
+  transgestao: "Orquestra Frotas",
 };
 
 function text(value: unknown, maxLength: number) {

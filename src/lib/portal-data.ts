@@ -1,4 +1,4 @@
-import { Beer, Car, Dumbbell, Factory, Globe2, ScanFace, Scissors, Shirt, WalletCards } from "lucide-react";
+import { Beer, Briefcase, Car, Dumbbell, Factory, Globe2, ScanFace, Scissors, Shirt, Truck, WalletCards } from "lucide-react";
 
 export type ProjectAvailability = "online" | "offline" | "nao_verificado";
 export type ProjectRelation = "cliente_ativo" | "proprio" | "site";
@@ -132,6 +132,32 @@ export const deployedProjects: DeployedProject[] = [
     relation: "cliente_ativo",
   },
   {
+    id: "orquestra-frotas",
+    name: "Orquestra Frotas",
+    vercelName: "transgestao",
+    url: "https://transgestao.vercel.app",
+    category: "Transporte e logística",
+    description: "Fretes, frota, combustível, manutenção, motoristas e financeiro em um só lugar.",
+    icon: Truck,
+    accent: "slate",
+    status: "publicado",
+    availability: "online",
+    relation: "proprio",
+  },
+  {
+    id: "orquestra-one",
+    name: "Orquestra One",
+    vercelName: "orquestra-one",
+    url: null,
+    category: "Autônomos e pequenas equipes",
+    description: "Agenda, ordens de serviço, clientes, financeiro e estoque em um só lugar.",
+    icon: Briefcase,
+    accent: "teal",
+    status: "publicado",
+    availability: "nao_verificado",
+    relation: "proprio",
+  },
+  {
     id: "site-porto-belo",
     name: "Site Porto Belo",
     vercelName: "site-porto-belo",
@@ -194,7 +220,7 @@ export const projectSourceSystems: Record<string, string> = {
   "orquestra-studio": "orquestra_studio",
   "orquestra-blend": "orquestra_blend",
   "orquestra-moda": "orquestra_moda",
-  transgestao: "transgestao",
+  "orquestra-frotas": "transgestao",
 };
 
 export const projectCatalogDetails: Record<string, ProjectCatalogDetails> = {
@@ -253,6 +279,20 @@ export const projectCatalogDetails: Record<string, ProjectCatalogDetails> = {
     previewImage: "/catalogo/orquestra-moda-natural.webp",
     previewAlt: "Ilustração Orquestra Moda com coleção, estoque e vendas",
     previewKind: "ambiente",
+  },
+  "orquestra-frotas": {
+    audience: "Transportadoras e empresas com frota própria",
+    highlights: ["Fretes e custo por km", "Combustível e manutenção", "Motoristas e vencimentos"],
+    previewImage: "/catalogo/orquestra-frotas-natural.webp",
+    previewAlt: "Caminhão em rodovia à noite",
+    previewKind: "ambiente",
+  },
+  "orquestra-one": {
+    audience: "Autônomos e pequenas equipes de serviço",
+    highlights: ["Agenda e ordens de serviço", "Financeiro integrado", "Estoque e ferramentas"],
+    previewImage: "/catalogo/orquestra-one-interface.webp",
+    previewAlt: "Tela inicial do Orquestra One em modo demonstração",
+    previewKind: "captura_interface",
   },
   "site-porto-belo": {
     audience: "Empresas de transporte e logística",

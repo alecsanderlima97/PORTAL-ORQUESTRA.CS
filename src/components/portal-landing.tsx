@@ -29,13 +29,13 @@ function getCircularOffset(index: number, activeIndex: number, total: number) {
 const solutionGroups = [
   {
     title: "Controle da operação",
-    description: "Produção, equipes, academias e serviços sob controle.",
-    ids: ["sistema-serraria", "orquestracs-face-id", "orquestra-fit", "orquestra-auto-detail"],
+    description: "Produção, frotas, equipes, academias e serviços sob controle.",
+    ids: ["sistema-serraria", "orquestra-frotas", "orquestracs-face-id", "orquestra-fit", "orquestra-auto-detail"],
   },
   {
     title: "Soluções para negócios",
-    description: "Financeiro, beleza, bares, adegas e moda com gestão especializada.",
-    ids: ["orquestra-hub", "orquestra-studio", "orquestra-blend", "orquestra-moda"],
+    description: "Financeiro, beleza, bares, adegas, moda e autônomos com gestão especializada.",
+    ids: ["orquestra-hub", "orquestra-studio", "orquestra-blend", "orquestra-moda", "orquestra-one"],
   },
 ];
 
