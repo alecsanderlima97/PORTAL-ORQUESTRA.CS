@@ -12,7 +12,7 @@ const sourceCatalogs: Record<string, { name: string; url: string; type: string }
   orquestracs_face_id: { name: "Orquestra Face ID", url: "https://faceid.orquestracs.com", type: "sistema_web" },
   orquestra_blend: { name: "Orquestra Blend", url: "https://blend.orquestracs.com", type: "sistema_web" },
   orquestra_moda: { name: "Orquestra Moda", url: "https://moda.orquestracs.com", type: "sistema_web" },
-  transgestao: { name: "TransGestão Frotas", url: "https://transgestao.vercel.app", type: "sistema_web" },
+  transgestao: { name: "Orquestra Frotas", url: "https://transgestao.vercel.app", type: "sistema_web" },
 };
 const supportedContractVersions = new Set(["v1"]);
 const maximumSnapshotBytes = 1_000_000;
