@@ -110,8 +110,11 @@ export type ManagedService = {
   implementationFee: number | null;
   supportFee: number | null;
   billingDay: number | null;
+  billingFirstDueDate?: string | null;
   graceDays: number;
   billingMethod: BillingMethod | null;
+  billingNotificationsEnabled?: boolean;
+  billingAutomationEnabled?: boolean;
   notes: string | null;
   nextDueDate: string | null;
   startDate: string | null;

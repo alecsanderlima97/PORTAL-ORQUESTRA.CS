@@ -24,6 +24,14 @@ function nextDueDate(billingDay: number) {
   return new Date(Date.UTC(nextYear, normalizedMonth, Math.min(billingDay, nextDaysInMonth))).toISOString().slice(0, 10);
 }
 
+function isDateOnly(value: unknown): value is string {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function todayDateOnly() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function referenceMonth(dueDate: string | null | undefined) {
   return typeof dueDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dueDate) ? dueDate.slice(0, 7) : "";
 }
@@ -129,9 +137,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ ser
     const tenantId = typeof service.tenantId === "string" ? service.tenantId : "";
     const monthlyFee = typeof service.monthlyFee === "number" ? service.monthlyFee : Number(service.monthlyFee);
     const billingDay = Math.round(Number(service.billingDay));
+    const billingFirstDueDate = isDateOnly(service.billingFirstDueDate) ? service.billingFirstDueDate : null;
+    const billingMethod = typeof service.billingMethod === "string" ? service.billingMethod : "";
     if (!tenantId) return NextResponse.json({ error: "Vincule este produto a um cliente antes de configurar a cobrança." }, { status: 400 });
     if (!Number.isFinite(monthlyFee) || monthlyFee <= 0) return NextResponse.json({ error: "Informe uma mensalidade maior que zero antes de configurar a cobrança." }, { status: 400 });
     if (!Number.isInteger(billingDay) || billingDay < 1 || billingDay > 31) return NextResponse.json({ error: "Informe um dia de vencimento entre 1 e 31." }, { status: 400 });
+    if (billingFirstDueDate && billingFirstDueDate < todayDateOnly()) return NextResponse.json({ error: "O primeiro vencimento no Asaas não pode estar no passado. Use o próximo período ainda não pago." }, { status: 400 });
+    if (["TRANSFERENCIA", "DINHEIRO", "OUTRO"].includes(billingMethod)) return NextResponse.json({ error: "Para uma assinatura recorrente, escolha PIX, boleto, cartão de crédito ou deixe a forma não informada." }, { status: 400 });
 
     const companyRef = db.collection("companies").doc(tenantId);
     const companySnapshot = await companyRef.get();
@@ -149,7 +161,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ser
       phone: typeof company.contactPhone === "string" ? company.contactPhone : null,
       cpfCnpj: typeof company.cnpj === "string" && company.cnpj ? company.cnpj : typeof company.cpf === "string" ? company.cpf : null,
       externalReference: `company:${tenantId}`,
-      notificationDisabled: true,
+      notificationDisabled: service.billingNotificationsEnabled !== true,
     });
     const customerId = customer.id;
     await companyRef.update({ ...asaasCustomerIdUpdate(environment, customerId), updatedAt: FieldValue.serverTimestamp() });
@@ -159,9 +171,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ ser
     const subscription = existingSubscription ?? await createAsaasSubscription({
       customer: customerId,
       value: Math.round(monthlyFee * 100) / 100,
-      nextDueDate: nextDueDate(billingDay),
+      nextDueDate: billingFirstDueDate ?? nextDueDate(billingDay),
       description: `${String(service.name || "Produto Orquestra.cs").trim()} · ${String(service.plan || "Plano").trim()}`.slice(0, 255),
       externalReference,
+      billingType: billingMethod === "PIX" || billingMethod === "BOLETO" || billingMethod === "CREDIT_CARD" ? billingMethod : "UNDEFINED",
     });
     const publicPayment = createPublicPaymentToken();
     const checkoutUrl = getPublicPaymentUrl(request, publicPayment.token);
@@ -202,7 +215,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ser
       targetType: "managedService",
       targetId: serviceId,
       createdAt: now,
-      metadata: { provider: "asaas", environment, subscriptionId: subscription.id, reusedSubscription: Boolean(existingSubscription), paymentReady: Boolean(payment), notificationsDisabled: true, graceDays: Number(service.graceDays) || 3 },
+      metadata: { provider: "asaas", environment, subscriptionId: subscription.id, reusedSubscription: Boolean(existingSubscription), paymentReady: Boolean(payment), notificationsDisabled: service.billingNotificationsEnabled !== true, firstDueDate: billingFirstDueDate ?? nextDueDate(billingDay), graceDays: Number(service.graceDays) || 3 },
     });
     await batch.commit();
 
