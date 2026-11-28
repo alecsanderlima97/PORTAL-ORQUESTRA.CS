@@ -1,7 +1,7 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { AsaasConfigError, AsaasRequestError, createAsaasSubscription, findAsaasSubscriptionByExternalReference, getAsaasEnvironment, isAsaasConfigured, listAsaasSubscriptionPayments, mapAsaasPaymentStatus, resolveAsaasCustomer, type AsaasPayment } from "@/lib/asaas";
+import { AsaasConfigError, AsaasRequestError, createAsaasSubscription, findAsaasSubscriptionByExternalReference, getAsaasEnvironment, listActiveAsaasSubscriptions, isAsaasConfigured, listAsaasSubscriptionPayments, mapAsaasPaymentStatus, resolveAsaasCustomer, type AsaasPayment } from "@/lib/asaas";
 import { asaasCustomerIdUpdate, asaasDocumentId, asaasServiceBillingUpdate, getAsaasCustomerId, getAsaasEnvironmentBilling, getLegacyAsaasCustomerId } from "@/lib/asaas-environment-records";
 import { getFirebaseAdminDb } from "@/lib/firebase-admin";
 import { createPublicPaymentToken, getPublicPaymentUrl } from "@/lib/payment-links";
@@ -167,7 +167,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ ser
     await companyRef.update({ ...asaasCustomerIdUpdate(environment, customerId), updatedAt: FieldValue.serverTimestamp() });
 
     const externalReference = `managed-service:${serviceId}`;
-    const existingSubscription = await findAsaasSubscriptionByExternalReference(externalReference, customerId);
+    let existingSubscription = await findAsaasSubscriptionByExternalReference(externalReference, customerId);
+    if (!existingSubscription) {
+      // Assinatura criada direto no Asaas: vincula a única ativa (ou a de mesmo valor) em vez de cobrar em dobro.
+      const active = await listActiveAsaasSubscriptions(customerId);
+      const fee = Math.round(monthlyFee * 100) / 100;
+      const sameValue = active.filter((item) => typeof item.value === "number" && Math.abs(item.value - fee) < 0.01);
+      if (active.length === 1) existingSubscription = active[0];
+      else if (sameValue.length === 1) existingSubscription = sameValue[0];
+      else if (active.length > 1) {
+        return NextResponse.json({
+          code: "multiple_subscriptions",
+          error: "Este cliente tem mais de uma assinatura ativa no Asaas. Defina a referência externa da correta como " + externalReference + " e tente de novo.",
+        }, { status: 409 });
+      }
+    }
     const subscription = existingSubscription ?? await createAsaasSubscription({
       customer: customerId,
       value: Math.round(monthlyFee * 100) / 100,
@@ -211,7 +225,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ser
       tenantId,
       actorUserId: session.uid,
       actorRole: session.role,
-      action: "billing.subscription.created",
+      action: existingSubscription ? "billing.subscription.linked" : "billing.subscription.created",
       targetType: "managedService",
       targetId: serviceId,
       createdAt: now,
@@ -219,7 +233,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ser
     });
     await batch.commit();
 
-    return NextResponse.json({ ok: true, environment, subscriptionId: subscription.id, checkoutUrl, paymentReady: Boolean(payment) });
+    return NextResponse.json({ ok: true, environment, subscriptionId: subscription.id, checkoutUrl, paymentReady: Boolean(payment), linkedExisting: Boolean(existingSubscription) });
   } catch (error) {
     if (error instanceof AsaasConfigError) return NextResponse.json({ error: error.message }, { status: 503 });
     if (error instanceof AsaasRequestError) {

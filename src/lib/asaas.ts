@@ -180,6 +180,13 @@ export async function resolveAsaasCustomer(input: {
     return existing;
   }
 
+  // Clientes cadastrados direto no Asaas não têm externalReference: procura pelo CPF/CNPJ antes de criar outro.
+  const byDocument = input.cpfCnpj ? await findAsaasCustomerByDocument(input.cpfCnpj) : null;
+  if (byDocument) {
+    await updateAsaasCustomer(byDocument.id, { notificationDisabled: input.notificationDisabled ?? false });
+    return byDocument;
+  }
+
   return createAsaasCustomer({
     name: input.name,
     email: input.email,
@@ -257,6 +264,25 @@ export async function findAsaasPaymentByExternalReference(externalReference: str
   );
   const payments = Array.isArray(result.data) ? result.data : [];
   return payments.find((payment) => !/DELETED|CANCEL|REFUND/i.test(payment.status ?? "")) ?? null;
+}
+
+/** Procura um cliente já cadastrado no Asaas pelo CPF/CNPJ (evita cliente duplicado). */
+export async function findAsaasCustomerByDocument(cpfCnpj: string) {
+  const digits = cpfCnpj.replace(/\D/g, "");
+  if (digits.length !== 11 && digits.length !== 14) return null;
+  const result = await asaasRequest<AsaasListResponse<AsaasCustomer & { deleted?: boolean }>>(
+    `/customers?cpfCnpj=${encodeURIComponent(digits)}&limit=10`,
+  );
+  const customers = Array.isArray(result.data) ? result.data : [];
+  return customers.find((customer) => !customer.deleted) ?? null;
+}
+
+/** Assinaturas ativas de um cliente no Asaas (para vincular em vez de criar outra). */
+export async function listActiveAsaasSubscriptions(customerId: string) {
+  const result = await asaasRequest<AsaasListResponse<AsaasSubscription & { externalReference?: string | null; deleted?: boolean }>>(
+    `/subscriptions?customer=${encodeURIComponent(customerId)}&status=ACTIVE&limit=50`,
+  );
+  return (Array.isArray(result.data) ? result.data : []).filter((subscription) => !subscription.deleted);
 }
 
 export async function listAsaasSubscriptionPayments(subscriptionId: string) {
