@@ -1,5 +1,7 @@
 import "server-only";
 
+import { getAsaasEnvironment } from "@/lib/asaas";
+import { getAsaasEnvironmentBilling } from "@/lib/asaas-environment-records";
 import { getFirebaseAdminDb } from "@/lib/firebase-admin";
 import type {
   AuditRecord,
@@ -196,7 +198,7 @@ function mapService(id: string, raw: FirebaseFirestore.DocumentData): ManagedSer
     billingEnvironment: raw.billingEnvironment === "sandbox" || raw.billingEnvironment === "production" ? raw.billingEnvironment : null,
     asaasCustomerId: nullableString(raw.asaasCustomerId),
     asaasSubscriptionId: nullableString(raw.asaasSubscriptionId),
-    billingCheckoutUrl: nullableString(raw.billingCheckoutUrl),
+    billingCheckoutUrl: getAsaasEnvironmentBilling(raw, getAsaasEnvironment()).checkoutUrl ?? nullableString(raw.billingCheckoutUrl),
   };
 }
 

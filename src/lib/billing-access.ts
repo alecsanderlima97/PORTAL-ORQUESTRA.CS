@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getAsaasEnvironmentBilling } from "@/lib/asaas-environment-records";
 import { sendConnectorCommand } from "@/lib/connector-commands";
 
 type BillingService = {
@@ -12,7 +13,14 @@ type BillingService = {
   startDate?: unknown;
   billingMethod?: unknown;
   notes?: unknown;
+  [key: string]: unknown;
 };
+
+/** Link público de pagamento do Portal (Pix, boleto ou cartão pelo Asaas). */
+export function servicePaymentUrl(service: BillingService) {
+  const url = getAsaasEnvironmentBilling(service, "production").checkoutUrl;
+  return url && /^https:\/\//.test(url) ? url : null;
+}
 
 export type BillingAccessState = {
   serviceId: string;
@@ -77,6 +85,7 @@ export function buildBillingContract(service: BillingService, state: BillingAcce
     subscriptionStatus: state.subscriptionStatus,
     accessStatus: state.accessStatus,
     accessReason: state.reason ?? null,
+    paymentUrl: servicePaymentUrl(service),
   };
 }
 

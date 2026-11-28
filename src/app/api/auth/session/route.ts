@@ -3,6 +3,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getFirebaseAdminAuth } from "@/lib/firebase-admin";
 import { getFirebaseAdminDb } from "@/lib/firebase-admin";
 import { SESSION_COOKIE } from "@/lib/session";
+import { isPlatformAdminEmail } from "@/lib/platform-admins";
 import { clientIp, consumeRateLimit } from "@/lib/rate-limit";
 import { cookies } from "next/headers";
 
@@ -41,7 +42,35 @@ export async function POST(request: Request) {
     const profile = await db.collection("users").doc(decoded.uid).get();
     let profileData = profile.data();
 
-    if (!profile.exists && decoded.email) {
+    // Desenvolvedor autorizado sem perfil ainda: cria o acesso de plataforma,
+    // exigindo e-mail confirmado pelo provedor de login.
+    if (!profile.exists && decoded.email && decoded.email_verified === true && isPlatformAdminEmail(decoded.email)) {
+      const email = decoded.email.toLowerCase();
+      const adminProfile = {
+        uid: decoded.uid,
+        name: decoded.name ?? email,
+        email,
+        role: "platform_owner",
+        tenantId: null,
+        active: true,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+      await db.collection("users").doc(decoded.uid).set(adminProfile);
+      await db.collection("auditLogs").doc().set({
+        tenantId: null,
+        actorUserId: decoded.uid,
+        actorRole: "platform_owner",
+        action: "platform_admin.provisioned",
+        targetType: "user",
+        targetId: decoded.uid,
+        createdAt: new Date().toISOString(),
+        metadata: { email },
+      });
+      profileData = adminProfile;
+    }
+
+    if (!profileData && decoded.email) {
       const email = decoded.email.toLowerCase();
       const inviteSnapshot = await db.collection("userInvites").where("email", "==", email).limit(10).get();
       const invite = inviteSnapshot.docs.find((doc) => doc.data().active === true);
@@ -77,7 +106,11 @@ export async function POST(request: Request) {
     const sessionCookie = await auth.createSessionCookie(idToken, {
       expiresIn: SESSION_DURATION_MS,
     });
-    const isPlatformAdmin = ["platform_owner", "orquestra_admin"].includes(profileData.role);
+    const hasPlatformRole = ["platform_owner", "orquestra_admin"].includes(profileData.role);
+    if (hasPlatformRole && !isPlatformAdminEmail(decoded.email)) {
+      return NextResponse.json({ error: "Este usuário não possui acesso à Central Admin." }, { status: 403 });
+    }
+    const isPlatformAdmin = hasPlatformRole;
     const response = NextResponse.json({
       ok: true,
       destination: isPlatformAdmin ? "/central-admin" : "/portal",

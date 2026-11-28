@@ -356,11 +356,53 @@ export function ProductDetailView({ snapshot, projectId }: { snapshot: ControlSn
   </>;
 }
 
+function daysUntilDate(date: string | null) {
+  if (!date || !/^\d{4}-\d{2}-\d{2}/.test(date)) return null;
+  const today = new Date(new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }) + "T00:00:00Z");
+  return Math.round((new Date(date.slice(0, 10) + "T00:00:00Z").getTime() - today.getTime()) / 86_400_000);
+}
+
+/** Situação de acesso por mensalidade: a vencer, em tolerância, bloqueado e liberação pendente. */
+function BillingAccessPanel({ snapshot }: { snapshot: ControlSnapshot }) {
+  const rows = snapshot.services
+    .map((service) => {
+      const days = daysUntilDate(service.nextDueDate);
+      const state = service.accessStatus === "bloqueado" || service.accessStatus === "bloqueio_agendado" ? "Bloqueado"
+        : service.accessStatus === "liberacao_pendente" ? "Liberação pendente"
+          : service.accessStatus === "em_tolerancia" || (days !== null && days < 0) ? "Vencido (tolerância)"
+            : days !== null && days <= 5 ? "A vencer"
+              : null;
+      return { service, days, state };
+    })
+    .filter((row) => row.state)
+    .sort((left, right) => (left.days ?? 0) - (right.days ?? 0));
+  const tone = (state: string) => state === "Bloqueado" ? "bg-red-50 text-red-700 ring-red-100" : state === "A vencer" ? "bg-sky-50 text-sky-700 ring-sky-100" : "bg-amber-50 text-amber-800 ring-amber-100";
+  return (
+    <section className="mt-6 rounded-lg border border-[#dfe6ee] bg-white">
+      <header className="border-b border-[#edf1f5] p-5"><h2 className="font-semibold">Acesso por mensalidade</h2><p className="mt-1 text-xs leading-5 text-[#708198]">Aviso 5 dias antes, tolerância após o vencimento e bloqueio automático só nos serviços com a opção ligada. O pagamento confirmado pelo Asaas libera sozinho.</p></header>
+      {rows.length === 0 ? <div className="p-5"><EmptyState title="Nenhum serviço a vencer ou em atraso" description="Os serviços aparecem aqui 5 dias antes do vencimento." /></div> : (
+        <ul className="divide-y divide-[#edf1f5]">
+          {rows.map(({ service, days, state }) => (
+            <li key={service.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2"><Link href={`/central-admin/servicos/${service.id}`} className="font-semibold text-[#173044] hover:underline">{service.name}</Link><span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ${tone(state as string)}`}>{state}</span>{service.billingAutomationEnabled ? null : <span className="rounded-full bg-[#f3f6f9] px-2.5 py-0.5 text-xs font-semibold text-[#5b6f82]">Bloqueio automático desligado</span>}</div>
+                <p className="mt-1 text-xs text-[#708198]">{service.nextDueDate ? `Vencimento ${formatSnapshotDate(service.nextDueDate)}` : "Sem vencimento"}{days !== null ? ` · ${days < 0 ? `${Math.abs(days)} dia(s) em atraso` : days === 0 ? "vence hoje" : `faltam ${days} dia(s)`}` : ""} · Tolerância {service.graceDays} dia(s){service.lastKnownStatus ? ` · ${service.lastKnownStatus}` : ""}</p>
+              </div>
+              <div className="flex shrink-0 gap-2">{service.billingCheckoutUrl ? <a href={service.billingCheckoutUrl} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center rounded-md border border-[#d7e0e7] px-3 text-xs font-semibold text-[#294052] hover:bg-[#f8fbfd]">Link de pagamento</a> : null}<Link href={`/central-admin/servicos/${service.id}`} className="inline-flex h-9 items-center rounded-md bg-[#10243c] px-3 text-xs font-semibold text-white hover:bg-[#173044]">Gerenciar</Link></div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 export function FinanceView({ snapshot }: { snapshot: ControlSnapshot }) {
   const pending = snapshot.charges.filter((charge) => !["paga", "cancelada"].includes(charge.status));
   return (
     <>
       <ControlHeading eyebrow="Controle financeiro" title="Cobranças" description="Mensalidades, vencimentos, tolerância e histórico sem armazenar dados bancários sensíveis." />
+      <BillingAccessPanel snapshot={snapshot} />
       <div className="mt-7 grid gap-3 sm:grid-cols-3"><Metric label="Cobranças cadastradas" value={String(snapshot.charges.length)} detail="no Firestore" /><Metric label="Em atenção" value={String(pending.length)} detail="pendentes ou vencidas" tone={pending.length ? "warning" : "success"} /><Metric label="Confirmadas" value={String(snapshot.charges.filter((charge) => charge.status === "paga").length)} detail="pagamento registrado" tone="success" /></div>
       <div className="mt-6 rounded-lg border border-[#dfe6ee] bg-white">{snapshot.charges.length === 0 ? <div className="p-5"><EmptyState title="Nenhuma cobrança cadastrada" description="O financeiro aparecerá aqui depois que a primeira mensalidade for registrada. Checkout e webhooks entram em uma etapa separada." /></div> : <div className="overflow-x-auto"><table className="w-full min-w-[980px] text-left text-sm"><thead className="bg-[#f8fafc] text-xs text-[#77879a]"><tr><th className="px-5 py-3">Referência</th><th className="px-5 py-3">Cliente</th><th className="px-5 py-3">Produto</th><th className="px-5 py-3">Valor</th><th className="px-5 py-3">Vencimento</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Ação</th></tr></thead><tbody className="divide-y divide-[#edf1f5]">{snapshot.charges.map((charge) => { const company = snapshot.companies.find((item) => item.id === charge.tenantId); const service = charge.serviceId ? snapshot.services.find((item) => item.id === charge.serviceId) : null; return <tr key={charge.id}><td className="px-5 py-4 font-medium">{charge.referenceMonth || "Sem referência"}</td><td className="px-5 py-4 text-[#60738a]">{company?.tradeName || company?.legalName || charge.tenantId}</td><td className="px-5 py-4 text-[#60738a]">{service?.name || (charge.serviceOrderId ? "Ordem de serviço" : "Não vinculado")}</td><td className="px-5 py-4 font-medium">{formatMoney(charge.amount)}</td><td className="px-5 py-4 text-[#60738a]">{formatSnapshotDate(charge.dueDate)}</td><td className="px-5 py-4"><span className="rounded-full bg-[#eef5fd] px-2.5 py-1 text-xs font-semibold text-[#1769b0]">{charge.status.replaceAll("_", " ")}</span></td><td className="px-5 py-4">{charge.invoiceUrl ? <a href={charge.invoiceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1769b0] hover:underline">Abrir cobrança <ExternalLink className="size-3.5" /></a> : <span className="text-xs text-[#8593a5]">Aguardando link</span>}</td></tr>; })}</tbody></table></div>}</div>
     </>
