@@ -203,12 +203,13 @@ export async function createAsaasSubscription(input: {
   nextDueDate: string;
   description: string;
   externalReference: string;
+  billingType?: "UNDEFINED" | "PIX" | "BOLETO" | "CREDIT_CARD";
 }) {
   return asaasRequest<AsaasSubscription>("/subscriptions", {
     method: "POST",
     body: JSON.stringify({
       customer: input.customer,
-      billingType: "UNDEFINED",
+      billingType: input.billingType ?? "UNDEFINED",
       value: input.value,
       nextDueDate: input.nextDueDate,
       cycle: "MONTHLY",
@@ -216,6 +217,10 @@ export async function createAsaasSubscription(input: {
       externalReference: input.externalReference,
     }),
   });
+}
+
+export async function getAsaasSubscription(subscriptionId: string) {
+  return asaasRequest<AsaasSubscription>(`/subscriptions/${encodeURIComponent(subscriptionId)}`);
 }
 
 export async function findAsaasSubscriptionByExternalReference(externalReference: string, customerId: string) {

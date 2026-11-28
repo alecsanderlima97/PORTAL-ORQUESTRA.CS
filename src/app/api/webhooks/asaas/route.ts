@@ -1,8 +1,9 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
-import { getAsaasEnvironment, getAsaasPayment, mapAsaasPaymentStatus } from "@/lib/asaas";
+import { getAsaasEnvironment, getAsaasPayment, getAsaasSubscription, mapAsaasPaymentStatus } from "@/lib/asaas";
 import { asaasDocumentId, getAsaasCustomerId, getAsaasEnvironmentBilling, getLegacyAsaasCustomerId } from "@/lib/asaas-environment-records";
+import { dateAfterGrace, isPastGracePeriod, sendBillingAccessCommand, todayDateOnly } from "@/lib/billing-access";
 import { getFirebaseAdminDb } from "@/lib/firebase-admin";
 import { sendConnectorCommand } from "@/lib/connector-commands";
 
@@ -50,6 +51,21 @@ function referenceMonth(dueDate: string | null | undefined) {
 
 function cents(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? Math.round(value * 100) : null;
+}
+
+function nextMonthlyDate(date: string | null) {
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const [year, month, day] = date.split("-").map(Number);
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  const lastDay = new Date(Date.UTC(nextYear, nextMonth, 0)).getUTCDate();
+  return new Date(Date.UTC(nextYear, nextMonth - 1, Math.min(day, lastDay))).toISOString().slice(0, 10);
+}
+
+function billingConnectorStatus(status: ReturnType<typeof mapAsaasPaymentStatus>) {
+  if (status === "paga") return "paid" as const;
+  if (status === "vencida") return "overdue" as const;
+  return "pending" as const;
 }
 
 export async function POST(request: Request) {
@@ -207,6 +223,21 @@ export async function POST(request: Request) {
         }
       }
     }
+    let subscriptionNextDueDate: string | null = null;
+    let subscriptionMonthlyFee: number | null = null;
+    if (serviceRef && serviceData && !creditOrderRef && status === "paga") {
+      const subscriptionId = getAsaasEnvironmentBilling(serviceData, environment).subscriptionId;
+      if (subscriptionId) {
+        try {
+          const subscription = await getAsaasSubscription(subscriptionId);
+          subscriptionNextDueDate = safeText(subscription.nextDueDate, 20) || null;
+          subscriptionMonthlyFee = typeof subscription.value === "number" && Number.isFinite(subscription.value) ? subscription.value : null;
+        } catch {
+          // O pagamento continua sendo registrado. O reconciliador diário
+          // tenta obter o próximo vencimento novamente se necessário.
+        }
+      }
+    }
     const confirmedPayment = verifiedPayment ?? payment;
     const paidAt = status === "paga" ? (confirmedPayment?.paymentDate || confirmedPayment?.confirmedDate || new Date().toISOString()) : null;
     const chargeData = {
@@ -248,6 +279,61 @@ export async function POST(request: Request) {
         dueDate: safeText(payment?.dueDate, 20) || null,
         createdAt: FieldValue.serverTimestamp(),
       }, { merge: true });
+    }
+
+    if (serviceRef && serviceData && serviceData.billingAutomationEnabled === true && typeof serviceData.tenantId === "string" && !creditOrderRef && ["paga", "vencida"].includes(status)) {
+      const dueDate = safeText(confirmedPayment?.dueDate, 20) || null;
+      const graceDays = Number.isInteger(Number(serviceData.graceDays))
+        ? Math.max(0, Math.min(30, Number(serviceData.graceDays)))
+        : 3;
+      const nextDueDate = status === "paga" ? (subscriptionNextDueDate || nextMonthlyDate(dueDate)) : dueDate;
+      const blocked = status === "vencida" && isPastGracePeriod(dueDate, graceDays);
+      const accessState = {
+        serviceId: serviceRef.id,
+        paymentId,
+        billingStatus: blocked ? "blocked" as const : billingConnectorStatus(status),
+        subscriptionStatus: blocked ? "bloqueado" as const : "ativo" as const,
+        accessStatus: status === "paga" ? "ativo" as const : blocked ? "bloqueado" as const : "em_tolerancia" as const,
+        dueDate,
+        nextDueDate,
+        paidThroughDate: status === "paga" ? dueDate : null,
+        reason: blocked
+          ? `Pagamento vencido após ${graceDays} dia(s) de tolerância. Bloqueio aplicado em ${todayDateOnly()}.`
+          : status === "paga"
+            ? "Pagamento confirmado pelo Asaas."
+            : `Pagamento vencido. Tolerância até ${dueDate ? dateAfterGrace(dueDate, graceDays) : "data não informada"}.`,
+      };
+      const serviceUpdates: Record<string, unknown> = {
+        accessStatus: accessState.accessStatus,
+        subscriptionStatus: accessState.subscriptionStatus,
+        sourceBillingStatus: accessState.billingStatus,
+        lastKnownStatus: accessState.reason,
+        connectorStatus: "pendente",
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+      if (nextDueDate) serviceUpdates.nextDueDate = nextDueDate;
+      if (subscriptionMonthlyFee !== null) serviceUpdates.monthlyFee = subscriptionMonthlyFee;
+      if (nextDueDate && /^\d{4}-\d{2}-\d{2}$/.test(nextDueDate)) serviceUpdates.billingDay = Number(nextDueDate.slice(8, 10));
+      if (status === "paga" && dueDate) serviceUpdates.sourcePaidThroughDate = dueDate;
+      await serviceRef.update(serviceUpdates);
+
+      const connector = await sendBillingAccessCommand(serviceData, accessState).catch(() => ({ sent: false, skipped: false, status: 0 }));
+      if (connector.sent) {
+        await serviceRef.update({ connectorStatus: "ativo", updatedAt: FieldValue.serverTimestamp() });
+      } else if (connector.skipped) {
+        await serviceRef.update({
+          connectorStatus: "pendente",
+          accessStatus: status === "paga" ? "liberacao_pendente" : blocked ? "bloqueio_agendado" : "em_tolerancia",
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      } else {
+        await serviceRef.update({
+          connectorStatus: "com_falha",
+          accessStatus: status === "paga" ? "liberacao_pendente" : blocked ? "bloqueio_agendado" : "em_tolerancia",
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        throw new Error("billing-access-sync-pending");
+      }
     }
 
     await db.collection("auditLogs").doc().set({

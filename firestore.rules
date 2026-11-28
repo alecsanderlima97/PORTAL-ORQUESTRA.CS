@@ -16,7 +16,8 @@ service cloud.firestore {
 
     function isPlatformAdmin() {
       return activeProfile()
-        && userDoc().data.role in ['orquestra_admin', 'platform_owner'];
+        && userDoc().data.role in ['orquestra_admin', 'platform_owner']
+        && request.auth.token.email in ['orquestracs@gmail.com', 'limaalecsander@gmail.com'];
     }
 
     function belongsToTenant(tenantId) {

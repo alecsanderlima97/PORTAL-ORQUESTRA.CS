@@ -3,6 +3,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getFirebaseAdminAuth, getFirebaseAdminDb } from "@/lib/firebase-admin";
+import { isPlatformAdminEmail } from "@/lib/platform-admins";
 import type { PlatformRole, UserProfile } from "@/lib/platform-types";
 
 const SESSION_COOKIE = "orquestra_session";
@@ -25,6 +26,10 @@ export async function getCurrentSession(): Promise<UserProfile | null> {
 
     const data = profile.data();
     if (!data?.active || !data.role || !data.email || !data.name) {
+      return null;
+    }
+    // Papel de plataforma só vale para os e-mails autorizados, conferidos no token.
+    if (platformRoles.has(data.role as PlatformRole) && !isPlatformAdminEmail(decoded.email)) {
       return null;
     }
 

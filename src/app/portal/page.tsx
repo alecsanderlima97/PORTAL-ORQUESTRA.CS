@@ -130,7 +130,36 @@ function PortalSidebar() {
   );
 }
 
+function daysUntil(date: string | null) {
+  if (!date || !/^\d{4}-\d{2}-\d{2}/.test(date)) return null;
+  const today = new Date(new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }) + "T00:00:00Z");
+  return Math.round((new Date(date.slice(0, 10) + "T00:00:00Z").getTime() - today.getTime()) / 86_400_000);
+}
+
+function formatDay(date: string) {
+  const [year, month, day] = date.slice(0, 10).split("-");
+  return `${day}/${month}/${year}`;
+}
+
+/** Aviso de cobrança: a vencer (até 5 dias), vencido em tolerância ou bloqueado. */
+function billingNotice(service: ManagedService) {
+  if (service.accessStatus === "bloqueado") {
+    return { tone: "border-red-200 bg-red-50 text-red-800", text: "Acesso bloqueado por mensalidade em atraso. Após o pagamento, o sistema é liberado automaticamente." };
+  }
+  const days = daysUntil(service.nextDueDate);
+  if (service.accessStatus === "em_tolerancia" || (days !== null && days < 0)) {
+    const late = days !== null ? Math.abs(days) : null;
+    const left = late !== null ? Math.max(0, service.graceDays - late) : null;
+    return { tone: "border-amber-200 bg-amber-50 text-amber-900", text: `Mensalidade vencida${late !== null ? ` há ${late} dia(s)` : ""}.${left !== null ? ` O acesso será bloqueado em ${left + 1} dia(s) se o pagamento não for confirmado.` : ""}` };
+  }
+  if (days !== null && days <= 5 && service.nextDueDate) {
+    return { tone: "border-sky-200 bg-sky-50 text-sky-900", text: days === 0 ? "Sua mensalidade vence hoje." : `Sua mensalidade vence em ${days} dia(s), em ${formatDay(service.nextDueDate)}.` };
+  }
+  return null;
+}
+
 function ServiceCard({ service, charge }: { service: ManagedService; charge?: TenantSnapshot["charges"][number] }) {
+  const notice = billingNotice(service);
   const canOpen = Boolean(service.url) && service.accessStatus !== "bloqueado";
   const openCharge = charge && !["paga", "cancelada"].includes(charge.status);
   const paymentQuery = service.sourceSystem
@@ -156,7 +185,7 @@ function ServiceCard({ service, charge }: { service: ManagedService; charge?: Te
         <div className="flex flex-wrap items-center justify-end gap-2">
           <a href={paymentHref} target={service.billingCheckoutUrl ? "_blank" : undefined} rel={service.billingCheckoutUrl ? "noreferrer" : undefined} className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-zinc-200 px-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50">
             <CreditCard className="size-4" />
-            {openCharge ? "Pagar mensalidade" : "Ver plano"}
+            {openCharge || notice ? "Pagar mensalidade" : "Ver plano"}
           </a>
           {canOpen ? (
             <a href={service.url} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-zinc-950 px-3 text-sm font-semibold text-white transition hover:bg-zinc-800">
@@ -170,6 +199,7 @@ function ServiceCard({ service, charge }: { service: ManagedService; charge?: Te
           )}
         </div>
       </div>
+      {notice ? <p role="status" className={`mt-3 rounded-md border px-3 py-2 text-sm ${notice.tone}`}>{notice.text}</p> : null}
     </article>
   );
 }
