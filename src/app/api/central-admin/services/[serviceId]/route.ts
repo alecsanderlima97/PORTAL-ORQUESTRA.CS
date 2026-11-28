@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getFirebaseAdminDb } from "@/lib/firebase-admin";
 import { getCurrentSession } from "@/lib/session";
+import { servicePaymentUrl } from "@/lib/billing-access";
 import { sendConnectorCommand } from "@/lib/connector-commands";
 
 const platformRoles = new Set(["platform_owner", "orquestra_admin"]);
@@ -131,7 +132,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ se
     const updatedFields = { name, type, url, plan, monthlyFee, developmentFee, implementationFee, supportFee, billingDay, billingFirstDueDate, graceDays, billingMethod, billingNotificationsEnabled, billingAutomationEnabled, notes, startDate, renewalDate, subscriptionStatus, currentVersion, lastUpdatedAt, lastUpdateSummary, vercelProjectName, repositoryUrl };
     const previousData = serviceSnapshot.data() ?? {};
     const batch = db.batch();
-    batch.update(serviceRef, { ...updatedFields, updatedAt: FieldValue.serverTimestamp() });
+    // A mudança feita aqui vale sobre resumos do sistema gerados antes dela.
+    const accessStatus = subscriptionStatus === "ativo" || subscriptionStatus === "trial"
+      ? "ativo"
+      : subscriptionStatus === "cancelado" || subscriptionStatus === "bloqueado" || subscriptionStatus === "pausado"
+        ? "bloqueado"
+        : subscriptionStatus === "vencido" ? "em_tolerancia" : "revisao_manual";
+    batch.update(serviceRef, { ...updatedFields, accessStatus, portalStatusChangedAt: new Date().toISOString(), updatedAt: FieldValue.serverTimestamp() });
     batch.set(db.collection("auditLogs").doc(), {
       tenantId: previousData.tenantId ?? null,
       actorUserId: session.uid,
@@ -157,6 +164,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ se
         renewalDate,
         nextDueDate: renewalDate,
         subscriptionStatus,
+        paymentUrl: servicePaymentUrl(previousData),
         dataVersion: Number(previousData.sourceDataVersion || 0) + 1,
       },
     }).catch(() => ({ sent: false, skipped: false }));

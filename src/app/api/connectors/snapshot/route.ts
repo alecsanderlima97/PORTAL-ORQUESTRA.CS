@@ -761,8 +761,12 @@ export async function POST(request: Request) {
         updatedAt: receivedAt,
       };
 
-      if (plan) updates.plan = plan;
-      if (subscriptionStatus) {
+      // Mudança feita no Portal (Central Admin, Asaas) depois deste resumo vale mais:
+      // o resumo antigo não pode desfazer a liberação ou o bloqueio.
+      const portalStatusChangedAt = optionalDate(serviceDoc.data.portalStatusChangedAt);
+      const portalChangeIsNewer = Boolean(portalStatusChangedAt && sourceUpdatedAt < portalStatusChangedAt);
+      if (plan && !portalChangeIsNewer) updates.plan = plan;
+      if (subscriptionStatus && !portalChangeIsNewer) {
         updates.subscriptionStatus = subscriptionStatus;
         updates.accessStatus = subscriptionStatus === "ativo" || subscriptionStatus === "trial"
           ? "ativo"
@@ -771,13 +775,15 @@ export async function POST(request: Request) {
             : "revisao_manual";
       }
 
-      if (monthlyFee.present) updates.monthlyFee = monthlyFee.value;
-      if (billingDay.present) updates.billingDay = billingDay.value;
-      if (graceDays.present) updates.graceDays = graceDays.value;
-      if (startDate !== undefined) updates.startDate = startDate;
-      if (renewalDate !== undefined) updates.renewalDate = renewalDate;
-      if (nextDueDate !== undefined) updates.nextDueDate = nextDueDate;
-      if (billingMethod !== undefined) updates.billingMethod = billingMethod;
+      if (!portalChangeIsNewer) {
+        if (monthlyFee.present) updates.monthlyFee = monthlyFee.value;
+        if (billingDay.present) updates.billingDay = billingDay.value;
+        if (graceDays.present) updates.graceDays = graceDays.value;
+        if (startDate !== undefined) updates.startDate = startDate;
+        if (renewalDate !== undefined) updates.renewalDate = renewalDate;
+        if (nextDueDate !== undefined) updates.nextDueDate = nextDueDate;
+        if (billingMethod !== undefined) updates.billingMethod = billingMethod;
+      }
       const sourceBillingStatus = optionalTextField(fieldValue(contract, tenant, "billingStatus"), 40);
       const paidThroughDate = optionalContractDateField(fieldValue(contract, tenant, "paidThroughDate"));
       if (paidThroughDate === "invalid") throw new Error("invalid paid through date");
