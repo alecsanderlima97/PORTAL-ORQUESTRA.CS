@@ -122,6 +122,7 @@ async function reconcileService(db: FirebaseFirestore.Firestore, serviceRef: Fir
     ...(authoritativeBillingDay !== null ? { billingDay: authoritativeBillingDay } : {}),
     lastKnownStatus: accessState.reason,
     connectorStatus: "pendente",
+    ...(service.subscriptionStatus !== accessState.subscriptionStatus ? { portalStatusChangedAt: new Date().toISOString() } : {}),
     updatedAt: FieldValue.serverTimestamp(),
   });
 

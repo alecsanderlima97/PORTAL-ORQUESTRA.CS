@@ -309,6 +309,7 @@ export async function POST(request: Request) {
         sourceBillingStatus: accessState.billingStatus,
         lastKnownStatus: accessState.reason,
         connectorStatus: "pendente",
+        portalStatusChangedAt: new Date().toISOString(),
         updatedAt: FieldValue.serverTimestamp(),
       };
       if (nextDueDate) serviceUpdates.nextDueDate = nextDueDate;
